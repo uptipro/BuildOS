@@ -10,6 +10,7 @@ interface Transaction {
   category: string;
 }
 
+// TODO: No transactions endpoint — using placeholder data
 const mockTransactions: Transaction[] = [
   {
     id: "1",
@@ -54,7 +55,9 @@ export function TransactionsPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl text-gray-900">Transactions</h1>
-        <p className="text-sm text-gray-600 mt-1">View all financial transactions</p>
+        <p className="text-sm text-gray-600 mt-1">
+          View all financial transactions
+        </p>
       </div>
 
       <div className="grid grid-cols-3 gap-6 mb-6">
@@ -91,17 +94,32 @@ export function TransactionsPage() {
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left px-6 py-3 text-xs text-gray-600">Type</th>
-              <th className="text-left px-6 py-3 text-xs text-gray-600">Description</th>
-              <th className="text-left px-6 py-3 text-xs text-gray-600">Project</th>
-              <th className="text-left px-6 py-3 text-xs text-gray-600">Category</th>
-              <th className="text-left px-6 py-3 text-xs text-gray-600">Date</th>
-              <th className="text-right px-6 py-3 text-xs text-gray-600">Amount</th>
+              <th className="text-left px-6 py-3 text-xs text-gray-600">
+                Type
+              </th>
+              <th className="text-left px-6 py-3 text-xs text-gray-600">
+                Description
+              </th>
+              <th className="text-left px-6 py-3 text-xs text-gray-600">
+                Project
+              </th>
+              <th className="text-left px-6 py-3 text-xs text-gray-600">
+                Category
+              </th>
+              <th className="text-left px-6 py-3 text-xs text-gray-600">
+                Date
+              </th>
+              <th className="text-right px-6 py-3 text-xs text-gray-600">
+                Amount
+              </th>
             </tr>
           </thead>
           <tbody>
             {mockTransactions.map((transaction) => (
-              <tr key={transaction.id} className="border-b border-gray-100 hover:bg-gray-50">
+              <tr
+                key={transaction.id}
+                className="border-b border-gray-100 hover:bg-gray-50"
+              >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     {transaction.type === "Income" ? (
@@ -113,17 +131,25 @@ export function TransactionsPage() {
                         <ArrowUpRight className="w-4 h-4 text-red-600" />
                       </div>
                     )}
-                    <span className="text-sm text-gray-900">{transaction.type}</span>
+                    <span className="text-sm text-gray-900">
+                      {transaction.type}
+                    </span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-900">{transaction.description}</span>
+                  <span className="text-sm text-gray-900">
+                    {transaction.description}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-700">{transaction.project}</span>
+                  <span className="text-sm text-gray-700">
+                    {transaction.project}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-700">{transaction.category}</span>
+                  <span className="text-sm text-gray-700">
+                    {transaction.category}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
                   <span className="text-sm text-gray-700">
@@ -133,7 +159,9 @@ export function TransactionsPage() {
                 <td className="px-6 py-4 text-right">
                   <span
                     className={`text-sm ${
-                      transaction.type === "Income" ? "text-green-600" : "text-red-600"
+                      transaction.type === "Income"
+                        ? "text-green-600"
+                        : "text-red-600"
                     }`}
                   >
                     {transaction.type === "Income" ? "+" : "-"}
