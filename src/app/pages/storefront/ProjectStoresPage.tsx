@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FolderOpen, Package, AlertTriangle, ChevronDown, ChevronUp, ShoppingCart, CheckCircle, X } from "lucide-react";
+import { getStores, type Store } from "../../api/materials";
 
 type StockStatus = "In Stock" | "Low Stock" | "Out of Stock";
 
@@ -23,7 +24,20 @@ interface ProjectStore {
   items: { name: string; qty: number; unit: string; reorderLevel: number }[];
 }
 
-const MOCK_STORES: ProjectStore[] = [
+function toProjectStore(s: Store): ProjectStore {
+  return {
+    id: s.id,
+    project: s.name,
+    location: s.location ?? "",
+    custodian: s.manager ?? "",
+    items: (s.storeItems || []).map((it: any) => ({
+      name: it.materialName,
+      qty: it.qty,
+      unit: it.unit,
+      reorderLevel: it.reorderLevel,
+    })),
+  };
+}
   {
     id: "PS-A",
     project: "Block A",
@@ -60,10 +74,22 @@ const MOCK_STORES: ProjectStore[] = [
 ];
 
 export function ProjectStoresPage() {
-  const [expanded, setExpanded] = useState<string | null>("PS-A");
+  const [stores, setStores] = useState<ProjectStore[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [procurementTarget, setProcurementTarget] = useState<{ storeId: string; itemIndex: number; name: string; qty: number; unit: string; reorderLevel: number } | null>(null);
   const [procurementQty, setProcurementQty] = useState("");
   const [sentToProcurement, setSentToProcurement] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    getStores().then(data => {
+      const ps = data.map(toProjectStore);
+      setStores(ps);
+      if (ps.length > 0) setExpanded(ps[0].id);
+    }).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="p-8 text-center text-gray-400">Loading...</div>;
 
   return (
     <div className="space-y-5">
@@ -75,22 +101,22 @@ export function ProjectStoresPage() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-2xl font-bold text-gray-900">{MOCK_STORES.length}</p>
+          <p className="text-2xl font-bold text-gray-900">{stores.length}</p>
           <p className="text-xs text-gray-500">Active Project Stores</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-2xl font-bold text-gray-900">{MOCK_STORES.reduce((acc, s) => acc + s.items.length, 0)}</p>
+          <p className="text-2xl font-bold text-gray-900">{stores.reduce((acc, s) => acc + s.items.length, 0)}</p>
           <p className="text-xs text-gray-500">Total Items Tracked</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <p className="text-2xl font-bold text-yellow-600">
-            {MOCK_STORES.reduce((acc, s) => acc + s.items.filter((i) => getStatus(i) === "Low Stock").length, 0)}
+            {stores.reduce((acc, s) => acc + s.items.filter((i) => getStatus(i) === "Low Stock").length, 0)}
           </p>
           <p className="text-xs text-gray-500">Low Stock Items</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <p className="text-2xl font-bold text-red-600">
-            {MOCK_STORES.reduce((acc, s) => acc + s.items.filter((i) => getStatus(i) === "Out of Stock").length, 0)}
+            {stores.reduce((acc, s) => acc + s.items.filter((i) => getStatus(i) === "Out of Stock").length, 0)}
           </p>
           <p className="text-xs text-gray-500">Out of Stock</p>
         </div>
@@ -98,7 +124,7 @@ export function ProjectStoresPage() {
 
       {/* Store cards */}
       <div className="space-y-3">
-        {MOCK_STORES.map((store) => {
+        {stores.map((store) => {
           const lowCount = store.items.filter((i) => getStatus(i) !== "In Stock").length;
           const isOpen = expanded === store.id;
           return (
