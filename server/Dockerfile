@@ -1,6 +1,6 @@
 FROM node:20-alpine AS builder
 
-ARG CACHE_BUST=4
+ARG CACHE_BUST=5
 RUN echo "Cache bust: $CACHE_BUST"
 
 WORKDIR /app
@@ -15,11 +15,7 @@ COPY prisma ./prisma/
 RUN npx prisma generate
 
 COPY src ./src/
-
 RUN npm run build
-
-# Show exactly what was built
-RUN echo "=== dist/ contents ===" && find dist/ -type f | sort
 
 # ─── Production image ───────────────────────────────────────────────────────────
 FROM node:20-alpine
@@ -38,4 +34,5 @@ ENV NODE_ENV=production
 
 EXPOSE 8080
 
-CMD ["node", "dist/main"]
+# ✅ correct path
+CMD ["node", "dist/src/main"]
