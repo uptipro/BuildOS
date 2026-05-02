@@ -1,5 +1,9 @@
 FROM node:20-alpine AS builder
 
+# Cache bust — increment when you need a fresh build
+ARG CACHE_BUST=2
+RUN echo "Cache bust: $CACHE_BUST"
+
 WORKDIR /app
 
 COPY package*.json ./
