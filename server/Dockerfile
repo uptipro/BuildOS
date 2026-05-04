@@ -1,32 +1,28 @@
 FROM node:20-alpine AS builder
 
-ARG CACHE_BUST=7
-RUN echo "Cache bust: $CACHE_BUST"
-
 WORKDIR /app
 
-# Copy from server/ subdirectory (Railway builds from repo root context)
-COPY server/package*.json ./
-COPY server/nest-cli.json ./
-COPY server/tsconfig*.json ./
+# Railway build context root is server/
+COPY package*.json ./
+COPY nest-cli.json ./
+COPY tsconfig*.json ./
 
 RUN npm ci
 
-COPY server/prisma ./prisma/
+COPY prisma ./prisma/
 RUN npx prisma generate
 
-COPY server/src ./src/
+COPY src ./src/
 RUN npm run build
 
 # ─── Production image ───────────────────────────────────────────────────────────
 FROM node:20-alpine
 
-# openssl3 matches linux-musl-openssl-3.0.x target
 RUN apk add --no-cache openssl openssl-dev
 
 WORKDIR /app
 
-COPY server/package*.json ./
+COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
