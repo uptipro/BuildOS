@@ -12,86 +12,24 @@ import {
   Plus,
 } from "lucide-react";
 import { fetchProjects } from "../../api/projects";
+import { getPurchaseRequests } from "../../api/procurement-requests";
 import { useAuthUser } from "../../utils/useAuthUser";
 
-
-// ─── Mock data for the logged-in employee ────────────────────────────────────
-
-// TODO: No auth context — using placeholder data
-const currentUser = {
-  name: "James Okafor",
-  role: "Site Engineer",
-  dept: "Engineering",
-  avatar: "JO",
-};
-
-// TODO: No aggregate "my requests by current user" endpoint — using placeholder data
-const recentRequests = [
-  {
-    id: "REQ-0041",
-    type: "Material Request",
-    title: "Structural Steel I-beams",
-    project: "Downtown Office Complex",
-    date: "2026-04-09",
-    status: "pending",
-  },
-  {
-    id: "REQ-0039",
-    type: "Expense Request",
-    title: "Site Transport — Week 14",
-    project: "Downtown Office Complex",
-    date: "2026-04-07",
-    status: "approved",
-  },
-  {
-    id: "REQ-0037",
-    type: "Material Request",
-    title: "Portland Cement (200 bags)",
-    project: "Riverside Residential",
-    date: "2026-04-04",
-    status: "approved",
-  },
-  {
-    id: "REQ-0036",
-    type: "Expense Request",
-    title: "Safety Gear Replacement",
-    project: "Downtown Office Complex",
-    date: "2026-04-01",
-    status: "rejected",
-  },
-];
-
-// TODO: No notifications endpoint — using placeholder data
-const notifications = [
-  {
-    id: "n1",
-    type: "approval",
-    text: "Your material request REQ-0037 was approved",
-    time: "2 hours ago",
-    read: false,
-  },
-  {
-    id: "n2",
-    type: "rejection",
-    text: "REQ-0036 was rejected — re-submission required",
-    time: "Yesterday",
-    read: false,
-  },
-  {
-    id: "n3",
-    type: "assignment",
-    text: "You have been assigned to Riverside Residential",
-    time: "2 days ago",
-    read: true,
-  },
-  {
-    id: "n4",
-    type: "reminder",
-    text: "Foundation Works task is due in 3 days",
-    time: "3 days ago",
-    read: true,
-  },
-];
+interface RecentRequest {
+  id: string;
+  type: string;
+  title: string;
+  project: string;
+  date: string;
+  status: string;
+}
+interface Notification {
+  id: string;
+  type: string;
+  text: string;
+  time: string;
+  read: boolean;
+}
 
 const statusConfig: Record<string, { badge: string; icon: React.ReactNode }> = {
   pending: {
@@ -119,12 +57,30 @@ export function ESSDashboardPage() {
   const navigate = useNavigate();
   const { name: authName, role: authRole, initials: authInitials } = useAuthUser();
   const [allProjects, setAllProjects] = useState<any[]>([]);
+  const [recentRequests, setRecentRequests] = useState<RecentRequest[]>([]);
+  const [notifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     fetchProjects({ status: "Active" })
       .then(setAllProjects)
       .catch(() => {});
+    getPurchaseRequests()
+      .then((data) =>
+        setRecentRequests(
+          data.slice(0, 5).map((r) => ({
+            id: r.prRef || r.id,
+            type: "Material Request",
+            title: r.title,
+            project: r.projectName || "—",
+            date: r.createdAt ? r.createdAt.slice(0, 10) : "",
+            status: (r.status || "pending").toLowerCase(),
+          }))
+        )
+      )
+      .catch(() => {});
   }, []);
+
+  const pendingCount = recentRequests.filter((r) => r.status === "pending").length;
 
   const myProjects = allProjects.map((p) => ({
     id: p.id,

@@ -40,24 +40,10 @@ interface TimeLog {
   supervisorNote?: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-// TODO: No time logs endpoint — using placeholder data
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 // allProjects and allWorkers loaded from API — see component state
-// TODO: No tasks endpoint — taskOptions are placeholder data
-const taskOptions = [
-  "Foundation Works",
-  "Structural Steel Erection",
-  "HVAC Rough-in",
-  "Electrical Rough-in",
-  "Cost Estimation Rev 2",
-  "Debris Clearing",
-  "Safety Audit — Q2",
-  "Steel Frame Assembly",
-  "Stakeholder Report",
-  "Site Preparation",
-];
+const taskOptions: string[] = [];
 
 const statusConfig: Record<
   LogStatus,

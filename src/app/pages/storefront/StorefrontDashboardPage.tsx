@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Store,
   FolderOpen,
@@ -48,6 +48,47 @@ const STORE_COLORS = [
 export function StorefrontDashboardPage() {
   const [stores, setStores] = useState<StoreDisplay[]>([]);
   const [recentTransfers, setRecentTransfers] = useState<TransferDisplay[]>([]);
+
+  const stats = useMemo(
+    () => [
+      {
+        label: "Total Stores",
+        value: stores.length,
+        sub: "Active stores",
+        icon: Store,
+        color: "bg-teal-100 text-teal-700",
+      },
+      {
+        label: "Total Items",
+        value: stores.reduce((sum, s) => sum + s.items, 0),
+        sub: "Across all stores",
+        icon: Package,
+        color: "bg-blue-100 text-blue-700",
+      },
+      {
+        label: "Low Stock",
+        value: stores.reduce((sum, s) => sum + s.lowStock, 0),
+        sub: "Items below threshold",
+        icon: AlertTriangle,
+        color: "bg-red-100 text-red-700",
+      },
+      {
+        label: "Pending Transfers",
+        value: recentTransfers.filter((t) => t.status !== "Completed").length,
+        sub: "Awaiting approval",
+        icon: Clock,
+        color: "bg-yellow-100 text-yellow-700",
+      },
+      {
+        label: "Completed Transfers",
+        value: recentTransfers.filter((t) => t.status === "Completed").length,
+        sub: "This period",
+        icon: CheckCircle2,
+        color: "bg-green-100 text-green-700",
+      },
+    ],
+    [stores, recentTransfers],
+  );
 
   useEffect(() => {
     getStores()

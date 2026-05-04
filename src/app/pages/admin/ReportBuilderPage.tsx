@@ -22,7 +22,7 @@ type PageView = "library" | "builder";
 interface Field { key: string; label: string; type: FieldType; }
 interface DataSource {
   value: string; label: string; module: string; moduleColor: string; appKey: string;
-  fields: Field[]; mockData: Record<string, string | number>[];
+  fields: Field[];
 }
 interface SelectedField { key: string; displayLabel: string; aggregation: Aggregation; }
 interface FilterRow { id: string; field: string; operator: FilterOperator; value: string; valueTo: string; logic: LogicOperator; }
@@ -60,13 +60,6 @@ const DATA_SOURCES: DataSource[] = [
       { key: "progress", label: "Progress (%)", type: "number" },
       { key: "manager", label: "Project Manager", type: "text" },
     ],
-    mockData: [
-      { name: "Lekki Tower A", location: "Lagos", status: "Active", budget: 5200000, spent: 3100000, start_date: "2025-01-10", end_date: "2026-06-30", progress: 60, manager: "Tunde Okafor" },
-      { name: "Abuja HQ Renovation", location: "Abuja", status: "Active", budget: 1800000, spent: 900000, start_date: "2025-03-01", end_date: "2025-12-31", progress: 50, manager: "Amina Bello" },
-      { name: "Port Harcourt Mall", location: "PH", status: "Completed", budget: 8400000, spent: 8100000, start_date: "2023-06-01", end_date: "2025-02-28", progress: 100, manager: "Chidi Nwosu" },
-      { name: "Ibadan Road Phase 2", location: "Ibadan", status: "On Hold", budget: 3600000, spent: 400000, start_date: "2025-07-01", end_date: "2027-01-31", progress: 11, manager: "Sola Adeleke" },
-      { name: "Kano Industrial Complex", location: "Kano", status: "Active", budget: 12000000, spent: 2200000, start_date: "2025-09-01", end_date: "2028-03-31", progress: 18, manager: "Musa Ibrahim" },
-    ],
   },
   {
     value: "expenses", label: "Expenses", module: "Finance",
@@ -79,13 +72,6 @@ const DATA_SOURCES: DataSource[] = [
       { key: "vendor", label: "Vendor", type: "text" },
       { key: "status", label: "Status", type: "status" },
       { key: "approved_by", label: "Approved By", type: "text" },
-    ],
-    mockData: [
-      { date: "2026-04-01", category: "Materials", amount: 45000, project: "Lekki Tower A", vendor: "BuildMart Ltd", status: "Approved", approved_by: "Finance Manager" },
-      { date: "2026-04-03", category: "Labour", amount: 22000, project: "Abuja HQ Renovation", vendor: "WorkForce Co", status: "Pending", approved_by: "" },
-      { date: "2026-04-05", category: "Equipment", amount: 78000, project: "Lekki Tower A", vendor: "AluMach Nigeria", status: "Approved", approved_by: "Finance Manager" },
-      { date: "2026-04-07", category: "Transport", amount: 8500, project: "Kano Industrial Complex", vendor: "FastHaul Ltd", status: "Approved", approved_by: "Site Manager" },
-      { date: "2026-04-08", category: "Materials", amount: 31000, project: "Port Harcourt Mall", vendor: "BuildMart Ltd", status: "Rejected", approved_by: "" },
     ],
   },
   {
@@ -101,13 +87,6 @@ const DATA_SOURCES: DataSource[] = [
       { key: "delivery_date", label: "Delivery Date", type: "date" },
       { key: "project", label: "Project", type: "text" },
     ],
-    mockData: [
-      { po_number: "PO-2026-0041", supplier: "BuildMart Ltd", items: 12, total: 134000, status: "Approved", created_date: "2026-03-10", delivery_date: "2026-04-15", project: "Lekki Tower A" },
-      { po_number: "PO-2026-0042", supplier: "SteelCo Nigeria", items: 3, total: 280000, status: "Pending", created_date: "2026-03-25", delivery_date: "2026-04-30", project: "Kano Industrial Complex" },
-      { po_number: "PO-2026-0043", supplier: "WoodWorks Ltd", items: 8, total: 45000, status: "Delivered", created_date: "2026-02-14", delivery_date: "2026-03-20", project: "Abuja HQ Renovation" },
-      { po_number: "PO-2026-0044", supplier: "AluMach Nigeria", items: 2, total: 90000, status: "Approved", created_date: "2026-04-01", delivery_date: "2026-04-20", project: "Lekki Tower A" },
-      { po_number: "PO-2026-0045", supplier: "FastHaul Ltd", items: 1, total: 22000, status: "Pending", created_date: "2026-04-05", delivery_date: "2026-04-12", project: "Ibadan Road Phase 2" },
-    ],
   },
   {
     value: "inventory", label: "Inventory", module: "Procurement",
@@ -121,13 +100,6 @@ const DATA_SOURCES: DataSource[] = [
       { key: "total_value", label: "Total Value ($)", type: "number" },
       { key: "supplier", label: "Supplier", type: "text" },
       { key: "reorder_level", label: "Reorder Level", type: "number" },
-    ],
-    mockData: [
-      { item_name: "Portland Cement", category: "Materials", quantity: 2400, unit: "Bags", unit_price: 8.5, total_value: 20400, supplier: "BuildMart Ltd", reorder_level: 500 },
-      { item_name: "Steel Rebar 12mm", category: "Metals", quantity: 180, unit: "Tons", unit_price: 850, total_value: 153000, supplier: "SteelCo Nigeria", reorder_level: 30 },
-      { item_name: "Granite 20mm", category: "Aggregates", quantity: 320, unit: "m3", unit_price: 45, total_value: 14400, supplier: "QuarryMine Ltd", reorder_level: 80 },
-      { item_name: "PVC Pipes 110mm", category: "Plumbing", quantity: 850, unit: "Length", unit_price: 12, total_value: 10200, supplier: "PlumbiCo", reorder_level: 200 },
-      { item_name: "Electrical Cable 6mm", category: "Electrical", quantity: 4200, unit: "Metres", unit_price: 3.2, total_value: 13440, supplier: "PowerLink", reorder_level: 1000 },
     ],
   },
   {
@@ -143,13 +115,6 @@ const DATA_SOURCES: DataSource[] = [
       { key: "salary", label: "Salary ($)", type: "number" },
       { key: "location", label: "Office", type: "text" },
     ],
-    mockData: [
-      { name: "Tunde Okafor", department: "Construction", role: "Project Manager", email: "t.okafor@buildos.com", join_date: "2022-03-15", status: "Active", salary: 8500, location: "Lagos" },
-      { name: "Amina Bello", department: "Engineering", role: "Site Engineer", email: "a.bello@buildos.com", join_date: "2021-07-01", status: "Active", salary: 7200, location: "Abuja" },
-      { name: "Chidi Nwosu", department: "Construction", role: "Project Manager", email: "c.nwosu@buildos.com", join_date: "2020-01-10", status: "Active", salary: 9000, location: "Port Harcourt" },
-      { name: "Sola Adeleke", department: "Finance", role: "Accountant", email: "s.adeleke@buildos.com", join_date: "2023-06-20", status: "Active", salary: 6500, location: "Ibadan" },
-      { name: "Musa Ibrahim", department: "Procurement", role: "Store Manager", email: "m.ibrahim@buildos.com", join_date: "2022-11-03", status: "Active", salary: 5800, location: "Kano" },
-    ],
   },
   {
     value: "audit_logs", label: "Audit Logs", module: "Admin",
@@ -162,13 +127,6 @@ const DATA_SOURCES: DataSource[] = [
       { key: "timestamp", label: "Timestamp", type: "date" },
       { key: "ip_address", label: "IP Address", type: "text" },
       { key: "result", label: "Result", type: "status" },
-    ],
-    mockData: [
-      { user: "Admin User", action: "Created", module: "Users", record: "Jane Doe", timestamp: "2026-04-08 09:14", ip_address: "192.168.1.10", result: "Success" },
-      { user: "Tunde Okafor", action: "Updated", module: "Projects", record: "Lekki Tower A", timestamp: "2026-04-08 08:55", ip_address: "192.168.1.22", result: "Success" },
-      { user: "Sola Adeleke", action: "Deleted", module: "Expenses", record: "EXP-0041", timestamp: "2026-04-07 17:30", ip_address: "10.0.0.5", result: "Success" },
-      { user: "Amina Bello", action: "Login", module: "Auth", record: "", timestamp: "2026-04-07 08:01", ip_address: "10.0.0.12", result: "Success" },
-      { user: "Unknown", action: "Login", module: "Auth", record: "", timestamp: "2026-04-06 23:44", ip_address: "45.88.201.3", result: "Failed" },
     ],
   },
 ];
@@ -435,7 +393,7 @@ export function ReportBuilderPage() {
   const firstNum = selectedFields.find((f) => source.fields.find((sf) => sf.key === f.key)?.type === "number");
 
   const previewData = (() => {
-    let rows = [...source.mockData];
+    let rows: Record<string, string | number>[] = [];
     for (const f of filters) {
       if (!f.field) continue;
       rows = rows.filter((row) => {
@@ -913,7 +871,7 @@ export function ReportBuilderPage() {
                   <div className="flex-1 overflow-auto p-4">
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                       <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                        <span className="text-xs text-gray-500">{source.mockData.length} rows (mock)</span>
+                        <span className="text-xs text-gray-500">{previewData.length} rows</span>
                         <button className="ml-auto flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-700 hover:bg-gray-50"><Download className="w-3.5 h-3.5" />Export CSV</button>
                       </div>
                       <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 400px)" }}>
@@ -922,7 +880,7 @@ export function ReportBuilderPage() {
                             <tr>{source.fields.map((f) => <th key={f.key} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide whitespace-nowrap">{f.label}</th>)}</tr>
                           </thead>
                           <tbody className="divide-y divide-gray-50">
-                            {source.mockData.map((row, i) => (
+                            {previewData.map((row, i) => (
                               <tr key={i} className="hover:bg-gray-50/60">
                                 {source.fields.map((f) => <td key={f.key} className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap font-mono">{String(row[f.key] ?? "")}</td>)}
                               </tr>

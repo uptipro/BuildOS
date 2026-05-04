@@ -223,10 +223,12 @@ function AssignWorkerModal({
 
 function EditTaskModal({
   task,
+  projects,
   onSave,
   onClose,
 }: {
   task: Task;
+  projects: string[];
   onSave: (updated: Task) => void;
   onClose: () => void;
 }) {
@@ -274,7 +276,7 @@ function EditTaskModal({
               onChange={(e) => set("project", e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
-              {allProjects.map((p) => (
+              {projects.map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
@@ -373,10 +375,12 @@ function EditTaskModal({
 
 function AddTaskModal({
   tasks,
+  projects,
   onSave,
   onClose,
 }: {
   tasks: Task[];
+  projects: string[];
   onSave: (t: typeof emptyForm) => void;
   onClose: () => void;
 }) {
@@ -420,7 +424,7 @@ function AddTaskModal({
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               <option value="">Select project…</option>
-              {allProjects.map((p) => (
+              {projects.map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
@@ -951,6 +955,7 @@ export function TasksPage() {
       {showAddTask && (
         <AddTaskModal
           tasks={tasks}
+          projects={allProjects}
           onSave={handleAddTask}
           onClose={() => setShowAddTask(false)}
         />
@@ -967,6 +972,7 @@ export function TasksPage() {
       {editFor && taskForEdit && (
         <EditTaskModal
           task={taskForEdit}
+          projects={allProjects}
           onSave={handleEditTask}
           onClose={() => setEditFor(null)}
         />

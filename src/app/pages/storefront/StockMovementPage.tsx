@@ -38,9 +38,6 @@ const TYPE_STYLE: Record<MovementType, string> = {
   Adjustment: "bg-gray-100 text-gray-700",
 };
 
-// TODO: No stock movement endpoint — using placeholder data
-const MOCK: Movement[] = [];
-
 const TYPES: (MovementType | "All")[] = [
   "All",
   "Transfer",

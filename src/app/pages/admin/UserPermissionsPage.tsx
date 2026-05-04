@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getUsers } from "../../api/admin-extras";
 import {
   Search, ChevronDown, ChevronRight, CheckCircle2, XCircle,
   AlertTriangle, Save, Eye, Plus, PenLine, BadgeCheck, Trash2, X,
@@ -75,7 +76,7 @@ const defOverride = (): ProcessOverride => ({
   view: "inherit", create: "inherit", edit: "inherit", approve: "inherit", delete: "inherit",
 });
 
-// Mock role base permissions
+// Default role base permissions config
 const ROLE_PERMS: Record<string, Record<string, RoleBasePerm>> = {
   "Construction Manager": {
     p_create_pr:   { view: true,  create: true,  edit: true,  approve: false, delete: false },
@@ -321,6 +322,26 @@ export function UserPermissionsPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
+
+  useEffect(() => {
+    getUsers()
+      .then((data) =>
+        setUsers(
+          data.map((u) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            department: u.department || "—",
+            status: u.isActive ? "active" : "inactive",
+            lastLogin: u.lastLogin || "Never",
+            rolePerms: ROLE_PERMS[u.role] || {},
+            overrides: {},
+          }))
+        )
+      )
+      .catch(() => {});
+  }, []);
 
   const roles = Array.from(new Set(users.map((u) => u.role)));
 
