@@ -65,7 +65,7 @@ export const deleteStore = (id: string) =>
 
 // Store Items
 export const getStoreItems = (storeId?: string) =>
-    apiFetch<StoreItem[]>(storeId ? `/store-items?storeId=${storeId}` : '/store-items');
+    apiFetch<StoreItem[]>(storeId ? `/stores/${storeId}/items` : '/stores');
 export const createStoreItem = (data: Partial<StoreItem>) =>
     apiFetch<StoreItem>('/store-items', { method: 'POST', body: JSON.stringify(data) });
 export const updateStoreItem = (id: string, data: Partial<StoreItem>) =>

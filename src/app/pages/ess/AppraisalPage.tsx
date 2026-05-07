@@ -117,6 +117,11 @@ export function AppraisalPage() {
 
       {/* Appraisal list */}
       <div className="space-y-3">
+        {appraisals.length === 0 && (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-sm">No appraisal records found.</p>
+          </div>
+        )}
         {appraisals.map((a) => (
           <div
             key={a.id}
