@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { useNavigate } from "react-router";
+import { getReports, runReport as apiRunReport } from "../../api/reports";
 import {
   BarChart3,
   TrendingDown,
@@ -13,93 +14,79 @@ import {
 } from "lucide-react";
 
 // TODO: No reports endpoint — using placeholder data
-const reports = [
-  {
-    id: "r1",
-    title: "Project Progress Report",
-    description:
-      "Overall progress across all active construction projects, milestone completion rates, and schedule adherence metrics.",
-    icon: <BarChart3 className="w-6 h-6" />,
-    color: "text-orange-600 bg-orange-100",
-    lastRun: "Apr 9, 2026",
-    frequency: "Weekly",
-    status: "deployed",
-  },
-  {
-    id: "r2",
-    title: "Delay Analysis Report",
-    description:
-      "Root cause analysis of project delays, impact assessment, and recommendations for schedule recovery.",
-    icon: <TrendingDown className="w-6 h-6" />,
-    color: "text-red-600 bg-red-100",
-    lastRun: "Apr 7, 2026",
-    frequency: "Bi-weekly",
-    status: "deployed",
-  },
-  {
-    id: "r3",
-    title: "Resource Utilization Report",
-    description:
-      "Worker allocation efficiency, over/under-utilization analysis, and team performance benchmarks across all project sites.",
-    icon: <Users className="w-6 h-6" />,
-    color: "text-blue-600 bg-blue-100",
-    lastRun: "Apr 5, 2026",
-    frequency: "Monthly",
-    status: "deployed",
-  },
-  {
-    id: "r4",
-    title: "Material Consumption Report",
-    description:
-      "Actual vs. planned material usage per project, wastage rates, procurement efficiency, and inventory reconciliation.",
-    icon: <Package className="w-6 h-6" />,
-    color: "text-green-600 bg-green-100",
-    lastRun: "Apr 1, 2026",
-    frequency: "Monthly",
-    status: "deployed",
-  },
-];
+const seedReports: {
+  id: string;
+  title: string;
+  description: string;
+  icon: ReactNode;
+  color: string;
+  lastRun: string;
+  frequency: string;
+  status: string;
+}[] = [];
 
 // TODO: No report runs endpoint — using placeholder data
-const recentRuns = [
-  {
-    title: "Project Progress Report",
-    project: "All Projects",
-    generatedBy: "System (Auto)",
-    date: "Apr 9, 2026 08:00",
-    format: "PDF",
-  },
-  {
-    title: "Delay Analysis",
-    project: "Downtown Office Complex",
-    generatedBy: "John Smith",
-    date: "Apr 7, 2026 14:32",
-    format: "PDF",
-  },
-  {
-    title: "Resource Utilization",
-    project: "All Projects",
-    generatedBy: "System (Auto)",
-    date: "Apr 5, 2026 09:00",
-    format: "XLSX",
-  },
-  {
-    title: "Material Consumption",
-    project: "Highway Interchange",
-    generatedBy: "Robert Lee",
-    date: "Apr 1, 2026 16:18",
-    format: "PDF",
-  },
-];
+const recentRuns: {
+  title: string;
+  project: string;
+  generatedBy: string;
+  date: string;
+  format: string;
+}[] = [];
+
+function typeIcon(type: string) {
+  switch (type?.toLowerCase()) {
+    case "delay":
+      return <TrendingDown className="w-6 h-6" />;
+    case "resource":
+      return <Users className="w-6 h-6" />;
+    case "material":
+      return <Package className="w-6 h-6" />;
+    default:
+      return <BarChart3 className="w-6 h-6" />;
+  }
+}
+function typeColor(type: string) {
+  switch (type?.toLowerCase()) {
+    case "delay":
+      return "text-red-600 bg-red-100";
+    case "resource":
+      return "text-blue-600 bg-blue-100";
+    case "material":
+      return "text-green-600 bg-green-100";
+    default:
+      return "text-orange-600 bg-orange-100";
+  }
+}
 
 export function ReportsPage() {
   const navigate = useNavigate();
+  const [reports, setReports] = useState(seedReports);
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [exportedIds, setExportedIds] = useState<Set<string>>(new Set());
   const [downloadedIdxs, setDownloadedIdxs] = useState<Set<number>>(new Set());
   const [showAllRuns, setShowAllRuns] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    getReports("construction")
+      .then((items) =>
+        setReports(
+          items.map((r) => ({
+            id: r.id,
+            title: r.name,
+            description: r.description ?? "",
+            icon: typeIcon(r.type),
+            color: typeColor(r.type),
+            lastRun: r.runs?.[0]?.startedAt?.slice(0, 10) ?? "—",
+            frequency: r.schedule ?? "On demand",
+            status: "deployed",
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
 
   function showToast(msg: string) {
     setToastMsg(msg);
@@ -108,6 +95,7 @@ export function ReportsPage() {
 
   function runReport(id: string, title: string) {
     setRunningIds((s) => new Set(s).add(id));
+    apiRunReport(id).catch(() => {});
     setTimeout(() => {
       setRunningIds((s) => {
         const n = new Set(s);

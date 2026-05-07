@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getJobRoles, createJobRole } from "../../api/job-roles";
 import {
   Briefcase,
   Plus,
@@ -23,7 +24,6 @@ interface Role {
   skills: string[];
 }
 
-// TODO: No HR roles endpoint — using placeholder data
 const initialRoles: Role[] = [
   {
     id: "ROLE-001",
@@ -256,14 +256,7 @@ const initialRoles: Role[] = [
   },
 ];
 
-const depts = [
-  "All Departments",
-  ...Array.from(new Set(initialRoles.map((r) => r.department))).sort(),
-];
-const grades = [
-  "All Grades",
-  ...Array.from(new Set(initialRoles.map((r) => r.gradeLevel))).sort(),
-];
+// depts and grades computed inside component from state
 
 const gradeColors: Record<string, string> = {
   "Level 9": "bg-purple-100 text-purple-700",
@@ -274,6 +267,7 @@ const gradeColors: Record<string, string> = {
 };
 
 export function HRRolesPage() {
+  const [roles, setRoles] = useState<Role[]>(initialRoles);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [gradeFilter, setGradeFilter] = useState("All Grades");
@@ -283,7 +277,36 @@ export function HRRolesPage() {
   const [newDept, setNewDept] = useState("");
   const [newGrade, setNewGrade] = useState("");
 
-  const filtered = initialRoles.filter((r) => {
+  useEffect(() => {
+    getJobRoles()
+      .then((jr) =>
+        setRoles(
+          jr.map((r) => ({
+            id: r.id,
+            title: r.title,
+            department: r.department,
+            gradeLevel: r.gradeLevel ?? "",
+            minSalary: r.minSalary != null ? String(r.minSalary) : "",
+            maxSalary: r.maxSalary != null ? String(r.maxSalary) : "",
+            headcount: r.headcount,
+            responsibilities: r.responsibilities,
+            skills: r.skills,
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
+
+  const depts = [
+    "All Departments",
+    ...Array.from(new Set(roles.map((r) => r.department))).sort(),
+  ];
+  const grades = [
+    "All Grades",
+    ...Array.from(new Set(roles.map((r) => r.gradeLevel))).sort(),
+  ];
+
+  const filtered = roles.filter((r) => {
     const matchS =
       r.title.toLowerCase().includes(search.toLowerCase()) ||
       r.department.toLowerCase().includes(search.toLowerCase());
@@ -293,7 +316,7 @@ export function HRRolesPage() {
     return matchS && matchD && matchG;
   });
 
-  const totalHeadcount = initialRoles.reduce((s, r) => s + r.headcount, 0);
+  const totalHeadcount = roles.reduce((s, r) => s + r.headcount, 0);
 
   return (
     <div className="space-y-5">
@@ -303,8 +326,8 @@ export function HRRolesPage() {
             Roles & Positions
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {initialRoles.length} defined roles · {totalHeadcount} total
-            positions filled
+            {roles.length} defined roles · {totalHeadcount} total positions
+            filled
           </p>
         </div>
         <button
@@ -318,7 +341,7 @@ export function HRRolesPage() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: "Total Roles Defined", value: initialRoles.length },
+          { label: "Total Roles Defined", value: roles.length },
           { label: "Positions Filled", value: totalHeadcount },
           { label: "Departments Covered", value: 8 },
           { label: "Grade Levels Used", value: 5 },
@@ -581,7 +604,43 @@ export function HRRolesPage() {
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-indigo-700 text-white rounded-md text-sm hover:bg-indigo-800">
+              <button
+                className="px-4 py-2 bg-indigo-700 text-white rounded-md text-sm hover:bg-indigo-800"
+                onClick={() => {
+                  if (!newTitle || !newDept) return;
+                  createJobRole({
+                    title: newTitle,
+                    department: newDept,
+                    gradeLevel: newGrade,
+                    headcount: 1,
+                    responsibilities: [],
+                    skills: [],
+                  })
+                    .then((r) => {
+                      setRoles((prev) => [
+                        ...prev,
+                        {
+                          id: r.id,
+                          title: r.title,
+                          department: r.department,
+                          gradeLevel: r.gradeLevel ?? "",
+                          minSalary:
+                            r.minSalary != null ? String(r.minSalary) : "",
+                          maxSalary:
+                            r.maxSalary != null ? String(r.maxSalary) : "",
+                          headcount: r.headcount,
+                          responsibilities: r.responsibilities,
+                          skills: r.skills,
+                        },
+                      ]);
+                    })
+                    .catch(() => {});
+                  setShowCreate(false);
+                  setNewTitle("");
+                  setNewDept("");
+                  setNewGrade("");
+                }}
+              >
                 Create Role
               </button>
             </div>

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { fetchProjects } from "../../api/projects";
+import { getConstructionApprovals } from "../../api/construction-extras";
 
 const statusConfig: Record<
   string,
@@ -42,10 +43,14 @@ export function ConstructionDashboardPage() {
     "all" | "on-track" | "at-risk" | "delayed"
   >("all");
   const [allProjects, setAllProjects] = useState<any[]>([]);
+  const [approvals, setApprovals] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProjects()
       .then(setAllProjects)
+      .catch(() => {});
+    getConstructionApprovals()
+      .then(setApprovals)
       .catch(() => {});
   }, []);
 
@@ -120,11 +125,10 @@ export function ConstructionDashboardPage() {
       icon: <DollarSign className="w-5 h-5" />,
       iconBg: "bg-purple-100 text-purple-600",
     },
-    // TODO: No server endpoint for approvals count — using placeholder
     {
       label: "Pending Approvals",
-      value: "—",
-      sub: "No approvals data available",
+      value: String(approvals.filter((a) => a.status === "pending").length),
+      sub: "Awaiting review",
       subColor: "text-amber-600",
       icon: <Clock className="w-5 h-5" />,
       iconBg: "bg-amber-100 text-amber-600",
@@ -150,7 +154,11 @@ export function ConstructionDashboardPage() {
             Construction Dashboard
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Overview of all construction activities — {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+            Overview of all construction activities —{" "}
+            {new Date().toLocaleDateString("en-GB", {
+              month: "long",
+              year: "numeric",
+            })}
           </p>
         </div>
         <div className="flex gap-2">
@@ -196,7 +204,9 @@ export function ConstructionDashboardPage() {
         <div className="flex flex-col items-center justify-center py-6 text-gray-400">
           <AlertTriangle className="w-8 h-8 mb-2 opacity-30" />
           <p className="text-sm">No alert data available.</p>
-          <p className="text-xs mt-1">Connect an alerts endpoint to display project warnings here.</p>
+          <p className="text-xs mt-1">
+            Connect an alerts endpoint to display project warnings here.
+          </p>
         </div>
       </div>
 
@@ -369,21 +379,47 @@ export function ConstructionDashboardPage() {
 
           {/* Module quick access */}
           <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">Quick Access</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">
+              Quick Access
+            </h2>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "Approvals", href: "/apps/construction/approvals", icon: <CheckCircle className="w-4 h-4" />, color: "text-amber-600 bg-amber-50" },
-                { label: "Documents", href: "/apps/construction/documents", icon: <HardHat className="w-4 h-4" />, color: "text-blue-600 bg-blue-50" },
-                { label: "Resources", href: "/apps/construction/resource-planning", icon: <Users className="w-4 h-4" />, color: "text-purple-600 bg-purple-50" },
-                { label: "Materials", href: "/apps/construction/approvals", icon: <Package className="w-4 h-4" />, color: "text-green-600 bg-green-50" },
+                {
+                  label: "Approvals",
+                  href: "/apps/construction/approvals",
+                  icon: <CheckCircle className="w-4 h-4" />,
+                  color: "text-amber-600 bg-amber-50",
+                },
+                {
+                  label: "Documents",
+                  href: "/apps/construction/documents",
+                  icon: <HardHat className="w-4 h-4" />,
+                  color: "text-blue-600 bg-blue-50",
+                },
+                {
+                  label: "Resources",
+                  href: "/apps/construction/resource-planning",
+                  icon: <Users className="w-4 h-4" />,
+                  color: "text-purple-600 bg-purple-50",
+                },
+                {
+                  label: "Materials",
+                  href: "/apps/construction/approvals",
+                  icon: <Package className="w-4 h-4" />,
+                  color: "text-green-600 bg-green-50",
+                },
               ].map((qa) => (
                 <button
                   key={qa.label}
                   onClick={() => navigate(qa.href)}
                   className="flex flex-col items-start gap-2 p-3 border border-gray-200 rounded-lg hover:border-orange-200 hover:bg-orange-50/30 transition-colors text-left"
                 >
-                  <span className={`p-1.5 rounded-md ${qa.color}`}>{qa.icon}</span>
-                  <p className="text-xs font-medium text-gray-900">{qa.label}</p>
+                  <span className={`p-1.5 rounded-md ${qa.color}`}>
+                    {qa.icon}
+                  </span>
+                  <p className="text-xs font-medium text-gray-900">
+                    {qa.label}
+                  </p>
                 </button>
               ))}
             </div>
@@ -391,11 +427,15 @@ export function ConstructionDashboardPage() {
 
           {/* Activity Feed */}
           <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Recent Activity</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">
+              Recent Activity
+            </h2>
             <div className="flex flex-col items-center justify-center py-6 text-gray-400">
               <Activity className="w-8 h-8 mb-2 opacity-30" />
               <p className="text-sm">No activity log available.</p>
-              <p className="text-xs mt-1">Connect an activity feed endpoint to show recent events.</p>
+              <p className="text-xs mt-1">
+                Connect an activity feed endpoint to show recent events.
+              </p>
             </div>
           </div>
         </div>

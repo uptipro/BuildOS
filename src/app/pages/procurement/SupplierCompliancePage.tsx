@@ -1,5 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShieldCheck, Plus, Edit, Trash2, X, Search } from "lucide-react";
+import {
+  getComplianceDocuments,
+  createComplianceDocument,
+  updateComplianceDocument,
+  deleteComplianceDocument,
+} from "../../api/compliance-documents";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type RequirementLevel = "Mandatory" | "Optional";
@@ -10,55 +16,6 @@ interface DocumentType {
   description: string;
   level: RequirementLevel;
 }
-
-// ── Seed data ─────────────────────────────────────────────────────────────────
-// TODO: No supplier compliance endpoint — using placeholder data
-const SEED: DocumentType[] = [
-  {
-    id: "1",
-    name: "Certificate of Incorporation",
-    description: "Proof of legal registration as a business entity.",
-    level: "Mandatory",
-  },
-  {
-    id: "2",
-    name: "Tax Clearance Certificate",
-    description: "Evidence of up-to-date tax compliance with FIRS.",
-    level: "Mandatory",
-  },
-  {
-    id: "3",
-    name: "CAC Form BN1 / CAC Form 7",
-    description: "Business name registration or company particulars form.",
-    level: "Mandatory",
-  },
-  {
-    id: "4",
-    name: "Audited Financial Statements",
-    description:
-      "Last 2 years audited accounts for financial capacity assessment.",
-    level: "Optional",
-  },
-  {
-    id: "5",
-    name: "ISO Certification",
-    description:
-      "Quality management system certification (ISO 9001 or equivalent).",
-    level: "Optional",
-  },
-  {
-    id: "6",
-    name: "Bank Reference Letter",
-    description: "Letter from supplier's bank confirming financial standing.",
-    level: "Optional",
-  },
-  {
-    id: "7",
-    name: "Vendor Questionnaire",
-    description: "Completed supplier onboarding questionnaire.",
-    level: "Mandatory",
-  },
-];
 
 const BLANK: Omit<DocumentType, "id"> = {
   name: "",
@@ -241,7 +198,7 @@ function DeleteModal({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function SupplierCompliancePage() {
-  const [docs, setDocs] = useState<DocumentType[]>(SEED);
+  const [docs, setDocs] = useState<DocumentType[]>([]);
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState<"All" | RequirementLevel>(
     "All",
@@ -249,6 +206,21 @@ export function SupplierCompliancePage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<DocumentType | null>(null);
   const [deleting, setDeleting] = useState<DocumentType | null>(null);
+
+  useEffect(() => {
+    getComplianceDocuments()
+      .then((items) =>
+        setDocs(
+          items.map((d) => ({
+            id: d.id,
+            name: d.name,
+            description: d.description ?? "",
+            level: d.level as RequirementLevel,
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
 
   const filtered = docs.filter((d) => {
     const matchSearch =
@@ -269,11 +241,44 @@ export function SupplierCompliancePage() {
 
   function save(data: Omit<DocumentType, "id"> & { id?: string }) {
     if (data.id) {
-      setDocs((prev) =>
-        prev.map((d) => (d.id === data.id ? { ...data, id: data.id! } : d)),
-      );
+      updateComplianceDocument(data.id, {
+        name: data.name,
+        description: data.description,
+        level: data.level,
+      })
+        .then((r) =>
+          setDocs((prev) =>
+            prev.map((d) =>
+              d.id === r.id
+                ? {
+                    id: r.id,
+                    name: r.name,
+                    description: r.description ?? "",
+                    level: r.level as RequirementLevel,
+                  }
+                : d,
+            ),
+          ),
+        )
+        .catch(() => {});
     } else {
-      setDocs((prev) => [...prev, { ...data, id: Date.now().toString() }]);
+      createComplianceDocument({
+        name: data.name,
+        description: data.description,
+        level: data.level,
+      })
+        .then((r) =>
+          setDocs((prev) => [
+            ...prev,
+            {
+              id: r.id,
+              name: r.name,
+              description: r.description ?? "",
+              level: r.level as RequirementLevel,
+            },
+          ]),
+        )
+        .catch(() => {});
     }
   }
 
@@ -440,9 +445,11 @@ export function SupplierCompliancePage() {
       {deleting && (
         <DeleteModal
           name={deleting.name}
-          onConfirm={() =>
-            setDocs((prev) => prev.filter((d) => d.id !== deleting.id))
-          }
+          onConfirm={() => {
+            deleteComplianceDocument(deleting.id).catch(() => {});
+            setDocs((prev) => prev.filter((d) => d.id !== deleting.id));
+            setDeleting(null);
+          }}
           onClose={() => setDeleting(null)}
         />
       )}

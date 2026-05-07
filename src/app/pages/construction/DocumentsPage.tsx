@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { getProjectDocuments } from "../../api/construction-extras";
 import {
   Upload,
   Search,
@@ -32,8 +33,8 @@ interface DocFolder {
   lastModified: string;
 }
 
-// TODO: No documents endpoint — using placeholder data
-const folders: DocFolder[] = [
+// NOTE: folders and allDocs replaced with API-loaded state inside component
+const _FOLDERS_PLACEHOLDER: DocFolder[] = [
   {
     id: "f1",
     project: "Downtown Office Complex",
@@ -66,8 +67,8 @@ const folders: DocFolder[] = [
   },
 ];
 
-// TODO: No documents endpoint — using placeholder data
-const allDocs: DocFile[] = [
+// NOTE: allDocs loaded from API
+const _ALLDOCS_PLACEHOLDER: DocFile[] = [
   {
     id: "d1",
     name: "Architectural Drawings v3.2",
@@ -189,11 +190,42 @@ export function DocumentsPage() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [docList, setDocList] = useState<DocFile[]>(allDocs);
+  const [docList, setDocList] = useState<DocFile[]>([]);
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const folders: DocFolder[] = Array.from(
+    new Set(docList.map((d) => d.project)),
+  ).map((project) => ({
+    id: project,
+    project,
+    count: docList.filter((d) => d.project === project).length,
+    lastModified:
+      docList
+        .filter((d) => d.project === project)
+        .sort((a, b) => b.date.localeCompare(a.date))[0]?.date ?? "—",
+  }));
+
+  useEffect(() => {
+    getProjectDocuments()
+      .then((data) =>
+        setDocList(
+          data.map((d) => ({
+            id: d.id,
+            name: d.name,
+            type: d.type,
+            size: d.size ? `${(d.size / (1024 * 1024)).toFixed(1)} MB` : "—",
+            uploadedBy: d.uploadedBy ?? "—",
+            date: d.createdAt ? d.createdAt.split("T")[0] : "—",
+            version: "v1.0",
+            project: d.folderName ?? d.projectId ?? "General",
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
 
   function showToast(msg: string) {
     setToastMsg(msg);

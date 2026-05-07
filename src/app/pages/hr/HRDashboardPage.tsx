@@ -18,9 +18,10 @@ import {
 } from "lucide-react";
 import { fetchEmployees } from "../../api/employees";
 import { fetchDepartments } from "../../api/departments";
+import { getAttendance } from "../../api/hr-extras";
 
-// TODO: No attendance endpoint — using placeholder data
-const todayAttendance = [
+// NOTE: placeholder data — replaced by API in component
+const _todayAttendance = [
   {
     name: "Chukwudi Eze",
     role: "Site Engineer",
@@ -145,6 +146,7 @@ export function HRDashboardPage() {
   const navigate = useNavigate();
   const [allEmployees, setAllEmployees] = useState<any[]>([]);
   const [allDepartments, setAllDepartments] = useState<any[]>([]);
+  const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
 
   useEffect(() => {
     fetchEmployees()
@@ -152,6 +154,9 @@ export function HRDashboardPage() {
       .catch(() => {});
     fetchDepartments()
       .then(setAllDepartments)
+      .catch(() => {});
+    getAttendance()
+      .then(setTodayAttendance)
       .catch(() => {});
   }, []);
 

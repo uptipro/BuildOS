@@ -863,3 +863,110 @@ model TaxConfig {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("todo")
+  priority    String    @default("medium")
+  assignedTo  String?
+  projectId   String?
+  projectName String?
+  dueDate     DateTime?
+  tags        String[]  @default([])
+  createdBy   String    @default("system")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model JobRole {
+  id               String   @id @default(cuid())
+  title            String
+  department       String
+  gradeLevel       String?
+  minSalary        String?
+  maxSalary        String?
+  headcount        Int      @default(0)
+  responsibilities String[] @default([])
+  skills           String[] @default([])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model WorkforceAllocation {
+  id           String   @id @default(cuid())
+  employeeId   String?
+  employeeName String
+  projectId    String?
+  projectName  String
+  role         String
+  allocPct     Float    @default(100)
+  startDate    String
+  endDate      String?
+  status       String   @default("active")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ActivityRecord {
+  id          String   @id @default(cuid())
+  userId      String?
+  userName    String
+  action      String
+  module      String
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model ReportDefinition {
+  id          String      @id @default(cuid())
+  name        String
+  type        String
+  module      String
+  description String?
+  isScheduled Boolean     @default(false)
+  schedule    String?
+  createdBy   String      @default("system")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  runs        ReportRun[]
+}
+
+model ReportRun {
+  id          String           @id @default(cuid())
+  reportId    String
+  report      ReportDefinition @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  status      String           @default("pending")
+  startedAt   DateTime         @default(now())
+  completedAt DateTime?
+  outputUrl   String?
+  errorMsg    String?
+  createdAt   DateTime         @default(now())
+}
+
+model ResourcePlan {
+  id           String   @id @default(cuid())
+  name         String
+  projectId    String?
+  projectName  String?
+  resourceType String
+  quantity     Int      @default(1)
+  unit         String?
+  startDate    String
+  endDate      String?
+  status       String   @default("planned")
+  cost         Float    @default(0)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ComplianceDocumentType {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  level       String   @default("Mandatory")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

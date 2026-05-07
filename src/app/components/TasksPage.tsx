@@ -36,130 +36,12 @@ interface TasksPageProps {
   badgeColor?: string; // active nav badge e.g. "bg-emerald-50 text-emerald-700"
 }
 
-const DEPT_USERS: Record<string, string[]> = {
-  finance: ["Amara Lawson", "Femi Bode", "Ngozi Eze", "Sola Adeleke"],
-  hr: ["Ngozi Okafor", "Tunde Bello", "Musa Ibrahim", "Fatima Yusuf"],
-  procurement: ["Kene Obi", "Lawal Musa", "Emeka Nwosu", "Chidi Ogbu"],
-  projects: ["Chukwudi Eze", "Amara Lawson", "Femi Bode", "Ngozi Okafor"],
-  storefront: ["Ike Eze", "Bola Adewale", "Tayo Fashola", "Ada Okonkwo"],
-  ess: ["All Employees"],
-};
+const DEPT_USERS: Record<string, string[]> = {};
 
 const SEED_TASKS: Record<
   string,
   { name: string; description: string; priority: TaskPriority }[]
-> = {
-  finance: [
-    {
-      name: "Review Q1 expense reports",
-      description: "Validate all Q1 submissions before audit",
-      priority: "High",
-    },
-    {
-      name: "Update GL reconciliation",
-      description: "Reconcile all GL entries for March 2026",
-      priority: "Medium",
-    },
-    {
-      name: "Prepare payroll report",
-      description: "Generate April payroll summary for finance",
-      priority: "Medium",
-    },
-    {
-      name: "Supplier invoice check",
-      description: "Match invoices to POs for block A",
-      priority: "Low",
-    },
-  ],
-  hr: [
-    {
-      name: "Update employee leave balances",
-      description: "Carry forward unused leave from Q1",
-      priority: "High",
-    },
-    {
-      name: "Process new hire onboarding",
-      description: "Complete documentation for 3 new hires",
-      priority: "High",
-    },
-    {
-      name: "Schedule performance reviews",
-      description: "Book slots for Q2 appraisals",
-      priority: "Medium",
-    },
-    {
-      name: "Review payroll deductions",
-      description: "Verify statutory deductions for April run",
-      priority: "Medium",
-    },
-  ],
-  procurement: [
-    {
-      name: "Approve pending purchase requests",
-      description: "Review 5 open PRs awaiting approval",
-      priority: "High",
-    },
-    {
-      name: "Reconcile goods received",
-      description: "Match GRNs to purchase orders for March",
-      priority: "Medium",
-    },
-    {
-      name: "Evaluate supplier quotes",
-      description: "Compare bids for reinforcement steel supply",
-      priority: "High",
-    },
-    {
-      name: "Update stock reorder levels",
-      description: "Adjust reorder points based on Q1 usage",
-      priority: "Low",
-    },
-  ],
-  storefront: [
-    {
-      name: "Perform monthly stock count",
-      description: "Physical count of all general store items",
-      priority: "High",
-    },
-    {
-      name: "Process pending transfer requests",
-      description: "Approve 4 pending inter-project transfers",
-      priority: "Medium",
-    },
-    {
-      name: "Update item catalogue",
-      description: "Add new materials to the item master list",
-      priority: "Low",
-    },
-    {
-      name: "Reconcile store transactions",
-      description: "Match store records with finance entries",
-      priority: "Medium",
-    },
-  ],
-  projects: [
-    {
-      name: "Foundation inspection sign-off",
-      description: "Sign off on B1-B2 foundation pour report",
-      priority: "High",
-    },
-    {
-      name: "Update project schedule",
-      description: "Revise Gantt chart for Q2 activities",
-      priority: "Medium",
-    },
-    {
-      name: "Prepare site progress report",
-      description: "Monthly report for client — Downtown project",
-      priority: "High",
-    },
-    {
-      name: "Review subcontractor invoices",
-      description: "Check and approve invoices from 3 subs",
-      priority: "Medium",
-    },
-  ],
-};
+> = {};
 
 function makeId() {
   return `TASK-${String(Math.floor(Math.random() * 9000) + 1000)}`;
@@ -195,33 +77,9 @@ export function TasksPage({
   const users = DEPT_USERS[app] ?? ["Team Member"];
   const today = new Date().toISOString().slice(0, 10);
 
-  const seeds = SEED_TASKS[app] ?? SEED_TASKS.finance;
-  const dueDates = ["2026-04-18", "2026-04-20", "2026-04-25", "2026-04-15"];
-  const initStatuses: TaskStatus[] = [
-    "In Progress",
-    "Pending",
-    "Pending",
-    "Completed",
-  ];
+  const [tasks, setTasks] = useState<Task[]>([]);
 
-  // Distribute seeds: user[0] gets indices 0 & 2, others spread across 1 & 3
-  const seedAssign = [0, 1, 0, 2].map((idx) => users[idx % users.length]);
-  const [tasks, setTasks] = useState<Task[]>(
-    seeds.map((s, i) => ({
-      id: makeId(),
-      name: s.name,
-      description: s.description,
-      assignedTo: seedAssign[i] ?? users[0],
-      dueDate: dueDates[i] ?? today,
-      priority: s.priority,
-      status: initStatuses[i] ?? "Pending",
-      app,
-      createdAt: today,
-      category: "process" as const,
-    })),
-  );
-
-  const [currentUser, setCurrentUser] = useState(users[0]);
+  const [currentUser, setCurrentUser] = useState(users[0] ?? "");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "All">("All");

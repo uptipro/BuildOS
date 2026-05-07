@@ -10,18 +10,8 @@ type ReportModule =
   | "ESS"
   | "Storefront";
 
-// Reports available in the Report Builder (kept in sync with ReportBuilderPage seed data)
-const AVAILABLE_REPORTS: { name: string; module: ReportModule }[] = [
-  { name: "Project Status Summary", module: "Projects" },
-  { name: "Budget vs Spent Analysis", module: "Projects" },
-  { name: "Delayed Projects Report", module: "Projects" },
-  { name: "Monthly Expense Summary", module: "Finance" },
-  { name: "Pending Approval Expenses", module: "Finance" },
-  { name: "PO Pipeline Report", module: "Procurement" },
-  { name: "Low Stock Alert Report", module: "Procurement" },
-  { name: "Employee Headcount by Department", module: "HR" },
-  { name: "System Activity Audit", module: "Storefront" },
-];
+// Reports available in the Report Builder
+const AVAILABLE_REPORTS: { name: string; module: ReportModule }[] = [];
 
 interface ReportSchedule {
   id: string;
@@ -44,8 +34,8 @@ const MODULE_COLORS: Record<ReportModule, string> = {
 };
 
 const BLANK_FORM: Omit<ReportSchedule, "id" | "lastSent"> = {
-  name: AVAILABLE_REPORTS[0].name,
-  module: AVAILABLE_REPORTS[0].module,
+  name: "",
+  module: "Finance" as ReportModule,
   frequency: "Daily",
   sendTime: "08:00",
   recipients: "",

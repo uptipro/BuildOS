@@ -33,49 +33,9 @@ interface ScheduledPosting {
   processedDate?: string;
 }
 
-// ── Seed data ─────────────────────────────────────────────────────────────────
-
-const COA_ACCOUNTS = [
-  "1100 Accounts Receivable",
-  "1110 Cash & Bank",
-  "1200 Staff Advances",
-  "1210 Plant & Equipment",
-  "1300 Inventory",
-  "2000 Accounts Payable",
-  "2100 Accrued Liabilities",
-  "2300 Tax Payable – VAT",
-  "2310 Tax Payable – WHT",
-  "2320 PAYE Liability",
-  "4100 Contract Revenue",
-  "4200 Service Income",
-  "5100 Labour Costs",
-  "5200 Material Costs",
-  "5300 Equipment Costs",
-  "5400 Overhead",
-];
-
-const RECURRENCE_PATTERNS = [
-  "Daily",
-  "Weekly — Monday",
-  "Monthly — 1st",
-  "Monthly — 15th",
-  "Monthly — Last Day",
-  "Quarterly",
-  "Annually",
-];
-
-const SOURCE_PROCESSES = [
-  "Payroll",
-  "Allowances",
-  "Expense Claim",
-  "Reimbursement",
-  "Supplier Payment",
-  "Purchase Order",
-  "Contract Revenue",
-  "Stock Adjustment",
-  "Salary Advance",
-  "Other",
-];
+const COA_ACCOUNTS: string[] = [];
+const RECURRENCE_PATTERNS: string[] = [];
+const SOURCE_PROCESSES: string[] = [];
 
 const STATUS_CFG: Record<
   PostingStatus,
@@ -137,14 +97,12 @@ function NewPostingModal({
   });
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [debitAccount, setDebit] = useState(COA_ACCOUNTS[12]); // 5100
-  const [creditAccount, setCredit] = useState(COA_ACCOUNTS[1]); // 1110
+  const [debitAccount, setDebit] = useState("");
+  const [creditAccount, setCredit] = useState("");
   const [scheduleType, setScheduleType] = useState<ScheduleType>("scheduled");
   const [scheduledDate, setScheduledDate] = useState("");
-  const [recurringPattern, setRecurringPattern] = useState(
-    RECURRENCE_PATTERNS[2],
-  );
-  const [sourceProcess, setSourceProcess] = useState(SOURCE_PROCESSES[0]);
+  const [recurringPattern, setRecurringPattern] = useState("");
+  const [sourceProcess, setSourceProcess] = useState("");
 
   const valid =
     description.trim() &&

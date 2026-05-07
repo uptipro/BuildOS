@@ -44,4 +44,12 @@ export class AuthService {
             user: { id: user.id, email: user.email, name: user.name, role: user.role },
         };
     }
+
+    async verifyEmail(token: string) {
+        // Accept any 6-digit numeric token; production would check a stored OTP
+        if (!token || !/^\d{6}$/.test(token)) {
+            throw new UnauthorizedException('Invalid verification code');
+        }
+        return { verified: true };
+    }
 }
