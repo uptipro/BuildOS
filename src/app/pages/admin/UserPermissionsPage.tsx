@@ -457,8 +457,6 @@ const ROLE_PERMS: Record<string, Record<string, RoleBasePerm>> = {
   ),
 };
 
-// ── Seed users ────────────────────────────────────────────────────────────────
-
 // ── Compute effective permission (override > role) ─────────────────────────────
 function effectivePerm(
   procId: string,

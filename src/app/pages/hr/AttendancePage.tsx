@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getAttendance } from "../../api/hr-extras";
 import {
   CheckCircle,
   XCircle,
@@ -29,8 +30,8 @@ interface AttRecord {
 
 const today = "Monday, April 28, 2025";
 
-// TODO: No attendance records endpoint — using placeholder data
-const initialRecords: AttRecord[] = [
+// NOTE: placeholder data — replaced by API in component
+const _initialRecords: AttRecord[] = [
   {
     id: "EMP-001",
     name: "Chukwudi Eze",
@@ -219,10 +220,7 @@ const statusConfig: Record<
   },
 };
 
-const depts = [
-  "All Departments",
-  ...Array.from(new Set(initialRecords.map((r) => r.department))).sort(),
-];
+// NOTE: depts derived inside component from API records
 const statusOptions: { key: AttStatus | "all"; label: string }[] = [
   { key: "all", label: "All" },
   { key: "present", label: "Present" },
@@ -233,12 +231,40 @@ const statusOptions: { key: AttStatus | "all"; label: string }[] = [
 ];
 
 export function AttendancePage() {
-  const [records, setRecords] = useState<AttRecord[]>(initialRecords);
+  const [records, setRecords] = useState<AttRecord[]>([]);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [statusFilter, setStatusFilter] = useState<AttStatus | "all">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<AttStatus>("present");
+
+  const depts = [
+    "All Departments",
+    ...Array.from(new Set(records.map((r) => r.department))).sort(),
+  ];
+
+  useEffect(() => {
+    getAttendance()
+      .then((data) =>
+        setRecords(
+          data.map((r) => ({
+            id: r.employeeId,
+            name: r.employeeName,
+            role: "—",
+            department: r.department ?? "—",
+            checkIn: r.clockIn ?? "—",
+            checkOut: r.clockOut ?? "—",
+            status: (
+              ["present", "absent", "late", "half_day", "leave"] as const
+            ).includes(r.status as AttStatus)
+              ? (r.status as AttStatus)
+              : "present",
+            hrs: r.hoursWorked ?? 0,
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
 
   const counts = {
     present: records.filter((r) => r.status === "present").length,

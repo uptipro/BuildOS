@@ -7,16 +7,7 @@ interface ChangeCategory {
   description: string;
 }
 
-const SEED: ChangeCategory[] = [
-  { id: "cc-001", name: "Design Change", description: "Modifications to architectural or engineering designs." },
-  { id: "cc-002", name: "Scope Adjustment", description: "Changes that expand or reduce the project scope." },
-  { id: "cc-003", name: "Budget Revision", description: "Requests to revise the approved project budget." },
-  { id: "cc-004", name: "Timeline Change", description: "Extensions or reductions to project milestones or deadlines." },
-  { id: "cc-005", name: "Specification Change", description: "Changes to material specs, grades, or product standards." },
-  { id: "cc-006", name: "Resource Reallocation", description: "Reassignment of labour, equipment, or personnel across tasks." },
-  { id: "cc-007", name: "Regulatory Compliance", description: "Changes mandated by regulatory or statutory requirements." },
-  { id: "cc-008", name: "Safety Improvement", description: "Changes required to address site safety or risk findings." },
-];
+const SEED: ChangeCategory[] = [];
 
 const BLANK: Omit<ChangeCategory, "id"> = { name: "", description: "" };
 

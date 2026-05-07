@@ -17,6 +17,12 @@ import {
 import { exportCSV } from "../../utils/exportCSV";
 import { fetchProjects } from "../../api/projects";
 import { fetchEmployees } from "../../api/employees";
+import {
+  getTasks,
+  createTask as apiCreateTask,
+  deleteTask as apiDeleteTask,
+  updateTask as apiUpdateTask,
+} from "../../api/tasks";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -593,6 +599,24 @@ export function TasksPage() {
         ),
       )
       .catch(() => {});
+    getTasks()
+      .then((ts) =>
+        setTasks(
+          ts.map((t) => ({
+            id: t.id,
+            name: t.title,
+            project: t.projectName ?? "",
+            description: t.description ?? "",
+            startDate: t.createdAt?.slice(0, 10) ?? "",
+            endDate: t.dueDate?.slice(0, 10) ?? "",
+            priority: (t.priority as Priority) ?? "medium",
+            status: (t.status as TaskStatus) ?? "todo",
+            dependencies: [],
+            assignees: [],
+          })),
+        ),
+      )
+      .catch(() => {});
   }, []);
 
   const projects = ["All", ...allProjects];
@@ -618,8 +642,33 @@ export function TasksPage() {
   };
 
   function handleAddTask(form: typeof emptyForm) {
-    const newTask: Task = { ...form, id: `t${Date.now()}`, assignees: [] };
-    setTasks((ts) => [...ts, newTask]);
+    apiCreateTask({
+      title: form.name,
+      projectName: form.project,
+      description: form.description,
+      dueDate: form.endDate || undefined,
+      priority: form.priority,
+      status: form.status,
+    })
+      .then((t) => {
+        const newTask: Task = {
+          id: t.id,
+          name: t.title,
+          project: t.projectName ?? form.project,
+          description: t.description ?? form.description,
+          startDate: form.startDate,
+          endDate: t.dueDate?.slice(0, 10) ?? form.endDate,
+          priority: (t.priority as Priority) ?? form.priority,
+          status: (t.status as TaskStatus) ?? form.status,
+          dependencies: form.dependencies,
+          assignees: [],
+        };
+        setTasks((ts) => [...ts, newTask]);
+      })
+      .catch(() => {
+        const newTask: Task = { ...form, id: `t${Date.now()}`, assignees: [] };
+        setTasks((ts) => [...ts, newTask]);
+      });
     setShowAddTask(false);
   }
 
@@ -646,11 +695,20 @@ export function TasksPage() {
   }
 
   function deleteTask(taskId: string) {
+    apiDeleteTask(taskId).catch(() => {});
     setTasks((ts) => ts.filter((t) => t.id !== taskId));
     setOpenMenu(null);
   }
 
   function handleEditTask(updated: Task) {
+    apiUpdateTask(updated.id, {
+      title: updated.name,
+      projectName: updated.project,
+      description: updated.description,
+      dueDate: updated.endDate || undefined,
+      priority: updated.priority,
+      status: updated.status,
+    }).catch(() => {});
     setTasks((ts) => ts.map((t) => (t.id === updated.id ? updated : t)));
     setEditFor(null);
   }

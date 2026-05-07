@@ -9,8 +9,9 @@ import {
   Search,
   Download,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { exportCSV } from "../../utils/exportCSV";
+import { getActivityHistory } from "../../api/activity-history";
 
 type ActivityType =
   | "submitted"
@@ -28,121 +29,15 @@ interface Activity {
   time: string;
 }
 
-// TODO: No activity history endpoint — using placeholder data
-const activities: Activity[] = [
-  {
-    id: "1",
-    type: "submitted",
-    title: "Request Submitted",
-    detail: "Material Request REQ-0041 – Structural Steel I-beams",
-    date: "2026-04-09",
-    time: "08:30",
-  },
-  {
-    id: "2",
-    type: "approved",
-    title: "Request Approved",
-    detail: "Expense Request REQ-0039 – Site Transport Week 14",
-    date: "2026-04-07",
-    time: "14:30",
-  },
-  {
-    id: "3",
-    type: "submitted",
-    title: "Request Submitted",
-    detail: "Expense Request REQ-0039 – Site Transport Week 14",
-    date: "2026-04-07",
-    time: "07:15",
-  },
-  {
-    id: "4",
-    type: "approved",
-    title: "Request Approved",
-    detail: "Material Request REQ-0037 – Portland Cement (200 bags)",
-    date: "2026-04-04",
-    time: "11:45",
-  },
-  {
-    id: "5",
-    type: "submitted",
-    title: "Request Submitted",
-    detail: "Material Request REQ-0037 – Portland Cement (200 bags)",
-    date: "2026-04-04",
-    time: "09:00",
-  },
-  {
-    id: "6",
-    type: "rejected",
-    title: "Request Rejected",
-    detail: "Expense Request REQ-0036 – Safety Gear Replacement",
-    date: "2026-04-02",
-    time: "09:00",
-  },
-  {
-    id: "7",
-    type: "submitted",
-    title: "Request Submitted",
-    detail: "Expense Request REQ-0036 – Safety Gear Replacement",
-    date: "2026-04-01",
-    time: "10:00",
-  },
-  {
-    id: "8",
-    type: "assigned",
-    title: "Project Assignment",
-    detail: "Assigned as Lead Engineer on Riverside Residential",
-    date: "2026-03-30",
-    time: "09:00",
-  },
-  {
-    id: "9",
-    type: "approved",
-    title: "Request Approved",
-    detail: "Material Request REQ-0033 – Plywood Formwork (50 sheets)",
-    date: "2026-03-28",
-    time: "13:00",
-  },
-  {
-    id: "10",
-    type: "submitted",
-    title: "Request Submitted",
-    detail: "Material Request REQ-0033 – Plywood Formwork (50 sheets)",
-    date: "2026-03-28",
-    time: "07:45",
-  },
-  {
-    id: "11",
-    type: "approved",
-    title: "Request Approved",
-    detail: "Expense Request REQ-0029 – Site Catering Team Briefing",
-    date: "2026-03-20",
-    time: "15:00",
-  },
-  {
-    id: "12",
-    type: "submitted",
-    title: "Request Submitted",
-    detail: "Expense Request REQ-0029 – Site Catering Team Briefing",
-    date: "2026-03-20",
-    time: "08:00",
-  },
-  {
-    id: "13",
-    type: "profile",
-    title: "Profile Updated",
-    detail: "Phone number updated",
-    date: "2026-03-15",
-    time: "11:20",
-  },
-  {
-    id: "14",
-    type: "assigned",
-    title: "Project Assignment",
-    detail: "Assigned as Site Engineer on Downtown Office Complex",
-    date: "2025-10-01",
-    time: "09:00",
-  },
-];
+// Activity type inferred from action string
+function mapAction(action: string): ActivityType {
+  const a = action.toLowerCase();
+  if (a.includes("submit")) return "submitted";
+  if (a.includes("approv")) return "approved";
+  if (a.includes("reject")) return "rejected";
+  if (a.includes("assign")) return "assigned";
+  return "profile";
+}
 
 const typeConfig: Record<
   ActivityType,
@@ -195,8 +90,26 @@ function formatDate(d: string) {
 }
 
 export function ActivityHistoryPage() {
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [filter, setFilter] = useState<ActivityType | "all">("all");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    getActivityHistory()
+      .then((records) =>
+        setActivities(
+          records.map((r) => ({
+            id: r.id,
+            type: mapAction(r.action),
+            title: r.action,
+            detail: r.description ?? "",
+            date: r.createdAt.slice(0, 10),
+            time: r.createdAt.slice(11, 16),
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
 
   const filtered = activities.filter((a) => {
     const matchFilter = filter === "all" || a.type === filter;

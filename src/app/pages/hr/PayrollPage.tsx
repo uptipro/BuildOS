@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getPayslips } from "../../api/hr-extras";
 import {
   DollarSign,
   Download,
@@ -30,8 +31,8 @@ interface PayrollEntry {
   bankName: string;
 }
 
-// TODO: No payroll data endpoint — using placeholder data
-const payrollData: PayrollEntry[] = [
+// NOTE: payrollData replaced by API state inside component
+const _payrollData: PayrollEntry[] = [
   {
     id: "EMP-001",
     name: "Chukwudi Eze",
@@ -251,10 +252,8 @@ const statusConfig: Record<
 };
 
 const fmt = (n: number) => `₦${n.toLocaleString()}`;
-const depts = [
-  "All Departments",
-  ...Array.from(new Set(payrollData.map((p) => p.department))).sort(),
-];
+// NOTE: depts derived inside component
+const _depts_placeholder: string[] = [];
 
 const prevMonthTotal = 27_500_000;
 const currentMonth = "April 2025";
@@ -263,11 +262,43 @@ type SortKey = "name" | "gross" | "deductions" | "net" | "status";
 type SortDir = "asc" | "desc";
 
 export function PayrollPage() {
+  const [payrollData, setPayrollData] = useState<PayrollEntry[]>([]);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [statusFilter, setStatusFilter] = useState<PayStatus | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("net");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const depts = [
+    "All Departments",
+    ...Array.from(new Set(payrollData.map((p) => p.department))).sort(),
+  ];
+
+  useEffect(() => {
+    getPayslips()
+      .then((data) =>
+        setPayrollData(
+          data.map((s) => ({
+            id: s.employeeId,
+            name: s.employeeName,
+            role: "—",
+            department: s.department ?? "—",
+            gradeLevel: "—",
+            grossPay: s.grossPay,
+            deductions: s.deductions,
+            netPay: s.netPay,
+            status: (["paid", "pending", "processing"] as const).includes(
+              s.status as PayStatus,
+            )
+              ? (s.status as PayStatus)
+              : "pending",
+            paymentMethod: "Bank Transfer",
+            bankName: "—",
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
 
   function handleSort(k: SortKey) {
     if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));

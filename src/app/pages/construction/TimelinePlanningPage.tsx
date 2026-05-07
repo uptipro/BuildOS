@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { getTimelines } from "../../api/construction-extras";
 import {
   AlertTriangle,
   Clock,
@@ -39,8 +40,8 @@ interface ProjectTimeline {
   delays?: { reason: string; weeks: number }[];
 }
 
-// TODO: No project timelines endpoint — using placeholder data
-const timelines: ProjectTimeline[] = [
+// NOTE: timelines loaded from API via useEffect inside component
+const _TIMELINES_PLACEHOLDER: ProjectTimeline[] = [
   {
     id: "1",
     name: "Downtown Office Complex",
@@ -117,6 +118,34 @@ const statusColors = {
 
 export function TimelinePlanningPage() {
   const navigate = useNavigate();
+  const [timelines, setTimelines] = useState<ProjectTimeline[]>([]);
+  useEffect(() => {
+    const baseYear = new Date().getFullYear();
+    getTimelines()
+      .then((data) =>
+        setTimelines(
+          data.map((t) => {
+            const start = new Date(t.startDate);
+            const end = new Date(t.endDate);
+            return {
+              id: t.id,
+              name: t.name,
+              startMonth:
+                (start.getFullYear() - baseYear) * 12 + start.getMonth(),
+              endMonth: (end.getFullYear() - baseYear) * 12 + end.getMonth(),
+              progress: 0,
+              status: (["on-track", "at-risk", "delayed"] as const).includes(
+                t.status as ProjectTimeline["status"],
+              )
+                ? (t.status as ProjectTimeline["status"])
+                : "on-track",
+              manager: t.projectName || "",
+            };
+          }),
+        ),
+      )
+      .catch(() => {});
+  }, []);
   const [yearOffset, setYearOffset] = useState(0);
   const [adjustFor, setAdjustFor] = useState<string | null>(null);
   const [delayFor, setDelayFor] = useState<string | null>(null);

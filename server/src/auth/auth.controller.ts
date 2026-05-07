@@ -14,4 +14,9 @@ export class AuthController {
     register(@Body() body: { name: string; email: string; password: string }) {
         return this.authService.register(body.name, body.email, body.password);
     }
+
+    @Post('verify-email')
+    verifyEmail(@Body() body: { token: string }) {
+        return this.authService.verifyEmail(body.token);
+    }
 }

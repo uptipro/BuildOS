@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { fetchProjects } from "../../api/projects";
+import { getTasks, createTask } from "../../api/tasks";
 
 type TaskStatus = "done" | "in-progress" | "todo" | "blocked";
 
@@ -22,61 +23,6 @@ interface Task {
   priority: "low" | "medium" | "high";
   description?: string;
 }
-
-// TODO: No tasks endpoint — using placeholder data
-const allTasks: Task[] = [
-  {
-    id: "TASK-001",
-    name: "Foundation Works Inspection",
-    project: "Downtown Office Complex",
-    status: "in-progress",
-    due: "2026-04-15",
-    priority: "high",
-    description: "Inspect Level B1-B2 foundation pours and report compliance.",
-  },
-  {
-    id: "TASK-002",
-    name: "Safety Audit — Block B",
-    project: "Downtown Office Complex",
-    status: "todo",
-    due: "2026-04-18",
-    priority: "high",
-    description: "Conduct full HSE compliance walkthrough on Block B.",
-  },
-  {
-    id: "TASK-003",
-    name: "Concrete Pour Schedule Review",
-    project: "Riverside Residential",
-    status: "todo",
-    due: "2026-04-20",
-    priority: "medium",
-  },
-  {
-    id: "TASK-006",
-    name: "Soil Compaction Test Review",
-    project: "Riverside Residential",
-    status: "blocked",
-    due: "2026-04-14",
-    priority: "high",
-    description: "Awaiting lab report from geotechnical engineer.",
-  },
-  {
-    id: "TASK-004",
-    name: "Site Photo Documentation",
-    project: "Downtown Office Complex",
-    status: "done",
-    due: "2026-04-08",
-    priority: "low",
-  },
-  {
-    id: "TASK-005",
-    name: "Rebar Installation QC Check",
-    project: "Downtown Office Complex",
-    status: "done",
-    due: "2026-04-06",
-    priority: "medium",
-  },
-];
 
 const statusConfig: Record<
   TaskStatus,
@@ -118,13 +64,28 @@ function makeId() {
 
 export function MyTasksPage() {
   const today = new Date().toISOString().slice(0, 10);
-  const [tasks, setTasks] = useState<Task[]>(allTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
   const [showModal, setShowModal] = useState(false);
   const [allProjects, setAllProjects] = useState<string[]>([]);
   useEffect(() => {
     fetchProjects()
       .then((ps) => setAllProjects(ps.map((p) => p.name)))
+      .catch(() => {});
+    getTasks()
+      .then((ts) =>
+        setTasks(
+          ts.map((t) => ({
+            id: t.id,
+            name: t.title,
+            project: t.projectName ?? "",
+            status: t.status as TaskStatus,
+            due: t.dueDate?.slice(0, 10) ?? "",
+            priority: t.priority as Task["priority"],
+            description: t.description,
+          })),
+        ),
+      )
       .catch(() => {});
   }, []);
   const [form, setForm] = useState({
@@ -150,18 +111,29 @@ export function MyTasksPage() {
 
   function saveTask() {
     if (!form.name.trim()) return;
-    setTasks((prev) => [
-      ...prev,
-      {
-        id: makeId(),
-        name: form.name,
-        project: form.project,
-        status: "todo",
-        due: form.due,
-        priority: form.priority,
-        description: form.description,
-      },
-    ]);
+    createTask({
+      title: form.name,
+      projectName: form.project,
+      dueDate: form.due || undefined,
+      priority: form.priority,
+      status: "todo",
+      description: form.description,
+    })
+      .then((t) =>
+        setTasks((prev) => [
+          ...prev,
+          {
+            id: t.id,
+            name: t.title,
+            project: t.projectName ?? "",
+            status: t.status as TaskStatus,
+            due: t.dueDate?.slice(0, 10) ?? "",
+            priority: t.priority as Task["priority"],
+            description: t.description,
+          },
+        ]),
+      )
+      .catch(() => {});
     setForm({
       name: "",
       project: allProjects[0] || "",

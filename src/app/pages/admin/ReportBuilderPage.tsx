@@ -247,8 +247,6 @@ const DATA_SOURCES: DataSource[] = [
   },
 ];
 
-// ─── Seed Templates ────────────────────────────────────────────────────────
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const OPERATOR_LABELS: Record<FilterOperator, string> = {
   equals: "=",

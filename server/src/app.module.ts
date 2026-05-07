@@ -22,6 +22,13 @@ import { HrExtrasModule } from './hr-extras/hr-extras.module';
 import { FinanceExtrasModule } from './finance-extras/finance-extras.module';
 import { AdminExtrasModule } from './admin-extras/admin-extras.module';
 import { HealthModule } from './health/health.module';
+import { TasksModule } from './tasks/tasks.module';
+import { JobRolesModule } from './job-roles/job-roles.module';
+import { WorkforceAllocationModule } from './workforce-allocation/workforce-allocation.module';
+import { ActivityHistoryModule } from './activity-history/activity-history.module';
+import { ReportsModule } from './reports/reports.module';
+import { ResourcePlanningModule } from './resource-planning/resource-planning.module';
+import { ComplianceDocumentsModule } from './compliance-documents/compliance-documents.module';
 
 @Module({
     imports: [
@@ -48,6 +55,13 @@ import { HealthModule } from './health/health.module';
         HrExtrasModule,
         FinanceExtrasModule,
         AdminExtrasModule,
+        TasksModule,
+        JobRolesModule,
+        WorkforceAllocationModule,
+        ActivityHistoryModule,
+        ReportsModule,
+        ResourcePlanningModule,
+        ComplianceDocumentsModule,
     ],
 })
 export class AppModule { }

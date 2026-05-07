@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getWorkforceAllocations } from "../../api/workforce-allocation";
 import {
   Users,
   AlertTriangle,
@@ -281,6 +282,7 @@ const allocBadge = (pct: number) => {
 };
 
 export function WorkforceAllocationPage() {
+  const [allocs, setAllocs] = useState<Allocation[]>([]);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All");
   const [filter, setFilter] = useState<"all" | "over" | "full" | "under">(
@@ -289,12 +291,43 @@ export function WorkforceAllocationPage() {
   const [projectSearch, setProjectSearch] = useState("");
   const [showAssign, setShowAssign] = useState(false);
 
+  useEffect(() => {
+    getWorkforceAllocations()
+      .then((items) => {
+        // Group flat records by employeeName
+        const map = new Map<string, Allocation>();
+        for (const item of items) {
+          const key = item.employeeId ?? item.employeeName;
+          if (!map.has(key)) {
+            map.set(key, {
+              empId: item.employeeId ?? key,
+              empName: item.employeeName,
+              role: item.role,
+              department: "",
+              projects: [],
+              totalAlloc: 0,
+            });
+          }
+          const entry = map.get(key)!;
+          entry.projects.push({
+            name: item.projectName ?? "",
+            allocPct: item.allocPct,
+            role: item.role,
+            startDate: item.startDate?.slice(0, 10) ?? "",
+          });
+          entry.totalAlloc += item.allocPct;
+        }
+        setAllocs(Array.from(map.values()));
+      })
+      .catch(() => {});
+  }, []);
+
   const depts = [
     "All",
-    ...Array.from(new Set(allocations.map((a) => a.department))).sort(),
+    ...Array.from(new Set(allocs.map((a) => a.department))).sort(),
   ];
 
-  const filtered = allocations.filter((a) => {
+  const filtered = allocs.filter((a) => {
     const matchS =
       a.empName.toLowerCase().includes(search.toLowerCase()) ||
       a.empId.toLowerCase().includes(search.toLowerCase());
@@ -307,7 +340,7 @@ export function WorkforceAllocationPage() {
     return matchS && matchD && matchF;
   });
 
-  const overAllocated = allocations.filter((a) => a.totalAlloc > 100).length;
+  const overAllocated = allocs.filter((a) => a.totalAlloc > 100).length;
 
   return (
     <div className="space-y-5">
@@ -382,7 +415,7 @@ export function WorkforceAllocationPage() {
         {[
           {
             label: "Employees Assigned",
-            value: allocations.length,
+            value: allocs.length,
             color: "bg-indigo-50 text-indigo-700",
           },
           {
@@ -392,12 +425,12 @@ export function WorkforceAllocationPage() {
           },
           {
             label: "Fully Allocated (100%)",
-            value: allocations.filter((a) => a.totalAlloc === 100).length,
+            value: allocs.filter((a) => a.totalAlloc === 100).length,
             color: "bg-green-50 text-green-700",
           },
           {
             label: "Under-Allocated (<80%)",
-            value: allocations.filter((a) => a.totalAlloc < 80).length,
+            value: allocs.filter((a) => a.totalAlloc < 80).length,
             color: "bg-amber-50 text-amber-700",
           },
         ].map((s) => (
@@ -538,7 +571,7 @@ export function WorkforceAllocationPage() {
                 </label>
                 <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500">
                   <option value="">Select employee...</option>
-                  {allocations.map((a) => (
+                  {allocs.map((a) => (
                     <option key={a.empId}>
                       {a.empName} ({a.empId})
                     </option>

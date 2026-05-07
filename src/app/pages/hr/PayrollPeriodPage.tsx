@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getPayrollPeriods } from "../../api/hr-extras";
 import { Plus, Lock, Unlock, Clock, CheckCircle } from "lucide-react";
 
 type PeriodStatus = "open" | "processing" | "closed";
@@ -15,58 +16,6 @@ interface Period {
   processedBy: string | null;
   processedAt: string | null;
 }
-
-// TODO: No payroll periods endpoint — using placeholder data
-const SEED: Period[] = [
-  {
-    id: "pp1",
-    name: "April 2026",
-    type: "Monthly",
-    startDate: "2026-04-01",
-    endDate: "2026-04-30",
-    status: "open",
-    employeesIncluded: 156,
-    totalNetPay: 0,
-    processedBy: null,
-    processedAt: null,
-  },
-  {
-    id: "pp2",
-    name: "March 2026",
-    type: "Monthly",
-    startDate: "2026-03-01",
-    endDate: "2026-03-31",
-    status: "closed",
-    employeesIncluded: 154,
-    totalNetPay: 48200000,
-    processedBy: "Ngozi Okafor",
-    processedAt: "Apr 1, 2026",
-  },
-  {
-    id: "pp3",
-    name: "February 2026",
-    type: "Monthly",
-    startDate: "2026-02-01",
-    endDate: "2026-02-28",
-    status: "closed",
-    employeesIncluded: 150,
-    totalNetPay: 46100000,
-    processedBy: "Ngozi Okafor",
-    processedAt: "Mar 1, 2026",
-  },
-  {
-    id: "pp4",
-    name: "January 2026",
-    type: "Monthly",
-    startDate: "2026-01-01",
-    endDate: "2026-01-31",
-    status: "closed",
-    employeesIncluded: 148,
-    totalNetPay: 45300000,
-    processedBy: "Ngozi Okafor",
-    processedAt: "Feb 1, 2026",
-  },
-];
 
 const statusConf: Record<
   PeriodStatus,
@@ -92,11 +41,40 @@ const statusConf: Record<
 const fmt = (n: number) => (n === 0 ? "—" : `₦${(n / 1_000_000).toFixed(1)}M`);
 
 export function PayrollPeriodPage() {
-  const [periods, setPeriods] = useState<Period[]>(SEED);
+  const [periods, setPeriods] = useState<Period[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+
+  useEffect(() => {
+    getPayrollPeriods()
+      .then((data) =>
+        setPeriods(
+          data.map((p) => ({
+            id: p.id,
+            name: p.name,
+            type: (["Monthly", "Bi-Weekly"] as const).includes(
+              p.startDate ? "Monthly" : "Monthly",
+            )
+              ? "Monthly"
+              : "Bi-Weekly",
+            startDate: p.startDate,
+            endDate: p.endDate,
+            status: (["open", "processing", "closed"] as const).includes(
+              p.status as PeriodStatus,
+            )
+              ? (p.status as PeriodStatus)
+              : "open",
+            employeesIncluded: 0,
+            totalNetPay: 0,
+            processedBy: null,
+            processedAt: null,
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
 
   function toggleStatus(id: string) {
     setPeriods((prev) =>
