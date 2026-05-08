@@ -123,8 +123,15 @@ interface UserRecord {
   signatureInitials?: string;
 }
 
-// ── API → UserRecord mapper ─────────────────────────────────────────────────
 function userFromApi(u: AppUser): UserRecord {
+  const rawStatus = (u.status ?? "").toLowerCase();
+  const status: UserStatus =
+    rawStatus === "active"
+      ? "Active"
+      : rawStatus === "pending"
+        ? "Pending"
+        : "Inactive";
+
   return {
     id: u.id,
     name: u.name,
@@ -140,7 +147,7 @@ function userFromApi(u: AppUser): UserRecord {
           year: "numeric",
         })
       : "",
-    status: u.isActive ? "Active" : "Inactive",
+    status,
     apps: [],
     lastActive: u.lastLogin
       ? new Date(u.lastLogin).toLocaleDateString("en-US", {
@@ -154,7 +161,6 @@ function userFromApi(u: AppUser): UserRecord {
     requests: [],
   };
 }
-
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<UserStatus, string> = {
@@ -711,6 +717,133 @@ function UserDetailPanel({
   );
 }
 
+// ── Add User Modal ────────────────────────────────────────────────────────────
+function AddUserModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (u: UserRecord) => void;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    role: "viewer",
+    department: "",
+    password: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!form.name || !form.email) {
+      setError("Name and email are required.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const { createUser } = await import("../../api/admin-extras");
+      const created = await createUser({ ...form, status: "Active" });
+      onCreated(userFromApi(created));
+      onClose();
+    } catch {
+      setError("Failed to create user. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-gray-900">Add New User</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          {[
+            {
+              label: "Full Name",
+              key: "name",
+              type: "text",
+              placeholder: "Jane Smith",
+            },
+            {
+              label: "Email",
+              key: "email",
+              type: "email",
+              placeholder: "jane@company.com",
+            },
+            {
+              label: "Password",
+              key: "password",
+              type: "password",
+              placeholder: "Min. 8 characters",
+            },
+            {
+              label: "Department",
+              key: "department",
+              type: "text",
+              placeholder: "e.g. Finance",
+            },
+          ].map(({ label, key, type, placeholder }) => (
+            <div key={key}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {label}
+              </label>
+              <input
+                type={type}
+                placeholder={placeholder}
+                value={(form as any)[key]}
+                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          ))}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Role
+            </label>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="viewer">Viewer</option>
+              <option value="user">User</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {loading ? "Creating…" : "Create User"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 export function UsersPage() {
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -747,6 +880,14 @@ export function UsersPage() {
 
   return (
     <div>
+      {/* Add User Modal */}
+      {showAddModal && (
+        <AddUserModal
+          onClose={() => setShowAddModal(false)}
+          onCreated={(newUser) => setUsers((prev) => [newUser, ...prev])}
+        />
+      )}
+
       {/* User Detail Modal */}
       {selectedUser && (
         <UserDetailPanel

@@ -20,7 +20,7 @@ export function LoginPage() {
       }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({
-          email: formData.email,
+          email: formData.email.trim().toLowerCase(),
           password: formData.password,
         }),
       });

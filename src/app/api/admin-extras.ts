@@ -2,7 +2,7 @@ import { apiFetch } from './client';
 
 export interface AppUser {
     id: string; name: string; email: string; role: string;
-    department?: string; position?: string; isActive: boolean;
+    department?: string; position?: string; status: string;
     lastLogin?: string; createdAt: string;
 }
 export interface AppRole {

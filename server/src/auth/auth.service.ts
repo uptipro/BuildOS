@@ -11,11 +11,18 @@ export class AuthService {
     ) { }
 
     async login(email: string, password: string) {
-        const user = await this.prisma.user.findUnique({ where: { email } });
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (!user) throw new UnauthorizedException('Invalid credentials');
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) throw new UnauthorizedException('Invalid credentials');
+
+        // Update lastLogin timestamp so "Last Active" reflects real activity
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: { lastLogin: new Date() },
+        });
 
         const payload = { sub: user.id, email: user.email, role: user.role };
         return {

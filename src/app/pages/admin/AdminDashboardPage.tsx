@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Users, Shield, Settings, Activity, ArrowUpRight, Info } from "lucide-react";
+import {
+  Users,
+  Shield,
+  Settings,
+  Activity,
+  ArrowUpRight,
+  Info,
+} from "lucide-react";
 import { NavLink } from "react-router";
 import {
   getAdminActivityLog,
@@ -50,7 +57,9 @@ export function AdminDashboardPage() {
     {
       label: "System Health",
       value: summary?.health.status ?? "…",
-      delta: summary ? `Uptime ${Math.round(summary.health.uptimeSeconds / 60)}m` : null,
+      delta: summary
+        ? `Uptime ${Math.round(summary.health.uptimeSeconds / 60)}m`
+        : null,
       deltaPositive: null,
       icon: Settings,
       iconBg: "bg-blue-100",
@@ -63,23 +72,34 @@ export function AdminDashboardPage() {
       {/* Page header */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Admin Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">System management and configuration</p>
+        <p className="text-sm text-gray-500 mt-0.5">
+          System management and configuration
+        </p>
       </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((m) => (
-          <div key={m.label} className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-3">
+          <div
+            key={m.label}
+            className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-3"
+          >
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500 font-medium">{m.label}</p>
-              <div className={`w-8 h-8 rounded-lg ${m.iconBg} flex items-center justify-center`}>
+              <div
+                className={`w-8 h-8 rounded-lg ${m.iconBg} flex items-center justify-center`}
+              >
                 <m.icon className={`w-4 h-4 ${m.iconColor}`} />
               </div>
             </div>
             <p className="text-3xl font-bold text-gray-900">{m.value}</p>
             {m.delta && (
-              <p className={`text-xs font-medium flex items-center gap-1 ${m.deltaPositive === true ? "text-emerald-600" : m.deltaPositive === false ? "text-red-500" : "text-gray-400"}`}>
-                {m.deltaPositive === true && <ArrowUpRight className="w-3 h-3" />}
+              <p
+                className={`text-xs font-medium flex items-center gap-1 ${m.deltaPositive === true ? "text-emerald-600" : m.deltaPositive === false ? "text-red-500" : "text-gray-400"}`}
+              >
+                {m.deltaPositive === true && (
+                  <ArrowUpRight className="w-3 h-3" />
+                )}
                 {m.delta}
               </p>
             )}
@@ -91,7 +111,9 @@ export function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* User Activity */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">User Activity</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">
+            User Activity
+          </h2>
           {summary === null ? (
             <p className="text-sm text-gray-400">Loading…</p>
           ) : summary.users === 0 ? (
@@ -99,19 +121,30 @@ export function AdminDashboardPage() {
           ) : (
             <div className="space-y-4">
               {[
-                { label: "Registered Users", value: summary.users, max: summary.users },
-                { label: "Configured Roles", value: summary.roles, max: Math.max(summary.users, summary.roles) },
-                { label: "Pending Approvals", value: summary.pendingApprovals, max: Math.max(summary.users, summary.pendingApprovals, 1) },
+                {
+                  label: "Registered Users",
+                  value: summary.users,
+                  max: summary.users,
+                },
+                {
+                  label: "Configured Roles",
+                  value: summary.roles,
+                  max: Math.max(summary.users, summary.roles),
+                },
               ].map((item) => (
                 <div key={item.label}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm text-gray-600">{item.label}</span>
-                    <span className="text-sm font-medium text-gray-900">{item.value}</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {item.value}
+                    </span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-1.5">
                     <div
                       className="bg-indigo-500 h-1.5 rounded-full transition-all"
-                      style={{ width: `${Math.min((item.value / (item.max || 1)) * 100, 100)}%` }}
+                      style={{
+                        width: `${Math.min((item.value / (item.max || 1)) * 100, 100)}%`,
+                      }}
                     />
                   </div>
                 </div>
@@ -122,27 +155,42 @@ export function AdminDashboardPage() {
 
         {/* Recent Activity */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Recent Activity</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">
+            Recent Activity
+          </h2>
           <div className="space-y-3">
             {activityLog.map((item) => (
-              <div key={item.id} className="flex items-start gap-3 rounded-lg bg-gray-50 border border-gray-100 p-3">
+              <div
+                key={item.id}
+                className="flex items-start gap-3 rounded-lg bg-gray-50 border border-gray-100 p-3"
+              >
                 <Activity className="w-4 h-4 text-indigo-500 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{item.action}</p>
-                  <p className="text-xs text-gray-500 truncate">{item.actor} · {item.subject}</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {item.action}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {item.actor} · {item.subject}
+                  </p>
                 </div>
               </div>
             ))}
-            {activityLog.length === 0 && <p className="text-sm text-gray-400">No recent activity.</p>}
+            {activityLog.length === 0 && (
+              <p className="text-sm text-gray-400">No recent activity.</p>
+            )}
           </div>
         </div>
       </div>
 
       {/* System Status */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-sm font-semibold text-gray-900 mb-4">System Status</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-4">
+          System Status
+        </h2>
         <p className="text-sm text-gray-600">
-          {summary ? `System is ${summary.health.status}; last checked ${new Date(summary.health.checkedAt).toLocaleString()}.` : "Loading system status…"}
+          {summary
+            ? `System is ${summary.health.status}; last checked ${new Date(summary.health.checkedAt).toLocaleString()}.`
+            : "Loading system status…"}
         </p>
       </div>
 
