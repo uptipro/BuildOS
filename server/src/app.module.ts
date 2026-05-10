@@ -29,6 +29,7 @@ import { ActivityHistoryModule } from './activity-history/activity-history.modul
 import { ReportsModule } from './reports/reports.module';
 import { ResourcePlanningModule } from './resource-planning/resource-planning.module';
 import { ComplianceDocumentsModule } from './compliance-documents/compliance-documents.module';
+import { AppCatalogModule } from './app-catalog/app-catalog.module';
 
 @Module({
     imports: [
@@ -62,6 +63,7 @@ import { ComplianceDocumentsModule } from './compliance-documents/compliance-doc
         ReportsModule,
         ResourcePlanningModule,
         ComplianceDocumentsModule,
+        AppCatalogModule,
     ],
 })
 export class AppModule { }
