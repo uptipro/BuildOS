@@ -728,12 +728,24 @@ function AddUserModal({
   const [form, setForm] = useState({
     name: "",
     email: "",
-    role: "viewer",
+    role: "",
     department: "",
     password: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [roleOptions, setRoleOptions] = useState<
+    { id: string; name: string }[]
+  >([]);
+
+  useEffect(() => {
+    import("../../api/admin-extras").then(({ getAppRoles }) => {
+      getAppRoles().then((roles) => {
+        setRoleOptions(roles.map((r) => ({ id: r.id, name: r.name })));
+        if (roles.length > 0) setForm((f) => ({ ...f, role: roles[0].name }));
+      });
+    });
+  }, []);
 
   const handleSubmit = async () => {
     if (!form.name || !form.email) {
@@ -816,10 +828,11 @@ function AddUserModal({
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="viewer">Viewer</option>
-              <option value="user">User</option>
-              <option value="manager">Manager</option>
-              <option value="admin">Admin</option>
+              {roleOptions.map((r) => (
+                <option key={r.id} value={r.name}>
+                  {r.name}
+                </option>
+              ))}
             </select>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}

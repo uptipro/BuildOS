@@ -14,6 +14,10 @@ export interface AdminSystemSummary {
     roles: number;
     activeSessions: number;
     pendingApprovals: number;
+    openTickets?: number;
+    usersThisMonth: number;
+    pendingInvites: number;
+    healthPercent: number;
     health: { status: string; uptimeSeconds: number; checkedAt: string };
 }
 export interface AdminActivity {
@@ -29,6 +33,10 @@ export const getAdminSystemSummary = () =>
     apiFetch<AdminSystemSummary>('/admin/system-summary');
 export const getAdminActivityLog = () =>
     apiFetch<AdminActivity[]>('/admin/activity-log');
+export const inviteUser = (data: { email: string; name: string; role?: string }) =>
+    apiFetch<{ id: string; email: string; inviteToken: string; activationLink: string }>(
+        '/admin/users/invite', { method: 'POST', body: JSON.stringify(data) }
+    );
 
 // Users
 export const getUsers = (search?: string) =>
@@ -50,3 +58,40 @@ export const updateAppRole = (id: string, data: Partial<AppRole>) =>
     apiFetch<AppRole>(`/app-roles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteAppRole = (id: string) =>
     apiFetch<void>(`/app-roles/${id}`, { method: 'DELETE' });
+
+// Company Profile
+export interface CompanyProfile {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    logoUrl?: string | null;
+    updatedAt?: string;
+}
+export const getCompanyProfile = () => apiFetch<CompanyProfile>('/company-profile');
+export const updateCompanyProfile = (data: Partial<CompanyProfile>) =>
+    apiFetch<CompanyProfile>('/company-profile', { method: 'PUT', body: JSON.stringify(data) });
+
+// Directors
+export interface Director {
+    id: string;
+    firstName: string;
+    middleName: string;
+    lastName: string;
+    designation: string;
+    sequence: number;
+    createdAt?: string;
+    updatedAt?: string;
+}
+export const getDirectors = () => apiFetch<Director[]>('/directors');
+export const createDirector = (data: Omit<Director, 'id' | 'createdAt' | 'updatedAt'>) =>
+    apiFetch<Director>('/directors', { method: 'POST', body: JSON.stringify(data) });
+export const updateDirector = (id: string, data: Partial<Director>) =>
+    apiFetch<Director>(`/directors/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteDirector = (id: string) =>
+    apiFetch<void>(`/directors/${id}`, { method: 'DELETE' });

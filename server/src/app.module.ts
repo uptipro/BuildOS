@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
@@ -64,6 +66,8 @@ import { AppCatalogModule } from './app-catalog/app-catalog.module';
         ResourcePlanningModule,
         ComplianceDocumentsModule,
         AppCatalogModule,
+        ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     ],
+    providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule { }

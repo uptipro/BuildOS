@@ -1,10 +1,13 @@
 import 'reflect-metadata';
+import helmet from 'helmet';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+
+    app.use(helmet());
 
     const allowedOrigins = [
         process.env.FRONTEND_URL || 'http://localhost:5173',

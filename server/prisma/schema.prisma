@@ -400,24 +400,20 @@ model Payment {
 
 // ─────────────── USERS ───────────────
 
-enum UserRole {
-  admin
-  manager
-  viewer
-}
-
 model User {
-  id         String    @id @default(cuid())
-  email      String    @unique
-  password   String
-  name       String
-  role       UserRole  @default(viewer)
-  department String?
-  phone      String?
-  status     String    @default("Active")
-  lastLogin  DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String
+  name            String
+  role            String    @default("viewer")
+  department      String?
+  phone           String?
+  status          String    @default("Active")
+  lastLogin       DateTime?
+  inviteToken     String?
+  inviteExpiresAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 // ─────────────── APP ROLES / PERMISSIONS ───────────────
@@ -428,6 +424,33 @@ model AppRole {
   description String?
   isSuper     Boolean  @default(false)
   permissions Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────── COMPANY PROFILE / DIRECTORS ───────────────
+
+model CompanyProfile {
+  id        String   @id @default("singleton")
+  name      String   @default("")
+  email     String   @default("")
+  phone     String   @default("")
+  address   String   @default("")
+  city      String   @default("")
+  state     String   @default("")
+  zipCode   String   @default("")
+  country   String   @default("")
+  logoUrl   String?
+  updatedAt DateTime @updatedAt
+}
+
+model Director {
+  id          String   @id @default(cuid())
+  firstName   String
+  middleName  String   @default("")
+  lastName    String
+  designation String
+  sequence    Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

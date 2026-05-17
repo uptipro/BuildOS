@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
@@ -70,5 +70,28 @@ export class AuthService {
             include: { department: true },
         });
         return { user, employee };
+    }
+
+    async activateInvite(token: string, password: string) {
+        if (!token) throw new BadRequestException('Invite token is required');
+        if (!password || password.length < 8) throw new BadRequestException('Password must be at least 8 characters');
+
+        const user = await this.prisma.user.findFirst({ where: { inviteToken: token } });
+        if (!user) throw new BadRequestException('Invalid or expired invite token');
+        if (user.inviteExpiresAt && user.inviteExpiresAt < new Date()) {
+            throw new BadRequestException('Invite token has expired');
+        }
+
+        const hashed = await bcrypt.hash(password, 10);
+        const updated = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { password: hashed, status: 'Active', inviteToken: null, inviteExpiresAt: null },
+        });
+
+        const payload = { sub: updated.id, email: updated.email, role: updated.role };
+        return {
+            access_token: this.jwtService.sign(payload),
+            user: { id: updated.id, email: updated.email, name: updated.name, role: updated.role },
+        };
     }
 }

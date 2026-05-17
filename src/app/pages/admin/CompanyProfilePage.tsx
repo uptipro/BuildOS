@@ -1,19 +1,43 @@
 import { Save, Upload, Building2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  getCompanyProfile,
+  updateCompanyProfile,
+} from "../../api/admin-extras";
 
 export function CompanyProfilePage() {
   const [formData, setFormData] = useState({
-    companyName: "BuildCorp International",
-    email: "info@buildcorp.com",
-    phone: "+1 (555) 123-4567",
-    address: "123 Construction Avenue",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "United States",
+    companyName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
   });
 
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getCompanyProfile()
+      .then((p) => {
+        setFormData({
+          companyName: p.name ?? "",
+          email: p.email ?? "",
+          phone: p.phone ?? "",
+          address: p.address ?? "",
+          city: p.city ?? "",
+          state: p.state ?? "",
+          zipCode: p.zipCode ?? "",
+          country: p.country ?? "",
+        });
+        if (p.logoUrl) setLogoPreview(p.logoUrl);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -34,8 +58,18 @@ export function CompanyProfilePage() {
   };
 
   const handleSave = () => {
-    console.log("Saving company profile:", formData);
-    // Save logic here
+    setSaving(true);
+    updateCompanyProfile({
+      name: formData.companyName,
+      email: formData.email,
+      phone: formData.phone,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      zipCode: formData.zipCode,
+      country: formData.country,
+      logoUrl: logoPreview,
+    }).finally(() => setSaving(false));
   };
 
   return (
@@ -43,23 +77,28 @@ export function CompanyProfilePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Company Profile</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Company Profile
+          </h1>
           <p className="text-sm text-gray-600 mt-1">
             Manage your organization's general information
           </p>
         </div>
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-colors"
+          disabled={loading || saving}
+          className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-colors disabled:opacity-60"
         >
           <Save className="w-4 h-4" />
-          Save Changes
+          {saving ? "Saving…" : "Save Changes"}
         </button>
       </div>
 
       {/* Company Logo */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Company Logo</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Company Logo
+        </h2>
         <div className="flex items-start gap-6">
           <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
             {logoPreview ? (

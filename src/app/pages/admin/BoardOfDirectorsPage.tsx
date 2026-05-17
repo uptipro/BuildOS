@@ -1,5 +1,11 @@
 import { Plus, Edit, Trash2, GripVertical, Search } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import {
+  getDirectors,
+  createDirector,
+  updateDirector,
+  deleteDirector,
+} from "../../api/admin-extras";
 
 interface Director {
   id: string;
@@ -15,6 +21,14 @@ export function BoardOfDirectorsPage() {
   const [editingDirector, setEditingDirector] = useState<Director | null>(null);
 
   const [directors, setDirectors] = useState<Director[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getDirectors()
+      .then(setDirectors)
+      .finally(() => setLoading(false));
+  }, []);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -74,30 +88,45 @@ export function BoardOfDirectorsPage() {
 
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this director?")) {
-      setDirectors((prev) => prev.filter((d) => d.id !== id));
+      deleteDirector(id).then(() => {
+        setDirectors((prev) => prev.filter((d) => d.id !== id));
+      });
     }
   };
 
   const handleSave = () => {
-    if (editingDirector) {
-      setDirectors((prev) =>
-        prev.map((d) =>
-          d.id === editingDirector.id ? { ...d, ...formData } : d,
-        ),
-      );
-    } else {
-      const newDirector: Director = {
-        id: Date.now().toString(),
-        ...formData,
-      };
-      setDirectors((prev) => [...prev, newDirector]);
+    const newErrors: Record<string, string> = {};
+    if (!formData.firstName.trim())
+      newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!formData.designation.trim())
+      newErrors.designation = "Designation is required";
+    if (!formData.sequence) newErrors.sequence = "Sequence is required";
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
     }
-    handleCloseModal();
+    setErrors({});
+
+    if (editingDirector) {
+      updateDirector(editingDirector.id, formData).then((updated) => {
+        setDirectors((prev) =>
+          prev.map((d) => (d.id === editingDirector.id ? updated : d)),
+        );
+        handleCloseModal();
+      });
+    } else {
+      createDirector(formData).then((created) => {
+        setDirectors((prev) => [...prev, created]);
+        handleCloseModal();
+      });
+    }
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingDirector(null);
+    setErrors({});
     setFormData({
       firstName: "",
       middleName: "",
@@ -254,6 +283,11 @@ export function BoardOfDirectorsPage() {
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
+                  {errors.firstName && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.firstName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -282,6 +316,11 @@ export function BoardOfDirectorsPage() {
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
+                  {errors.lastName && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.lastName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -296,6 +335,11 @@ export function BoardOfDirectorsPage() {
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
+                  {errors.designation && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.designation}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -313,6 +357,11 @@ export function BoardOfDirectorsPage() {
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
+                  {errors.sequence && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.sequence}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

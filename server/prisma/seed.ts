@@ -1,4 +1,4 @@
-import { PrismaClient, ProjectStatus, ProjectType, EmployeeStatus, EmploymentType, LeaveStatus, POStatus, POPaymentStatus, ExpenseStatus, IncomeStatus, BudgetScope, BudgetStatus, PaymentType, PaymentStatus, ClaimStatus, UserRole } from '@prisma/client';
+import { PrismaClient, ProjectStatus, ProjectType, EmployeeStatus, EmploymentType, LeaveStatus, POStatus, POPaymentStatus, ExpenseStatus, IncomeStatus, BudgetScope, BudgetStatus, PaymentType, PaymentStatus, ClaimStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -440,7 +440,7 @@ async function main() {
             email: 'admin@buildos.ng',
             password: hashedPassword,
             name: 'Admin User',
-            role: UserRole.admin,
+            role: 'admin',
         },
     });
     console.log('Admin user created: admin@buildos.ng');

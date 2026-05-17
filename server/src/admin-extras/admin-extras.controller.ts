@@ -21,6 +21,8 @@ export class AdminExtrasController {
     getActivityLog() { return this.svc.activityLog(); }
 
     // ── Users ──
+    @Post('admin/users/invite')
+    inviteUser(@Body() body: { email: string; name: string; role?: string }) { return this.svc.inviteUser(body); }
     @Get('users')
     getAllUsers(@Query('search') search?: string) { return this.svc.findAllUsers(search); }
     @Get('users/:id')
@@ -43,4 +45,20 @@ export class AdminExtrasController {
     updateRole(@Param('id') id: string, @Body() body: any) { return this.svc.updateRole(id, body); }
     @Delete('app-roles/:id')
     deleteRole(@Param('id') id: string) { return this.svc.deleteRole(id); }
+
+    // ── Company Profile ──
+    @Get('company-profile')
+    getCompanyProfile() { return this.svc.getCompanyProfile(); }
+    @Put('company-profile')
+    updateCompanyProfile(@Body() body: any) { return this.svc.updateCompanyProfile(body); }
+
+    // ── Directors ──
+    @Get('directors')
+    getAllDirectors() { return this.svc.findAllDirectors(); }
+    @Post('directors')
+    createDirector(@Body() body: any) { return this.svc.createDirector(body); }
+    @Put('directors/:id')
+    updateDirector(@Param('id') id: string, @Body() body: any) { return this.svc.updateDirector(id, body); }
+    @Delete('directors/:id')
+    deleteDirector(@Param('id') id: string) { return this.svc.deleteDirector(id); }
 }

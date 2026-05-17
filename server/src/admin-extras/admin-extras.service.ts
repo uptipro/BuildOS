@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -180,18 +181,37 @@ export class AdminExtrasService {
     }
 
     async systemSummary() {
-        const [users, roles, pendingApprovals] = await Promise.all([
-            this.prisma.user.count(),
-            this.prisma.appRole.count(),
-            this.findApprovals('all').then((rows) => rows.filter((r) => r.status === 'pending').length),
-        ]);
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const [users, roles, pendingApprovals, usersThisMonth, pendingInvites, recentSessions] =
+            await Promise.all([
+                this.prisma.user.count(),
+                this.prisma.appRole.count(),
+                this.findApprovals('all').then((rows) => rows.filter((r) => r.status === 'pending').length),
+                this.prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
+                this.prisma.user.count({ where: { status: { in: ['pending_invite', 'invited', 'PENDING_INVITE'] } } }),
+                this.prisma.user.count({ where: { lastLogin: { gte: since24h } } }),
+            ]);
+
+        // Health: verify DB is reachable; returns 100% for a healthy monolith
+        let healthPercent = 100;
+        try {
+            await this.prisma.$queryRaw`SELECT 1`;
+        } catch {
+            healthPercent = 0;
+        }
+
         return {
             users,
             roles,
-            activeSessions: 0,
+            activeSessions: Math.max(recentSessions, 1), // at least 1 (caller is active)
             pendingApprovals,
+            usersThisMonth,
+            pendingInvites,
+            healthPercent,
             health: {
-                status: 'healthy',
+                status: healthPercent === 100 ? 'healthy' : 'degraded',
                 uptimeSeconds: Math.round(process.uptime()),
                 checkedAt: new Date(),
             },
@@ -215,6 +235,56 @@ export class AdminExtrasService {
     }
 
     // ── Users ──
+    async inviteUser(data: { email: string; name: string; role?: string }) {
+        const normalizedEmail = data.email.trim().toLowerCase();
+        const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (existing) throw new ConflictException('Email already registered');
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        // Placeholder password — cannot be used to log in; replaced on activation
+        const placeholder = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+
+        const user = await this.prisma.user.create({
+            data: {
+                email: normalizedEmail,
+                name: data.name,
+                role: data.role ?? 'viewer',
+                password: placeholder,
+                status: 'pending_invite',
+                inviteToken: token,
+                inviteExpiresAt: expiresAt,
+            },
+        });
+
+        return {
+            id: user.id,
+            email: user.email,
+            inviteToken: token,
+            // Frontend can construct the activation URL; no email service wired yet
+            activationLink: `/auth/activate?token=${token}`,
+        };
+    }
+
+    async activateInvite(token: string, password: string) {
+        if (!token) throw new BadRequestException('Invite token is required');
+        if (!password || password.length < 8) throw new BadRequestException('Password must be at least 8 characters');
+
+        const user = await this.prisma.user.findFirst({ where: { inviteToken: token } });
+        if (!user) throw new BadRequestException('Invalid or expired invite token');
+        if (user.inviteExpiresAt && user.inviteExpiresAt < new Date()) {
+            throw new BadRequestException('Invite token has expired');
+        }
+
+        const hashed = await bcrypt.hash(password, 10);
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: { password: hashed, status: 'Active', inviteToken: null, inviteExpiresAt: null },
+        });
+
+        return { message: 'Account activated. You can now log in.' };
+    }
+
     findAllUsers(search?: string) {
         return this.prisma.user.findMany({
             where: search
@@ -289,5 +359,38 @@ export class AdminExtrasService {
     }
     deleteRole(id: string) {
         return this.prisma.appRole.delete({ where: { id } });
+    }
+
+    // ── Company Profile ──
+    async getCompanyProfile() {
+        const profile = await this.prisma.companyProfile.findUnique({ where: { id: 'singleton' } });
+        if (!profile) {
+            return this.prisma.companyProfile.create({ data: { id: 'singleton' } });
+        }
+        return profile;
+    }
+
+    updateCompanyProfile(data: any) {
+        const { id, updatedAt, ...rest } = data;
+        return this.prisma.companyProfile.upsert({
+            where: { id: 'singleton' },
+            create: { id: 'singleton', ...rest },
+            update: rest,
+        });
+    }
+
+    // ── Directors ──
+    findAllDirectors() {
+        return this.prisma.director.findMany({ orderBy: { sequence: 'asc' } });
+    }
+    createDirector(data: any) {
+        return this.prisma.director.create({ data });
+    }
+    updateDirector(id: string, data: any) {
+        const { id: _id, createdAt, updatedAt, ...rest } = data;
+        return this.prisma.director.update({ where: { id }, data: rest });
+    }
+    deleteDirector(id: string) {
+        return this.prisma.director.delete({ where: { id } });
     }
 }

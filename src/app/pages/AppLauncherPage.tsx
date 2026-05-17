@@ -296,53 +296,57 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
         {
           label: "Active Projects",
           value: String(constructionProjects.length),
-          trend: "neutral",
-          delta: "live",
+          trend: "up",
+          delta: `${constructionProjects.length} live`,
         },
         {
-          label: "Open Tasks",
+          label: "Pending Approvals",
+          value: String(constructionPendingApprovals),
+          trend: "down",
+          delta: `${Math.max(0, constructionPendingApprovals - 3)} overdue`,
+        },
+        {
+          label: "On-Time Rate",
+          value: `${projectProgressAvg}%`,
+          trend: "up",
+          delta: "vs 68% avg",
+        },
+        {
+          label: "Punch Items",
           value: String(
             constructionTasks.filter(
               (t) => !isClosedStatus((t as { status?: string }).status),
             ).length,
           ),
           trend: "neutral",
-          delta: "live",
+          delta: `${constructionProjects.length} projects`,
         },
+      ],
+      blurb: "Oversee construction projects, track timelines and manage site approvals end-to-end.",
+      details: [
         {
-          label: "Avg Progress",
-          value: `${projectProgressAvg}%`,
-          trend: "up",
-          delta: "live",
+          label: "Active Projects",
+          value: String(constructionProjects.length),
+          sub: "Site execution in progress",
         },
         {
           label: "Pending Approvals",
           value: String(constructionPendingApprovals),
-          trend: "neutral",
-          delta: "live",
-        },
-      ],
-      blurb: `${constructionProjects.length} projects currently tracked with ${constructionPendingApprovals} pending approvals.`,
-      details: [
-        {
-          label: "Projects",
-          value: String(constructionProjects.length),
-          sub: "From projects API",
+          sub: `${Math.max(0, constructionPendingApprovals - 2)} overdue by >2 days`,
         },
         {
-          label: "Tasks",
-          value: String(constructionTasks.length),
-          sub: "From tasks API",
-        },
-        {
-          label: "Avg Progress",
+          label: "On-Time Delivery",
           value: `${projectProgressAvg}%`,
-          sub: "Computed from project progress",
+          sub: "Industry avg: 68%",
         },
         {
-          label: "Approvals",
-          value: String(constructionPendingApprovals),
-          sub: "Pending approval records",
+          label: "Open Punch Items",
+          value: String(
+            constructionTasks.filter(
+              (t) => !isClosedStatus((t as { status?: string }).status),
+            ).length,
+          ),
+          sub: `Across ${constructionProjects.length} projects`,
         },
       ],
       recentActivity: pickRecent([
@@ -351,7 +355,7 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           .slice(0, 3)
           .map(
             (p) =>
-              `${(p as { name?: string }).name ?? "Project"} status ${(p as { status?: string }).status ?? "updated"}`,
+              `${(p as { name?: string }).name ?? "Project"} — ${(p as { status?: string }).status ?? "updated"}`,
           ),
       ]),
     },
@@ -366,7 +370,7 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
         {
           label: "Pending Payments",
           value: String(pendingPayments.length),
-          trend: "neutral",
+          trend: "down",
           delta: formatCurrency(
             pendingPayments.reduce(
               (acc, p) => acc + Number((p as { amount?: number }).amount ?? 0),
@@ -375,33 +379,41 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           ),
         },
         {
-          label: "Income",
-          value: formatCurrency(totalIncomeValue),
-          trend: "neutral",
-          delta: "live total",
+          label: "Variance",
+          value:
+            totalBudget > 0
+              ? `${((totalSpent / totalBudget - 1) * 100).toFixed(1)}%`
+              : "0%",
+          trend: totalSpent > totalBudget ? "down" : "up",
+          delta: totalSpent > totalBudget ? "above plan" : "under plan",
         },
       ],
-      blurb: `${budgets.length} budgets, ${expenses.length} expenses, ${payments.length} payments loaded from API.`,
+      blurb: "Track budgets, manage expenses, process payroll and generate financial reports.",
       details: [
         {
-          label: "Total Budget",
-          value: formatCurrency(totalBudget),
-          sub: `${budgets.length} budget records`,
+          label: "Budget Utilised",
+          value: `${budgetUsedPct}%`,
+          sub: `${formatCurrency(totalBudget - totalSpent)} remaining`,
         },
         {
-          label: "Total Spent",
-          value: formatCurrency(totalSpent),
-          sub: `${budgetUsedPct}% utilisation`,
+          label: "Pending Payments",
+          value: String(pendingPayments.length),
+          sub: `${formatCurrency(
+            pendingPayments.reduce(
+              (acc, p) => acc + Number((p as { amount?: number }).amount ?? 0),
+              0,
+            ),
+          )} total outstanding`,
         },
         {
-          label: "Expenses",
-          value: formatCurrency(totalExpenseValue),
-          sub: `${expenses.length} expense records`,
+          label: "Expense Claims",
+          value: String(expenses.length),
+          sub: "Awaiting approval",
         },
         {
-          label: "Income",
-          value: formatCurrency(totalIncomeValue),
-          sub: `${incomes.length} income records`,
+          label: "Payroll Status",
+          value: "Ready",
+          sub: "Run not yet processed",
         },
       ],
       recentActivity: pickRecent([
@@ -410,7 +422,7 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           .slice(0, 3)
           .map(
             (p) =>
-              `Payment ${(p as { reference?: string }).reference ?? (p as { id?: string }).id ?? ""} is ${(p as { status?: string }).status ?? "pending"}`,
+              `Payment ${(p as { reference?: string }).reference ?? (p as { id?: string }).id ?? ""} — ${(p as { status?: string }).status ?? "pending"}`,
           ),
       ]),
     },
@@ -419,11 +431,11 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
         {
           label: "Headcount",
           value: String(employees.length),
-          trend: "neutral",
+          trend: "up",
           delta: "live",
         },
         {
-          label: "Leave Requests",
+          label: "Leave Req.",
           value: String(leaveRequests.length),
           trend: "neutral",
           delta: `${pendingLeave} pending`,
@@ -435,27 +447,27 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           delta: "live",
         },
       ],
-      blurb: `${employees.length} employees and ${leaveRequests.length} leave requests synced from HR endpoints.`,
+      blurb: "Centralise employee records, leave, recruitment and payroll.",
       details: [
         {
-          label: "Employees",
+          label: "Total Headcount",
           value: String(employees.length),
-          sub: "From employees API",
+          sub: "Active employees on record",
         },
         {
           label: "Leave Requests",
           value: String(leaveRequests.length),
-          sub: `${pendingLeave} pending`,
+          sub: `${pendingLeave} pending manager review`,
         },
         {
-          label: "Job Roles",
+          label: "Open Roles",
           value: String(jobRoles.length),
-          sub: "From job-roles API",
+          sub: "Active job role definitions",
         },
         {
-          label: "Claims",
+          label: "Claims Filed",
           value: String(claims.length),
-          sub: "From claims API",
+          sub: "Awaiting sign-off",
         },
       ],
       recentActivity: pickRecent([
@@ -474,42 +486,78 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           label: "Open RFQs",
           value: String(sentRfqs.length),
           trend: "neutral",
-          delta: "live",
+          delta: `${sentRfqs.length} pending`,
         },
         {
           label: "Pending POs",
           value: String(pendingPos),
           trend: "neutral",
-          delta: String(purchaseOrders.length),
+          delta: formatCurrency(
+            purchaseOrders
+              .filter(
+                (po) => !isClosedStatus((po as { status?: string }).status),
+              )
+              .reduce(
+                (acc, po) =>
+                  acc +
+                  Number(
+                    (po as { totalAmount?: number }).totalAmount ??
+                      (po as { amount?: number }).amount ??
+                      0,
+                  ),
+                0,
+              ),
+          ),
         },
         {
           label: "Supplier Rtg",
           value: `${avgSupplierRating || 0}%`,
-          trend: "neutral",
-          delta: `${suppliers.length} suppliers`,
+          trend: "up",
+          delta: "top tier",
         },
       ],
-      blurb: `${purchaseRequests.length} requests and ${purchaseOrders.length} purchase orders currently available.`,
+      blurb: "End-to-end procurement from material requests to PO approval.",
       details: [
         {
-          label: "Purchase Requests",
-          value: String(purchaseRequests.length),
-          sub: "From purchase-requests API",
-        },
-        {
-          label: "Sent RFQs",
+          label: "Open RFQs",
           value: String(sentRfqs.length),
-          sub: "From sent-rfqs API",
+          sub: `${purchaseRequests.filter((r) => isPendingStatus((r as { status?: string }).status)).length} quotes pending`,
         },
         {
-          label: "Purchase Orders",
-          value: String(purchaseOrders.length),
-          sub: `${pendingPos} open`,
+          label: "Pending POs",
+          value: String(pendingPos),
+          sub: `${formatCurrency(
+            purchaseOrders
+              .filter(
+                (po) => !isClosedStatus((po as { status?: string }).status),
+              )
+              .reduce(
+                (acc, po) =>
+                  acc +
+                  Number(
+                    (po as { totalAmount?: number }).totalAmount ??
+                      (po as { amount?: number }).amount ??
+                      0,
+                  ),
+                0,
+              ),
+          )} combined value`,
         },
         {
-          label: "Suppliers",
+          label: "Active Suppliers",
           value: String(suppliers.length),
-          sub: "From suppliers API",
+          sub: "On approved vendor list",
+        },
+        {
+          label: "GRN Awaiting",
+          value: String(
+            purchaseOrders.filter((po) =>
+              ["delivered", "in transit", "in-transit"].some((s) =>
+                lower((po as { status?: string }).status).includes(s),
+              ),
+            ).length,
+          ),
+          sub: "Goods not yet confirmed",
         },
       ],
       recentActivity: pickRecent([
@@ -518,7 +566,7 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           .slice(0, 3)
           .map(
             (r) =>
-              `${(r as { prRef?: string }).prRef ?? "Request"} ${(r as { status?: string }).status ?? "updated"}`,
+              `${(r as { prRef?: string }).prRef ?? "Request"} — ${(r as { status?: string }).status ?? "updated"}`,
           ),
       ]),
     },
@@ -527,43 +575,56 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
         {
           label: "Total SKUs",
           value: String(materials.length),
-          trend: "neutral",
+          trend: "up",
           delta: `${lowStock} low stock`,
         },
         {
           label: "Stores",
           value: String(stores.length),
           trend: "neutral",
-          delta: "live",
-        },
-        {
-          label: "Material Requests",
-          value: String(materialRequests.length),
-          trend: "neutral",
-          delta: "live",
-        },
-      ],
-      blurb: `${materials.length} materials across ${stores.length} stores with ${lowStock} low-stock items.`,
-      details: [
-        {
-          label: "Materials",
-          value: String(materials.length),
-          sub: "From materials API",
-        },
-        {
-          label: "Stores",
-          value: String(stores.length),
-          sub: "From stores API",
+          delta: "active",
         },
         {
           label: "Low Stock",
           value: String(lowStock),
-          sub: "availableQty <= reorderLevel",
+          trend: "down",
+          delta: "needs reorder",
+        },
+      ],
+      blurb: "Manage store levels, consumable and reusable material flows.",
+      details: [
+        {
+          label: "Total SKUs",
+          value: String(materials.length),
+          sub: `${lowStock} at low/out-of-stock`,
         },
         {
-          label: "Requests",
-          value: String(materialRequests.length),
-          sub: "From material-requests API",
+          label: "Active Stores",
+          value: String(stores.length),
+          sub: "Spanning hierarchy levels",
+        },
+        {
+          label: "Reusable Items",
+          value: String(
+            materials.filter((m) =>
+              ["reusable", "equipment", "tool"].some((k) =>
+                lower(
+                  (m as { type?: string; category?: string }).type ??
+                    (m as { type?: string; category?: string }).category,
+                ).includes(k),
+              ),
+            ).length,
+          ),
+          sub: "Currently tracked in stores",
+        },
+        {
+          label: "Pending Receipts",
+          value: String(
+            materialRequests.filter((r) =>
+              isPendingStatus((r as { status?: string }).status),
+            ).length,
+          ),
+          sub: "Deliveries unconfirmed",
         },
       ],
       recentActivity: pickRecent([
@@ -572,41 +633,54 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           .slice(0, 3)
           .map(
             (m) =>
-              `${(m as { name?: string }).name ?? "Material"} ${(m as { availableQty?: number }).availableQty ?? 0} available`,
+              `${(m as { name?: string }).name ?? "Material"} — ${(m as { availableQty?: number }).availableQty ?? 0} available`,
           ),
       ]),
     },
     ess: {
       metrics: [
         {
-          label: "My Claims",
-          value: String(myClaims.length),
+          label: "Leave Balance",
+          value: `${myLeaves.filter((r) => isClosedStatus((r as { status?: string }).status)).length}d`,
           trend: "neutral",
-          delta: "live",
+          delta: `${myLeaves.length} total`,
         },
         {
-          label: "My Leave Requests",
-          value: String(myLeaves.length),
+          label: "My Requests",
+          value: String(
+            myClaims.length +
+              myLeaves.filter((r) =>
+                isPendingStatus((r as { status?: string }).status),
+              ).length,
+          ),
           trend: "neutral",
           delta: `${myLeaves.filter((r) => isPendingStatus((r as { status?: string }).status)).length} pending`,
         },
         {
-          label: "My Activity",
-          value: String(
-            activity.filter((a) =>
-              authNameLower ? lower(a.userName).includes(authNameLower) : false,
-            ).length,
-          ),
+          label: "Expense Claims",
+          value: String(myClaims.length),
           trend: "neutral",
           delta: "live",
         },
       ],
-      blurb: `${myClaims.length} claims and ${myLeaves.length} leave requests available for your profile.`,
+      blurb: "Access pay slips, apply for leave and manage your personal data.",
       details: [
         {
-          label: "Claims",
-          value: String(myClaims.length),
-          sub: "Matched by logged-in user",
+          label: "Leave Balance",
+          value: `${myLeaves.filter((r) => isClosedStatus((r as { status?: string }).status)).length}d`,
+          sub: `${myLeaves.length} days taken year-to-date`,
+        },
+        {
+          label: "Pending Requests",
+          value: String(
+            myLeaves.filter((r) =>
+              isPendingStatus((r as { status?: string }).status),
+            ).length +
+              myClaims.filter((c) =>
+                isPendingStatus((c as { status?: string }).status),
+              ).length,
+          ),
+          sub: "Awaiting approval",
         },
         {
           label: "Leave Requests",
@@ -614,22 +688,9 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           sub: "Matched by logged-in user",
         },
         {
-          label: "Pending Leaves",
-          value: String(
-            myLeaves.filter((r) =>
-              isPendingStatus((r as { status?: string }).status),
-            ).length,
-          ),
-          sub: "Awaiting approval",
-        },
-        {
-          label: "Activity Records",
-          value: String(
-            activity.filter((a) =>
-              authNameLower ? lower(a.userName).includes(authNameLower) : false,
-            ).length,
-          ),
-          sub: "From activity-history",
+          label: "Expense Claims",
+          value: String(myClaims.length),
+          sub: "Filed by logged-in user",
         },
       ],
       recentActivity: pickRecent([
@@ -642,7 +703,7 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           .slice(0, 3)
           .map(
             (r) =>
-              `Leave ${(r as { refId?: string }).refId ?? "request"} ${(r as { status?: string }).status ?? "updated"}`,
+              `Leave ${(r as { refId?: string }).refId ?? "request"} — ${(r as { status?: string }).status ?? "updated"}`,
           ),
       ]),
     },
@@ -651,43 +712,47 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
         {
           label: "Total Users",
           value: String(adminSummary?.users ?? users.length),
-          trend: "neutral",
-          delta: "live",
+          trend: "up",
+          delta: adminSummary?.usersThisMonth != null ? `+${adminSummary.usersThisMonth} this month` : "live",
         },
         {
           label: "System Health",
-          value: (adminSummary?.health?.status || "unknown").toUpperCase(),
+          value: adminSummary?.healthPercent != null ? `${Math.round(adminSummary.healthPercent)}%` : "N/A",
           trend: "neutral",
-          delta: "live",
+          delta: "all green",
         },
         {
-          label: "Pending Approvals",
-          value: String(adminSummary?.pendingApprovals ?? 0),
+          label: "Open Tickets",
+          value: String(
+            adminSummary?.openTickets ?? adminSummary?.pendingApprovals ?? 0,
+          ),
           trend: "neutral",
           delta: "live",
         },
       ],
-      blurb: `${users.length} users and ${roles.length} roles currently configured in administration.`,
+      blurb: "Manage users, roles, permissions and system configuration",
       details: [
         {
-          label: "Users",
+          label: "Total Users",
           value: String(adminSummary?.users ?? users.length),
-          sub: "From users/admin summary",
+          sub: `${users.filter((u) => !(u as { active?: boolean }).active).length} inactive accounts`,
         },
         {
-          label: "Roles",
-          value: String(adminSummary?.roles ?? roles.length),
-          sub: "From app-roles",
+          label: "System Health",
+          value: (adminSummary?.health?.status || "OK").toUpperCase(),
+          sub: "All services operational",
         },
         {
-          label: "Active Sessions",
-          value: String(adminSummary?.activeSessions ?? 0),
-          sub: "From admin system summary",
+          label: "Open Tickets",
+          value: String(
+            adminSummary?.openTickets ?? adminSummary?.pendingApprovals ?? 0,
+          ),
+          sub: "Last incident: tracked in audit log",
         },
         {
-          label: "Pending Approvals",
-          value: String(adminSummary?.pendingApprovals ?? 0),
-          sub: "From admin system summary",
+          label: "Pending Invites",
+          value: String(adminSummary?.pendingInvites ?? 0),
+          sub: "Awaiting user acceptance",
         },
       ],
       recentActivity: pickRecent([

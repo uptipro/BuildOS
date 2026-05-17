@@ -21,6 +21,11 @@ export class AuthController {
         return this.authService.verifyEmail(body.token);
     }
 
+    @Post('activate')
+    activate(@Body() body: { token: string; password: string }) {
+        return this.authService.activateInvite(body.token, body.password);
+    }
+
     @Get('me')
     async getMe(@Headers('authorization') auth: string) {
         if (!auth?.startsWith('Bearer ')) throw new UnauthorizedException('No token provided');

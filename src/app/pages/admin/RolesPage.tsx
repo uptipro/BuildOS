@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getAppRoles } from "../../api/admin-extras";
 import {
   Shield,
   Plus,
@@ -433,6 +434,34 @@ function AddRoleModal({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
+
+  useEffect(() => {
+    getAppRoles().then((apiRoles) => {
+      setRoles((prev) =>
+        apiRoles.map((r) => {
+          const existing = prev.find((p) => p.id === r.id);
+          if (existing) return { ...existing, name: r.name };
+          return {
+            id: r.id,
+            name: r.name,
+            description: r.description ?? "",
+            users: 0,
+            isSuper: r.isSystem,
+            permissions: {},
+            appAccess: {
+              construction: false,
+              finance: false,
+              hr: false,
+              procurement: false,
+              admin: r.isSystem,
+              ess: false,
+            },
+            navAccess: {},
+          } as Role;
+        }),
+      );
+    });
+  }, []);
   const [processes, setProcesses] = useState<ProcessDef[]>(
     DEFAULT_PROCESSES.slice(0, 8),
   );
