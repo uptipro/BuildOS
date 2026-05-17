@@ -322,7 +322,8 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           delta: `${constructionProjects.length} projects`,
         },
       ],
-      blurb: "Oversee construction projects, track timelines and manage site approvals end-to-end.",
+      blurb:
+        "Oversee construction projects, track timelines and manage site approvals end-to-end.",
       details: [
         {
           label: "Active Projects",
@@ -388,7 +389,8 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           delta: totalSpent > totalBudget ? "above plan" : "under plan",
         },
       ],
-      blurb: "Track budgets, manage expenses, process payroll and generate financial reports.",
+      blurb:
+        "Track budgets, manage expenses, process payroll and generate financial reports.",
       details: [
         {
           label: "Budget Utilised",
@@ -713,11 +715,17 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
           label: "Total Users",
           value: String(adminSummary?.users ?? users.length),
           trend: "up",
-          delta: adminSummary?.usersThisMonth != null ? `+${adminSummary.usersThisMonth} this month` : "live",
+          delta:
+            adminSummary?.usersThisMonth != null
+              ? `+${adminSummary.usersThisMonth} this month`
+              : "live",
         },
         {
           label: "System Health",
-          value: adminSummary?.healthPercent != null ? `${Math.round(adminSummary.healthPercent)}%` : "N/A",
+          value:
+            adminSummary?.healthPercent != null
+              ? `${Math.round(adminSummary.healthPercent)}%`
+              : "N/A",
           trend: "neutral",
           delta: "all green",
         },
