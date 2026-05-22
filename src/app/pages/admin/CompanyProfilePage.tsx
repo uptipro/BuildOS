@@ -1,27 +1,41 @@
-import { Save, Upload, Building2 } from "lucide-react";
+import { Save, Upload, Building2, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   getCompanyProfile,
   updateCompanyProfile,
 } from "../../api/admin-extras";
+import { createDepartment, fetchDepartments } from "../../api/departments";
 
-const COUNTRY_OPTIONS = [
-  "Nigeria",
-  "United States",
-  "United Kingdom",
-  "United Arab Emirates",
-  "India",
-  "South Africa",
-  "Kenya",
-  "Ghana",
+const FALLBACK_COUNTRIES = [
+  "Australia",
   "Canada",
+  "France",
   "Germany",
+  "Ghana",
+  "India",
+  "Kenya",
+  "Nigeria",
+  "South Africa",
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
 ];
+
+async function fetchCountryOptions(): Promise<string[]> {
+  const res = await fetch("https://restcountries.com/v3.1/all?fields=name");
+  if (!res.ok) throw new Error("Failed to fetch countries");
+
+  const data = (await res.json()) as { name?: { common?: string } }[];
+  return data
+    .map((item) => item.name?.common?.trim())
+    .filter((name): name is string => Boolean(name))
+    .sort((a, b) => a.localeCompare(b));
+}
 
 async function compressImage(
   file: File,
-  maxWidth = 960,
-  quality = 0.82,
+  maxWidth = 720,
+  quality = 0.72,
 ): Promise<string> {
   const imageData = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -63,10 +77,33 @@ export function CompanyProfilePage() {
   });
 
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [countries, setCountries] = useState<string[]>(FALLBACK_COUNTRIES);
+  const [departments, setDepartments] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [newDepartmentName, setNewDepartmentName] = useState("");
+  const [newDepartmentDescription, setNewDepartmentDescription] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creatingDepartment, setCreatingDepartment] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [departmentMessage, setDepartmentMessage] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
+    fetchCountryOptions()
+      .then((list) => {
+        if (list.length > 0) setCountries(list);
+      })
+      .catch(() => setCountries(FALLBACK_COUNTRIES));
+
+    fetchDepartments()
+      .then((list) =>
+        setDepartments(list.map((d) => ({ id: d.id, name: d.name }))),
+      )
+      .catch(() => setDepartments([]));
+
     getCompanyProfile()
       .then((p) => {
         setFormData({
@@ -94,9 +131,14 @@ export function CompanyProfilePage() {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveMessage("Logo is too large. Please upload an image up to 5MB.");
+      return;
+    }
     try {
       const compressed = await compressImage(file);
       setLogoPreview(compressed);
+      setSaveMessage(null);
     } catch {
       // Fallback for unsupported image formats.
       const reader = new FileReader();
@@ -105,19 +147,66 @@ export function CompanyProfilePage() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
-    updateCompanyProfile({
-      name: formData.companyName,
-      email: formData.email,
-      phone: formData.phone,
-      address: formData.address,
-      city: formData.city,
-      state: formData.state,
-      zipCode: formData.zipCode,
-      country: formData.country,
-      logoUrl: logoPreview,
-    }).finally(() => setSaving(false));
+    setSaveMessage(null);
+    try {
+      await updateCompanyProfile({
+        name: formData.companyName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        country: formData.country,
+        logoUrl: logoPreview,
+      });
+      setSaveMessage("Company profile updated successfully.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save";
+      if (message.includes("413")) {
+        setSaveMessage(
+          "Upload is too large for the server. Try a smaller image and save again.",
+        );
+      } else {
+        setSaveMessage(message);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateDepartment = async () => {
+    const cleanName = newDepartmentName.trim();
+    if (!cleanName) {
+      setDepartmentMessage("Department name is required.");
+      return;
+    }
+
+    setCreatingDepartment(true);
+    setDepartmentMessage(null);
+    try {
+      await createDepartment({
+        name: cleanName,
+        description:
+          newDepartmentDescription.trim() || `${cleanName} department`,
+        location: "Head Office",
+        budget: "0",
+      });
+
+      const list = await fetchDepartments();
+      setDepartments(list.map((d) => ({ id: d.id, name: d.name })));
+      setNewDepartmentName("");
+      setNewDepartmentDescription("");
+      setDepartmentMessage("Department created.");
+    } catch {
+      setDepartmentMessage(
+        "Failed to create department. It may already exist.",
+      );
+    } finally {
+      setCreatingDepartment(false);
+    }
   };
 
   return (
@@ -141,6 +230,12 @@ export function CompanyProfilePage() {
           {saving ? "Saving…" : "Save Changes"}
         </button>
       </div>
+
+      {saveMessage && (
+        <div className="bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-700">
+          {saveMessage}
+        </div>
+      )}
 
       {/* Company Logo */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -242,7 +337,7 @@ export function CompanyProfilePage() {
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
             >
               <option value="">Select country</option>
-              {COUNTRY_OPTIONS.map((country) => (
+              {countries.map((country) => (
                 <option key={country} value={country}>
                   {country}
                 </option>
@@ -300,6 +395,65 @@ export function CompanyProfilePage() {
               onChange={handleInputChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
             />
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Departments
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <input
+            type="text"
+            value={newDepartmentName}
+            onChange={(e) => setNewDepartmentName(e.target.value)}
+            placeholder="Department name"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newDepartmentDescription}
+              onChange={(e) => setNewDepartmentDescription(e.target.value)}
+              placeholder="Description (optional)"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+            />
+            <button
+              type="button"
+              onClick={handleCreateDepartment}
+              disabled={creatingDepartment}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 disabled:opacity-60"
+            >
+              <Plus className="w-4 h-4" />
+              {creatingDepartment ? "Creating…" : "Create"}
+            </button>
+          </div>
+        </div>
+
+        {departmentMessage && (
+          <p className="text-sm text-gray-600 mb-3">{departmentMessage}</p>
+        )}
+
+        <div className="rounded-md border border-gray-200 overflow-hidden">
+          <div className="px-4 py-2 text-xs uppercase tracking-wide font-semibold text-gray-500 bg-gray-50 border-b border-gray-200">
+            Existing Departments ({departments.length})
+          </div>
+          <div className="max-h-52 overflow-auto divide-y divide-gray-100">
+            {departments.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-gray-500">
+                No departments yet.
+              </p>
+            ) : (
+              departments.map((department) => (
+                <p
+                  key={department.id}
+                  className="px-4 py-2 text-sm text-gray-700"
+                >
+                  {department.name}
+                </p>
+              ))
+            )}
           </div>
         </div>
       </div>

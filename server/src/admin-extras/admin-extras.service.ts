@@ -32,10 +32,10 @@ export class AdminExtrasService {
         await fs.writeFile(this.settingsFilePath, JSON.stringify(data, null, 2), 'utf-8');
     }
 
-    private async sendInviteEmail(email: string, name: string, activationLink: string) {
+    private async sendInviteEmail(email: string, name: string, activationLink: string): Promise<{ sent: boolean; warning?: string }> {
         const emailProvider = String(process.env.EMAIL_PROVIDER || 'resend').toLowerCase();
         if (emailProvider !== 'resend') {
-            return;
+            return { sent: false, warning: `Invite email skipped: provider '${emailProvider}' is not supported by this service` };
         }
 
         const resendApiKey = process.env.RESEND_API_KEY;
@@ -43,8 +43,9 @@ export class AdminExtrasService {
         const from = process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL;
 
         if (!resendApiKey || !from) {
-            this.logger.warn('Invite email skipped: missing RESEND_API_KEY or EMAIL_FROM/INVITE_FROM_EMAIL');
-            return;
+            const warning = 'Invite email skipped: missing RESEND_API_KEY or EMAIL_FROM/INVITE_FROM_EMAIL';
+            this.logger.warn(warning);
+            return { sent: false, warning };
         }
 
         const resend = new Resend(resendApiKey);
@@ -54,6 +55,7 @@ export class AdminExtrasService {
             subject: 'You are invited to BuildOS',
             text: `Hi ${name},\n\nYou have been invited to BuildOS. Activate your account here: ${activationLink}\n\nThis link expires in 7 days.`,
         });
+        return { sent: true };
     }
 
     private normalizeStatus(status: string) {
@@ -308,10 +310,16 @@ export class AdminExtrasService {
 
         const activationLink = `/auth/activate?token=${token}`;
 
+        let inviteEmailSent = false;
+        let inviteEmailWarning: string | undefined;
         try {
-            await this.sendInviteEmail(normalizedEmail, data.name, activationLink);
+            const result = await this.sendInviteEmail(normalizedEmail, data.name, activationLink);
+            inviteEmailSent = result.sent;
+            inviteEmailWarning = result.warning;
         } catch (error) {
             // Keep invite creation successful even if email delivery fails.
+            inviteEmailSent = false;
+            inviteEmailWarning = `Invite email failed: ${error instanceof Error ? error.message : 'unknown error'}`;
             this.logger.warn(`Invite email failed for ${normalizedEmail}: ${error instanceof Error ? error.message : 'unknown error'}`);
         }
 
@@ -320,6 +328,8 @@ export class AdminExtrasService {
             email: user.email,
             inviteToken: token,
             activationLink,
+            inviteEmailSent,
+            inviteEmailWarning,
         };
     }
 

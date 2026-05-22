@@ -728,9 +728,11 @@ function UserDetailPanel({
 function AddUserModal({
   onClose,
   onCreated,
+  onInviteWarning,
 }: {
   onClose: () => void;
   onCreated: (u: UserRecord) => void;
+  onInviteWarning: (message: string) => void;
 }) {
   const [form, setForm] = useState({
     name: "",
@@ -775,7 +777,21 @@ function AddUserModal({
     setLoading(true);
     setError("");
     try {
-      await inviteUser({ name: form.name, email: form.email, role: form.role });
+      const inviteResult = await inviteUser({
+        name: form.name,
+        email: form.email,
+        role: form.role,
+      });
+
+      if (inviteResult.inviteEmailSent === false) {
+        const warning =
+          inviteResult.inviteEmailWarning ||
+          "Invite created, but email delivery failed.";
+        const message = `${warning} Activation link: ${inviteResult.activationLink}`;
+        onInviteWarning(message);
+        console.warn("Invite email delivery warning:", message);
+      }
+
       onCreated({
         id: `pending-${Date.now()}`,
         name: form.name,
@@ -797,8 +813,12 @@ function AddUserModal({
         requests: [],
       });
       onClose();
-    } catch {
-      setError("Failed to send invite. Please try again.");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to send invite. Please try again.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -950,6 +970,7 @@ export function UsersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [inviteWarning, setInviteWarning] = useState("");
 
   useEffect(() => {
     getUsers()
@@ -977,11 +998,18 @@ export function UsersPage() {
 
   return (
     <div>
+      {inviteWarning && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {inviteWarning}
+        </div>
+      )}
+
       {/* Add User Modal */}
       {showAddModal && (
         <AddUserModal
           onClose={() => setShowAddModal(false)}
           onCreated={(newUser) => setUsers((prev) => [newUser, ...prev])}
+          onInviteWarning={(message) => setInviteWarning(message)}
         />
       )}
 

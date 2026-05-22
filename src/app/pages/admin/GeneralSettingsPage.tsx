@@ -214,6 +214,8 @@ const defaultCurrencyOptions = [
   { label: "South African Rand", value: "ZAR", meta: "R" },
 ];
 
+type CurrencyOption = (typeof defaultCurrencyOptions)[number];
+
 export function GeneralSettingsPage() {
   // ── Tab state ────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<
@@ -235,7 +237,20 @@ export function GeneralSettingsPage() {
     defaultCurrencyOptions,
   );
   const handleChange = (field: string, value: string) =>
-    setSettings((prev) => ({ ...prev, [field]: value }));
+    setSettings((prev) => {
+      const next = { ...prev, [field]: value };
+      localStorage.setItem("buildos_general_settings", JSON.stringify(next));
+      return next;
+    });
+  const saveCurrencyOptions = (
+    updater: CurrencyOption[] | ((prev: CurrencyOption[]) => CurrencyOption[]),
+  ) => {
+    setCurrencyOptions((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      localStorage.setItem("buildos_currency_options", JSON.stringify(next));
+      return next;
+    });
+  };
   const handleSave = () => {
     localStorage.setItem("buildos_general_settings", JSON.stringify(settings));
     localStorage.setItem(
@@ -442,7 +457,7 @@ export function GeneralSettingsPage() {
                       value: label.substring(0, 3).toUpperCase(),
                       meta: (meta ?? "").trim(),
                     };
-                    setCurrencyOptions((prev) => [...prev, opt]);
+                    saveCurrencyOptions((prev) => [...prev, opt]);
                     return opt;
                   }}
                   placeholder="Select or add currency"

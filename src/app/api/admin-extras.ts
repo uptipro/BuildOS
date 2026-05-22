@@ -7,7 +7,10 @@ export interface AppUser {
 }
 export interface AppRole {
     id: string; name: string; description?: string;
-    permissions: string[]; isSystem: boolean; createdAt: string;
+    permissions: string[] | Record<string, unknown>;
+    isSystem?: boolean;
+    isSuper?: boolean;
+    createdAt: string;
 }
 export interface AdminSystemSummary {
     users: number;
@@ -50,7 +53,14 @@ export const getAdminSystemSummary = () =>
 export const getAdminActivityLog = () =>
     apiFetch<AdminActivity[]>('/admin/activity-log');
 export const inviteUser = (data: { email: string; name: string; role?: string }) =>
-    apiFetch<{ id: string; email: string; inviteToken: string; activationLink: string }>(
+    apiFetch<{
+        id: string;
+        email: string;
+        inviteToken: string;
+        activationLink: string;
+        inviteEmailSent?: boolean;
+        inviteEmailWarning?: string;
+    }>(
         '/admin/users/invite', { method: 'POST', body: JSON.stringify(data) }
     );
 

@@ -23,7 +23,13 @@ export async function fetchDepartments() {
     return data.map(mapDepartment);
 }
 
-export function createDepartment(data: { name: string; description?: string }) {
+export function createDepartment(data: {
+    name: string;
+    description?: string;
+    location?: string;
+    budget?: string;
+    headId?: string | null;
+}) {
     return apiFetch<any>('/departments', {
         method: 'POST',
         body: JSON.stringify(data),

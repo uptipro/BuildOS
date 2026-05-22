@@ -59,31 +59,13 @@ export function AdminDashboardPage() {
       iconColor: "text-violet-600",
     },
     {
-      label: "DAU",
-      value: fmt(allUsers.length ? dau : null),
-      delta: "Users active in 24h",
+      label: "Active Sessions",
+      value: fmt(summary?.activeSessions ?? null),
+      delta: summary ? "Current authenticated sessions" : null,
       deltaPositive: null,
       icon: Activity,
-      iconBg: "bg-emerald-100",
-      iconColor: "text-emerald-600",
-    },
-    {
-      label: "WAU",
-      value: fmt(allUsers.length ? wau : null),
-      delta: "Users active in 7 days",
-      deltaPositive: null,
-      icon: Activity,
-      iconBg: "bg-cyan-100",
-      iconColor: "text-cyan-700",
-    },
-    {
-      label: "MAU",
-      value: fmt(allUsers.length ? mau : null),
-      delta: "Users active in 30 days",
-      deltaPositive: null,
-      icon: Activity,
-      iconBg: "bg-teal-100",
-      iconColor: "text-teal-700",
+      iconBg: "bg-sky-100",
+      iconColor: "text-sky-700",
     },
     {
       label: "System Health",
@@ -150,7 +132,7 @@ export function AdminDashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((m) => (
           <div
             key={m.label}
@@ -194,17 +176,17 @@ export function AdminDashboardPage() {
             <div className="space-y-4">
               {[
                 {
-                  label: "DAU",
+                  label: "Daily Active Users",
                   value: dau,
                   max: Math.max(summary.users, 1),
                 },
                 {
-                  label: "WAU",
+                  label: "Weekly Active Users",
                   value: wau,
                   max: Math.max(summary.users, 1),
                 },
                 {
-                  label: "MAU",
+                  label: "Monthly Active Users",
                   value: mau,
                   max: Math.max(summary.users, 1),
                 },

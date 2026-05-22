@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { getAppRoles, createAppRole } from "../../api/admin-extras";
+import {
+  getAppRoles,
+  createAppRole,
+  updateAppRole,
+  deleteAppRole,
+} from "../../api/admin-extras";
 import {
   Shield,
   Plus,
@@ -426,10 +431,31 @@ function AddRoleModal({
 export function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
 
+  const rolePayload = (role: Role) => ({
+    name: role.name,
+    description: role.description,
+    isSuper: !!role.isSuper,
+    permissions: {
+      processPermissions: role.permissions,
+      appAccess: role.appAccess,
+      navAccess: role.navAccess,
+    },
+  });
+
   useEffect(() => {
     getAppRoles().then((apiRoles) => {
       setRoles((prev) =>
         apiRoles.map((r) => {
+          const persisted =
+            r.permissions &&
+            typeof r.permissions === "object" &&
+            !Array.isArray(r.permissions)
+              ? (r.permissions as {
+                  processPermissions?: Record<string, ProcessPerm>;
+                  appAccess?: Record<AppKey, boolean>;
+                  navAccess?: Record<string, boolean>;
+                })
+              : {};
           const existing = prev.find((p) => p.id === r.id);
           if (existing) return { ...existing, name: r.name };
           return {
@@ -437,17 +463,18 @@ export function RolesPage() {
             name: r.name,
             description: r.description ?? "",
             users: 0,
-            isSuper: r.isSystem,
-            permissions: {},
+            isSuper: Boolean(r.isSuper ?? r.isSystem),
+            permissions: persisted.processPermissions ?? {},
             appAccess: {
               construction: false,
               finance: false,
               hr: false,
               procurement: false,
-              admin: r.isSystem,
+              admin: Boolean(r.isSuper ?? r.isSystem),
               ess: false,
+              ...(persisted.appAccess ?? {}),
             },
-            navAccess: {},
+            navAccess: persisted.navAccess ?? {},
           } as Role;
         }),
       );
@@ -471,50 +498,52 @@ export function RolesPage() {
     items: processes.filter((p) => p.app === app),
   }));
 
+  const updateAndPersistRole = (
+    roleId: string,
+    transform: (role: Role) => Role,
+  ) => {
+    let nextRole: Role | null = null;
+    setRoles((prev) =>
+      prev.map((r) => {
+        if (r.id !== roleId) return r;
+        nextRole = transform(r);
+        return nextRole;
+      }),
+    );
+    if (nextRole) {
+      void updateAppRole(nextRole.id, rolePayload(nextRole));
+    }
+  };
+
   const togglePerm = (
     roleId: string,
     procId: string,
     key: keyof ProcessPerm,
   ) => {
-    setRoles((prev) =>
-      prev.map((r) =>
-        r.id !== roleId
-          ? r
-          : {
-              ...r,
-              permissions: {
-                ...r.permissions,
-                [procId]: {
-                  ...r.permissions[procId],
-                  [key]: !r.permissions[procId]?.[key],
-                },
-              },
-            },
-      ),
-    );
+    updateAndPersistRole(roleId, (r) => ({
+      ...r,
+      permissions: {
+        ...r.permissions,
+        [procId]: {
+          ...r.permissions[procId],
+          [key]: !r.permissions[procId]?.[key],
+        },
+      },
+    }));
   };
 
   const toggleAppAccess = (roleId: string, app: AppKey) => {
-    setRoles((prev) =>
-      prev.map((r) =>
-        r.id !== roleId
-          ? r
-          : { ...r, appAccess: { ...r.appAccess, [app]: !r.appAccess[app] } },
-      ),
-    );
+    updateAndPersistRole(roleId, (r) => ({
+      ...r,
+      appAccess: { ...r.appAccess, [app]: !r.appAccess[app] },
+    }));
   };
 
   const toggleNavAccess = (roleId: string, navId: string) => {
-    setRoles((prev) =>
-      prev.map((r) =>
-        r.id !== roleId
-          ? r
-          : {
-              ...r,
-              navAccess: { ...r.navAccess, [navId]: !r.navAccess[navId] },
-            },
-      ),
-    );
+    updateAndPersistRole(roleId, (r) => ({
+      ...r,
+      navAccess: { ...r.navAccess, [navId]: !r.navAccess[navId] },
+    }));
   };
 
   const removeProcess = (procId: string) => {
@@ -528,8 +557,14 @@ export function RolesPage() {
     ]);
   };
 
-  const deleteRole = (roleId: string) => {
+  const deleteRole = async (roleId: string) => {
+    const previous = roles;
     setRoles((prev) => prev.filter((r) => r.id !== roleId));
+    try {
+      await deleteAppRole(roleId);
+    } catch {
+      setRoles(previous);
+    }
   };
 
   return (
@@ -705,7 +740,7 @@ export function RolesPage() {
                           </button>
                           {!role.isSuper && (
                             <button
-                              onClick={() => deleteRole(role.id)}
+                              onClick={() => void deleteRole(role.id)}
                               className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
                               title="Delete"
                             >
@@ -922,11 +957,33 @@ export function RolesPage() {
       {showAddRole && (
         <AddRoleModal
           onAdd={async ({ name, description }) => {
+            const appAccess = {
+              construction: false,
+              finance: false,
+              hr: false,
+              procurement: false,
+              admin: false,
+              ess: true,
+            };
+            const permissions = Object.fromEntries(
+              DEFAULT_PROCESSES.map((p) => [p.id, emptyPerm()]),
+            );
+            const navAccess = navPartial([
+              "ess_dashboard",
+              "ess_requests",
+              "ess_submit",
+              "ess_profile",
+            ]);
+
             const created = await createAppRole({
               name,
               description,
-              isSystem: false,
-              permissions: {},
+              isSuper: false,
+              permissions: {
+                processPermissions: permissions,
+                appAccess,
+                navAccess,
+              },
             });
             setRoles((prev) => [
               ...prev,
@@ -935,24 +992,10 @@ export function RolesPage() {
                 name: created.name,
                 description: created.description ?? "",
                 users: 0,
-                isSuper: created.isSystem,
-                permissions: Object.fromEntries(
-                  DEFAULT_PROCESSES.map((p) => [p.id, emptyPerm()]),
-                ),
-                appAccess: {
-                  construction: false,
-                  finance: false,
-                  hr: false,
-                  procurement: false,
-                  admin: false,
-                  ess: true,
-                },
-                navAccess: navPartial([
-                  "ess_dashboard",
-                  "ess_requests",
-                  "ess_submit",
-                  "ess_profile",
-                ]),
+                isSuper: Boolean(created.isSuper ?? created.isSystem),
+                permissions,
+                appAccess,
+                navAccess,
               },
             ]);
           }}
