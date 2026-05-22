@@ -1,10 +1,20 @@
 import {
   Save, Globe, Calendar, DollarSign,
-  Plus, Edit, Trash2, AlertTriangle, CheckCircle,
+  Plus, Edit, Trash2, AlertTriangle,
   X, Search, RefreshCw,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CreatableSelect } from "../../components/CreatableSelect";
+import {
+  createChangeCategory,
+  createIssueType,
+  deleteChangeCategory,
+  deleteIssueType,
+  getChangeCategories,
+  getIssueTypes,
+  updateChangeCategory,
+  updateIssueType,
+} from "../../api/admin-extras";
 
 // ── Issue Types ──────────────────────────────────────────────────────────────
 const IT_COLORS = [
@@ -23,7 +33,7 @@ type IssuePriority = "low" | "medium" | "high" | "critical";
 interface IssueType {
   id: string; name: string; description: string;
   priority: IssuePriority; color: string;
-  requiresApproval: boolean; slaHours: number; active: boolean;
+  slaHours: number; active: boolean;
 }
 const PRIORITY_BADGE: Record<IssuePriority, string> = {
   low: "bg-gray-100 text-gray-600", medium: "bg-amber-100 text-amber-700",
@@ -31,7 +41,7 @@ const PRIORITY_BADGE: Record<IssuePriority, string> = {
 };
 const EMPTY_ISSUE: Omit<IssueType, "id"> = {
   name: "", description: "", priority: "medium",
-  color: IT_COLORS[0], requiresApproval: false, slaHours: 24, active: true,
+  color: IT_COLORS[0], slaHours: 24, active: true,
 };
 
 // ── Change Categories ────────────────────────────────────────────────────────
@@ -42,14 +52,14 @@ function CategoryModal({
   initial, onSave, onClose,
 }: {
   initial: Partial<ChangeCategory> & { name: string; description: string };
-  onSave: (data: Omit<ChangeCategory, "id"> & { id?: string }) => void;
+  onSave: (data: Omit<ChangeCategory, "id"> & { id?: string }) => Promise<void>;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ ...initial });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  function submit() {
+  async function submit() {
     if (!form.name.trim()) { setErrors({ name: "Name is required." }); return; }
-    onSave(form); onClose();
+    await onSave(form); onClose();
   }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -125,30 +135,43 @@ export function GeneralSettingsPage() {
   });
   const [currencyOptions, setCurrencyOptions] = useState(defaultCurrencyOptions);
   const handleChange = (field: string, value: string) => setSettings((prev) => ({ ...prev, [field]: value }));
-  const handleSave = () => console.log("Saving settings:", settings);
+  const handleSave = () => {
+    localStorage.setItem("buildos_general_settings", JSON.stringify(settings));
+    localStorage.setItem("buildos_currency_options", JSON.stringify(currencyOptions));
+  };
 
   // ── Issue Types state ────────────────────────────────────────────────────
   const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [editIssueId, setEditIssueId] = useState<string | null>(null);
   const [issueForm, setIssueForm] = useState<typeof EMPTY_ISSUE>({ ...EMPTY_ISSUE });
-  function saveIssue(e: React.FormEvent) {
+  async function saveIssue(e: React.FormEvent) {
     e.preventDefault();
     if (!issueForm.name.trim()) return;
     if (editIssueId) {
-      setIssueTypes((prev) => prev.map((t) => t.id === editIssueId ? { ...t, ...issueForm } : t));
+      const updated = await updateIssueType(editIssueId, issueForm);
+      setIssueTypes((prev) => prev.map((t) => t.id === editIssueId ? updated : t));
       setEditIssueId(null);
     } else {
-      setIssueTypes((prev) => [...prev, { id: `it-${Date.now()}`, ...issueForm }]);
+      const created = await createIssueType(issueForm);
+      setIssueTypes((prev) => [...prev, created]);
     }
     setIssueForm({ ...EMPTY_ISSUE }); setShowIssueForm(false);
   }
   function startEditIssue(t: IssueType) {
-    setIssueForm({ name: t.name, description: t.description, priority: t.priority, color: t.color, requiresApproval: t.requiresApproval, slaHours: t.slaHours, active: t.active });
+    setIssueForm({ name: t.name, description: t.description, priority: t.priority, color: t.color, slaHours: t.slaHours, active: t.active });
     setEditIssueId(t.id); setShowIssueForm(true);
   }
-  function deleteIssue(id: string) { setIssueTypes((prev) => prev.filter((t) => t.id !== id)); }
-  function toggleIssueActive(id: string) { setIssueTypes((prev) => prev.map((t) => t.id === id ? { ...t, active: !t.active } : t)); }
+  async function deleteIssue(id: string) {
+    await deleteIssueType(id);
+    setIssueTypes((prev) => prev.filter((t) => t.id !== id));
+  }
+  async function toggleIssueActive(id: string) {
+    const current = issueTypes.find((t) => t.id === id);
+    if (!current) return;
+    const updated = await updateIssueType(id, { active: !current.active });
+    setIssueTypes((prev) => prev.map((t) => t.id === id ? updated : t));
+  }
 
   // ── Change Categories state ──────────────────────────────────────────────
   const [categories, setCategories] = useState<ChangeCategory[]>([]);
@@ -160,13 +183,40 @@ export function GeneralSettingsPage() {
     c.name.toLowerCase().includes(catSearch.toLowerCase()) ||
     c.description.toLowerCase().includes(catSearch.toLowerCase()),
   );
-  function saveCat(data: Omit<ChangeCategory, "id"> & { id?: string }) {
+  async function saveCat(data: Omit<ChangeCategory, "id"> & { id?: string }) {
     if (data.id) {
-      setCategories((prev) => prev.map((c) => (c.id === data.id ? { ...data, id: data.id! } : c)));
+      const updated = await updateChangeCategory(data.id, data);
+      setCategories((prev) => prev.map((c) => (c.id === data.id ? updated : c)));
     } else {
-      setCategories((prev) => [...prev, { ...data, id: `cc-${Date.now()}` }]);
+      const created = await createChangeCategory(data);
+      setCategories((prev) => [...prev, created]);
     }
   }
+
+  useEffect(() => {
+    const savedSettings = localStorage.getItem("buildos_general_settings");
+    const savedCurrencies = localStorage.getItem("buildos_currency_options");
+
+    if (savedSettings) {
+      try {
+        setSettings(JSON.parse(savedSettings));
+      } catch {
+        // no-op
+      }
+    }
+    if (savedCurrencies) {
+      try {
+        setCurrencyOptions(JSON.parse(savedCurrencies));
+      } catch {
+        // no-op
+      }
+    }
+    getIssueTypes().then(setIssueTypes).catch(() => setIssueTypes([]));
+    getChangeCategories().then(setCategories).catch(() => setCategories([]));
+  }, []);
+
+  const selectedCurrency = currencyOptions.find((option) => option.value === settings.currency);
+  const isCustomCurrency = !selectedCurrency?.meta;
 
   const TABS = [
     { key: "general" as const,           label: "General Settings" },
@@ -226,9 +276,16 @@ export function GeneralSettingsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Default Currency</label>
                 <CreatableSelect
                   options={currencyOptions} value={settings.currency}
-                  onChange={(value, option) => { handleChange("currency", value); if (option?.meta) handleChange("currencySymbol", option.meta); }}
-                  onCreateOption={(label) => {
-                    const opt = { label, value: label.substring(0, 3).toUpperCase(), meta: "" };
+                  onChange={(value, option) => {
+                    handleChange("currency", value);
+                    handleChange("currencySymbol", option?.meta ?? "");
+                  }}
+                  onCreateOption={(label, meta) => {
+                    const opt = {
+                      label,
+                      value: label.substring(0, 3).toUpperCase(),
+                      meta: (meta ?? "").trim(),
+                    };
                     setCurrencyOptions((prev) => [...prev, opt]); return opt;
                   }}
                   placeholder="Select or add currency" createLabel="Add custom currency" metaPlaceholder="Symbol (e.g. $, €, ₦)"
@@ -237,7 +294,11 @@ export function GeneralSettingsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Currency Symbol</label>
                 <input type="text" value={settings.currencySymbol} onChange={(e) => handleChange("currencySymbol", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent" />
+                  disabled={!isCustomCurrency}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500" />
+                {!isCustomCurrency && (
+                  <p className="text-xs text-gray-500 mt-1">Symbol is inherited from the selected currency.</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Number Format</label>
@@ -379,11 +440,6 @@ export function GeneralSettingsPage() {
                   </div>
                   <div className="flex flex-col gap-2 justify-end">
                     <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                      <input type="checkbox" checked={issueForm.requiresApproval}
-                        onChange={(e) => setIssueForm((f) => ({ ...f, requiresApproval: e.target.checked }))} className="rounded" />
-                      Requires Manager Approval
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                       <input type="checkbox" checked={issueForm.active}
                         onChange={(e) => setIssueForm((f) => ({ ...f, active: e.target.checked }))} className="rounded" />
                       Active
@@ -411,14 +467,13 @@ export function GeneralSettingsPage() {
                   <th className="text-left px-5 py-3 text-xs text-gray-500 font-medium">Name</th>
                   <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Priority</th>
                   <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">SLA Target</th>
-                  <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Approval</th>
                   <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Status</th>
                   <th className="text-right px-5 py-3 text-xs text-gray-500 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {issueTypes.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-10 text-sm text-gray-400">No issue types defined.</td></tr>
+                  <tr><td colSpan={5} className="text-center py-10 text-sm text-gray-400">No issue types defined.</td></tr>
                 )}
                 {issueTypes.map((t) => (
                   <tr key={t.id} className={`hover:bg-gray-50/70 ${!t.active ? "opacity-50" : ""}`}>
@@ -436,11 +491,6 @@ export function GeneralSettingsPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {t.slaHours < 24 ? `${t.slaHours}h` : `${t.slaHours / 24}d`}
-                    </td>
-                    <td className="px-4 py-3">
-                      {t.requiresApproval
-                        ? <span className="flex items-center gap-1 text-xs text-amber-700"><CheckCircle className="w-3.5 h-3.5" />Required</span>
-                        : <span className="text-xs text-gray-400">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => toggleIssueActive(t.id)}
@@ -522,7 +572,10 @@ export function GeneralSettingsPage() {
           )}
           {deletingCat && (
             <DeleteCatModal name={deletingCat.name}
-              onConfirm={() => setCategories((prev) => prev.filter((c) => c.id !== deletingCat.id))}
+              onConfirm={async () => {
+                await deleteChangeCategory(deletingCat.id);
+                setCategories((prev) => prev.filter((c) => c.id !== deletingCat.id));
+              }}
               onClose={() => setDeletingCat(null)} />
           )}
         </div>

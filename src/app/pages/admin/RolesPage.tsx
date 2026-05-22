@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAppRoles } from "../../api/admin-extras";
+import { getAppRoles, createAppRole } from "../../api/admin-extras";
 import {
   Shield,
   Plus,
@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Users,
 } from "lucide-react";
+import { Fragment } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type AppKey =
@@ -339,38 +340,26 @@ function AddRoleModal({
   onAdd,
   onClose,
 }: {
-  onAdd: (r: Role) => void;
+  onAdd: (data: { name: string; description: string }) => Promise<void>;
   onClose: () => void;
 }) {
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim()) return;
-    onAdd({
-      id: `r_${Date.now()}`,
-      name: name.trim(),
-      description: desc.trim(),
-      users: 0,
-      permissions: Object.fromEntries(
-        DEFAULT_PROCESSES.map((p) => [p.id, emptyPerm()]),
-      ),
-      appAccess: {
-        construction: false,
-        finance: false,
-        hr: false,
-        procurement: false,
-        admin: false,
-        ess: true,
-      },
-      navAccess: navPartial([
-        "ess_dashboard",
-        "ess_requests",
-        "ess_submit",
-        "ess_profile",
-      ]),
-    });
-    onClose();
+    setSaving(true);
+    setError("");
+    try {
+      await onAdd({ name: name.trim(), description: desc.trim() });
+      onClose();
+    } catch {
+      setError("Failed to create role.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -420,11 +409,13 @@ function AddRoleModal({
             </button>
             <button
               onClick={handleSubmit}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+              disabled={saving}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
             >
-              Create Role
+              {saving ? "Creating…" : "Create Role"}
             </button>
           </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
       </div>
     </div>
@@ -467,7 +458,6 @@ export function RolesPage() {
   );
   const [showAddProcess, setShowAddProcess] = useState(false);
   const [showAddRole, setShowAddRole] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
   const [expandedRoleTab, setExpandedRoleTab] = useState<
     Record<string, "app" | "nav">
@@ -536,12 +526,10 @@ export function RolesPage() {
       ...prev,
       { ...role, id: `r_${Date.now()}`, name: `${role.name} (Copy)`, users: 0 },
     ]);
-    setOpenMenuId(null);
   };
 
   const deleteRole = (roleId: string) => {
     setRoles((prev) => prev.filter((r) => r.id !== roleId));
-    setOpenMenuId(null);
   };
 
   return (
@@ -664,7 +652,7 @@ export function RolesPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {roles.map((role) => (
-                <>
+                <Fragment key={role.id}>
                   <tr key={role.id} className="hover:bg-gray-50/70 group">
                     {/* Role name cell — sticky */}
                     <td className="sticky left-0 z-10 bg-white group-hover:bg-gray-50/70 border-r border-gray-200 px-5 py-3 min-w-[200px]">
@@ -903,7 +891,7 @@ export function RolesPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -933,7 +921,41 @@ export function RolesPage() {
       )}
       {showAddRole && (
         <AddRoleModal
-          onAdd={(r) => setRoles((prev) => [...prev, r])}
+          onAdd={async ({ name, description }) => {
+            const created = await createAppRole({
+              name,
+              description,
+              isSystem: false,
+              permissions: {},
+            });
+            setRoles((prev) => [
+              ...prev,
+              {
+                id: created.id,
+                name: created.name,
+                description: created.description ?? "",
+                users: 0,
+                isSuper: created.isSystem,
+                permissions: Object.fromEntries(
+                  DEFAULT_PROCESSES.map((p) => [p.id, emptyPerm()]),
+                ),
+                appAccess: {
+                  construction: false,
+                  finance: false,
+                  hr: false,
+                  procurement: false,
+                  admin: false,
+                  ess: true,
+                },
+                navAccess: navPartial([
+                  "ess_dashboard",
+                  "ess_requests",
+                  "ess_submit",
+                  "ess_profile",
+                ]),
+              },
+            ]);
+          }}
           onClose={() => setShowAddRole(false)}
         />
       )}

@@ -11,6 +11,7 @@ import { NavLink } from "react-router";
 import {
   getAdminActivityLog,
   getAdminSystemSummary,
+  getUsers,
   type AdminActivity,
   type AdminSystemSummary,
 } from "../../api/admin-extras";
@@ -18,13 +19,23 @@ import {
 export function AdminDashboardPage() {
   const [summary, setSummary] = useState<AdminSystemSummary | null>(null);
   const [activityLog, setActivityLog] = useState<AdminActivity[]>([]);
+  const [allUsers, setAllUsers] = useState<{ lastLogin?: string }[]>([]);
 
   useEffect(() => {
     getAdminSystemSummary().then(setSummary).catch(console.error);
     getAdminActivityLog().then(setActivityLog).catch(console.error);
+    getUsers().then(setAllUsers).catch(console.error);
   }, []);
 
   const fmt = (n: number | null) => (n === null ? "…" : String(n));
+  const sinceCount = (days: number) => {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    return allUsers.filter((u) => u.lastLogin && new Date(u.lastLogin).getTime() >= cutoff).length;
+  };
+
+  const dau = sinceCount(1);
+  const wau = sinceCount(7);
+  const mau = sinceCount(30);
 
   const metrics = [
     {
@@ -46,13 +57,31 @@ export function AdminDashboardPage() {
       iconColor: "text-violet-600",
     },
     {
-      label: "Active Sessions",
-      value: fmt(summary?.activeSessions ?? null),
-      delta: summary ? "Current sessions" : null,
+      label: "DAU",
+      value: fmt(allUsers.length ? dau : null),
+      delta: "Users active in 24h",
       deltaPositive: null,
       icon: Activity,
       iconBg: "bg-emerald-100",
       iconColor: "text-emerald-600",
+    },
+    {
+      label: "WAU",
+      value: fmt(allUsers.length ? wau : null),
+      delta: "Users active in 7 days",
+      deltaPositive: null,
+      icon: Activity,
+      iconBg: "bg-cyan-100",
+      iconColor: "text-cyan-700",
+    },
+    {
+      label: "MAU",
+      value: fmt(allUsers.length ? mau : null),
+      delta: "Users active in 30 days",
+      deltaPositive: null,
+      icon: Activity,
+      iconBg: "bg-teal-100",
+      iconColor: "text-teal-700",
     },
     {
       label: "System Health",
@@ -67,6 +96,33 @@ export function AdminDashboardPage() {
     },
   ];
 
+  const serviceStates = [
+    {
+      name: "Database",
+      status: summary?.healthPercent === 100 ? "Operational" : summary ? "Degraded" : "Checking",
+      up: summary?.healthPercent === 100,
+      detail: summary ? `Health ${summary.healthPercent}%` : "Running checks",
+    },
+    {
+      name: "API",
+      status: summary?.health.status === "healthy" ? "Operational" : summary ? "Degraded" : "Checking",
+      up: summary?.health.status === "healthy",
+      detail: summary ? `${summary.pendingApprovals} pending approvals` : "Collecting metrics",
+    },
+    {
+      name: "Storage",
+      status: summary ? "Operational" : "Checking",
+      up: !!summary,
+      detail: summary ? "File storage reachable" : "Collecting metrics",
+    },
+    {
+      name: "Email",
+      status: summary ? "Operational" : "Checking",
+      up: !!summary,
+      detail: summary ? `${summary.pendingInvites} pending invites` : "Collecting metrics",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -78,7 +134,7 @@ export function AdminDashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {metrics.map((m) => (
           <div
             key={m.label}
@@ -122,14 +178,19 @@ export function AdminDashboardPage() {
             <div className="space-y-4">
               {[
                 {
-                  label: "Registered Users",
-                  value: summary.users,
-                  max: summary.users,
+                  label: "DAU",
+                  value: dau,
+                  max: Math.max(summary.users, 1),
                 },
                 {
-                  label: "Configured Roles",
-                  value: summary.roles,
-                  max: Math.max(summary.users, summary.roles),
+                  label: "WAU",
+                  value: wau,
+                  max: Math.max(summary.users, 1),
+                },
+                {
+                  label: "MAU",
+                  value: mau,
+                  max: Math.max(summary.users, 1),
                 },
               ].map((item) => (
                 <div key={item.label}>
@@ -187,9 +248,22 @@ export function AdminDashboardPage() {
         <h2 className="text-sm font-semibold text-gray-900 mb-4">
           System Status
         </h2>
-        <p className="text-sm text-gray-600">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {serviceStates.map((svc) => (
+            <div key={svc.name} className="rounded-lg border border-gray-100 p-3 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-800">{svc.name}</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${svc.up ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                  {svc.status}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">{svc.detail}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-3">
           {summary
-            ? `System is ${summary.health.status}; last checked ${new Date(summary.health.checkedAt).toLocaleString()}.`
+            ? `Last checked ${new Date(summary.health.checkedAt).toLocaleString()}`
             : "Loading system status…"}
         </p>
       </div>

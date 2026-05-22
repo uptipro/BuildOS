@@ -15,6 +15,7 @@ interface Unit {
 export function UnitsOfMeasurementPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Unit | null>(null);
   const [categoryOptions, setCategoryOptions] = useState([
     { label: "Length", value: "Length" },
     { label: "Weight", value: "Weight" },
@@ -191,9 +192,8 @@ export function UnitsOfMeasurementPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this unit?")) {
-      setUnits((prev) => prev.filter((u) => u.id !== id));
-    }
+    const target = units.find((u) => u.id === id) ?? null;
+    setDeleteTarget(target);
   };
 
   const handleSave = () => {
@@ -376,6 +376,34 @@ export function UnitsOfMeasurementPage() {
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
               >
                 {editingUnit ? "Save Changes" : "Add Unit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="text-base font-semibold text-gray-900">Delete Unit?</h2>
+            <p className="text-sm text-gray-500">
+              <strong>{deleteTarget.name}</strong> will be permanently removed.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setUnits((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+                  setDeleteTarget(null);
+                }}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl"
+              >
+                Delete
               </button>
             </div>
           </div>

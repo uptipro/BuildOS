@@ -1,11 +1,60 @@
-import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { Resend } from 'resend';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AdminExtrasService {
+    private readonly logger = new Logger(AdminExtrasService.name);
+
     constructor(private prisma: PrismaService) { }
+
+    private settingsFilePath = path.join(process.cwd(), 'data', 'admin-settings.json');
+
+    private async readAdminSettings() {
+        try {
+            const raw = await fs.readFile(this.settingsFilePath, 'utf-8');
+            const parsed = JSON.parse(raw);
+            return {
+                issueTypes: Array.isArray(parsed.issueTypes) ? parsed.issueTypes : [],
+                changeCategories: Array.isArray(parsed.changeCategories) ? parsed.changeCategories : [],
+            };
+        } catch {
+            return { issueTypes: [], changeCategories: [] };
+        }
+    }
+
+    private async writeAdminSettings(data: { issueTypes: any[]; changeCategories: any[] }) {
+        await fs.mkdir(path.dirname(this.settingsFilePath), { recursive: true });
+        await fs.writeFile(this.settingsFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    }
+
+    private async sendInviteEmail(email: string, name: string, activationLink: string) {
+        const emailProvider = String(process.env.EMAIL_PROVIDER || 'resend').toLowerCase();
+        if (emailProvider !== 'resend') {
+            return;
+        }
+
+        const resendApiKey = process.env.RESEND_API_KEY;
+        // Keep backward compatibility while aligning with BuyOps variable naming.
+        const from = process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL;
+
+        if (!resendApiKey || !from) {
+            this.logger.warn('Invite email skipped: missing RESEND_API_KEY or EMAIL_FROM/INVITE_FROM_EMAIL');
+            return;
+        }
+
+        const resend = new Resend(resendApiKey);
+        await resend.emails.send({
+            from,
+            to: [email],
+            subject: 'You are invited to BuildOS',
+            text: `Hi ${name},\n\nYou have been invited to BuildOS. Activate your account here: ${activationLink}\n\nThis link expires in 7 days.`,
+        });
+    }
 
     private normalizeStatus(status: string) {
         const s = String(status || '').toLowerCase();
@@ -257,12 +306,20 @@ export class AdminExtrasService {
             },
         });
 
+        const activationLink = `/auth/activate?token=${token}`;
+
+        try {
+            await this.sendInviteEmail(normalizedEmail, data.name, activationLink);
+        } catch (error) {
+            // Keep invite creation successful even if email delivery fails.
+            this.logger.warn(`Invite email failed for ${normalizedEmail}: ${error instanceof Error ? error.message : 'unknown error'}`);
+        }
+
         return {
             id: user.id,
             email: user.email,
             inviteToken: token,
-            // Frontend can construct the activation URL; no email service wired yet
-            activationLink: `/auth/activate?token=${token}`,
+            activationLink,
         };
     }
 
@@ -359,6 +416,86 @@ export class AdminExtrasService {
     }
     deleteRole(id: string) {
         return this.prisma.appRole.delete({ where: { id } });
+    }
+
+    // ── Issue Types ──
+    async findAllIssueTypes() {
+        const settings = await this.readAdminSettings();
+        return settings.issueTypes;
+    }
+
+    async createIssueType(data: any) {
+        const settings = await this.readAdminSettings();
+        const next = {
+            id: crypto.randomUUID(),
+            name: data.name,
+            description: data.description ?? '',
+            priority: data.priority ?? 'medium',
+            color: data.color ?? 'bg-red-100 text-red-700',
+            slaHours: Number(data.slaHours ?? 24),
+            active: data.active !== false,
+        };
+        settings.issueTypes.push(next);
+        await this.writeAdminSettings(settings);
+        return next;
+    }
+
+    async updateIssueType(id: string, data: any) {
+        const settings = await this.readAdminSettings();
+        const idx = settings.issueTypes.findIndex((item: any) => item.id === id);
+        if (idx < 0) throw new BadRequestException('Issue type not found');
+        settings.issueTypes[idx] = {
+            ...settings.issueTypes[idx],
+            ...data,
+            id,
+        };
+        await this.writeAdminSettings(settings);
+        return settings.issueTypes[idx];
+    }
+
+    async deleteIssueType(id: string) {
+        const settings = await this.readAdminSettings();
+        settings.issueTypes = settings.issueTypes.filter((item: any) => item.id !== id);
+        await this.writeAdminSettings(settings);
+        return { ok: true };
+    }
+
+    // ── Change Categories ──
+    async findAllChangeCategories() {
+        const settings = await this.readAdminSettings();
+        return settings.changeCategories;
+    }
+
+    async createChangeCategory(data: any) {
+        const settings = await this.readAdminSettings();
+        const next = {
+            id: crypto.randomUUID(),
+            name: data.name,
+            description: data.description ?? '',
+        };
+        settings.changeCategories.push(next);
+        await this.writeAdminSettings(settings);
+        return next;
+    }
+
+    async updateChangeCategory(id: string, data: any) {
+        const settings = await this.readAdminSettings();
+        const idx = settings.changeCategories.findIndex((item: any) => item.id === id);
+        if (idx < 0) throw new BadRequestException('Change category not found');
+        settings.changeCategories[idx] = {
+            ...settings.changeCategories[idx],
+            ...data,
+            id,
+        };
+        await this.writeAdminSettings(settings);
+        return settings.changeCategories[idx];
+    }
+
+    async deleteChangeCategory(id: string) {
+        const settings = await this.readAdminSettings();
+        settings.changeCategories = settings.changeCategories.filter((item: any) => item.id !== id);
+        await this.writeAdminSettings(settings);
+        return { ok: true };
     }
 
     // ── Company Profile ──

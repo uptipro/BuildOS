@@ -29,6 +29,22 @@ export interface AdminActivity {
     date: string;
 }
 
+export interface IssueTypeConfig {
+    id: string;
+    name: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    color: string;
+    slaHours: number;
+    active: boolean;
+}
+
+export interface ChangeCategoryConfig {
+    id: string;
+    name: string;
+    description: string;
+}
+
 export const getAdminSystemSummary = () =>
     apiFetch<AdminSystemSummary>('/admin/system-summary');
 export const getAdminActivityLog = () =>
@@ -58,6 +74,24 @@ export const updateAppRole = (id: string, data: Partial<AppRole>) =>
     apiFetch<AppRole>(`/app-roles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteAppRole = (id: string) =>
     apiFetch<void>(`/app-roles/${id}`, { method: 'DELETE' });
+
+// Issue Types
+export const getIssueTypes = () => apiFetch<IssueTypeConfig[]>('/admin/issue-types');
+export const createIssueType = (data: Omit<IssueTypeConfig, 'id'>) =>
+    apiFetch<IssueTypeConfig>('/admin/issue-types', { method: 'POST', body: JSON.stringify(data) });
+export const updateIssueType = (id: string, data: Partial<Omit<IssueTypeConfig, 'id'>>) =>
+    apiFetch<IssueTypeConfig>(`/admin/issue-types/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteIssueType = (id: string) =>
+    apiFetch<{ ok: boolean }>(`/admin/issue-types/${id}`, { method: 'DELETE' });
+
+// Change Categories
+export const getChangeCategories = () => apiFetch<ChangeCategoryConfig[]>('/admin/change-categories');
+export const createChangeCategory = (data: Omit<ChangeCategoryConfig, 'id'>) =>
+    apiFetch<ChangeCategoryConfig>('/admin/change-categories', { method: 'POST', body: JSON.stringify(data) });
+export const updateChangeCategory = (id: string, data: Partial<Omit<ChangeCategoryConfig, 'id'>>) =>
+    apiFetch<ChangeCategoryConfig>(`/admin/change-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteChangeCategory = (id: string) =>
+    apiFetch<{ ok: boolean }>(`/admin/change-categories/${id}`, { method: 'DELETE' });
 
 // Company Profile
 export interface CompanyProfile {

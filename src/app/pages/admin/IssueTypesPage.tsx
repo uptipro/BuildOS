@@ -1,5 +1,11 @@
-import { useState } from "react";
-import { Plus, Edit, Trash2, AlertTriangle, CheckCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, Edit, Trash2, AlertTriangle } from "lucide-react";
+import {
+  getIssueTypes,
+  createIssueType,
+  updateIssueType,
+  deleteIssueType,
+} from "../../api/admin-extras";
 
 const COLORS = [
   "bg-red-100 text-red-700",
@@ -31,7 +37,6 @@ interface IssueType {
   description: string;
   priority: Priority;
   color: string;
-  requiresApproval: boolean;
   slaHours: number;
   active: boolean;
 }
@@ -46,7 +51,7 @@ const PRIORITY_BADGE: Record<Priority, string> = {
 
 const EMPTY: Omit<IssueType, "id"> = {
   name: "", description: "", priority: "medium",
-  color: COLORS[0], requiresApproval: false, slaHours: 24, active: true,
+  color: COLORS[0], slaHours: 24, active: true,
 };
 
 export function IssueTypesPage() {
@@ -55,14 +60,22 @@ export function IssueTypesPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<typeof EMPTY>({ ...EMPTY });
 
-  function save(e: React.FormEvent) {
+  useEffect(() => {
+    getIssueTypes().then(setIssueTypes).catch(() => {
+      setIssueTypes([]);
+    });
+  }, []);
+
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) return;
     if (editId) {
-      setIssueTypes((prev) => prev.map((t) => t.id === editId ? { ...t, ...form } : t));
+      const updated = await updateIssueType(editId, form);
+      setIssueTypes((prev) => prev.map((t) => t.id === editId ? updated : t));
       setEditId(null);
     } else {
-      setIssueTypes((prev) => [...prev, { id: `it-${Date.now()}`, ...form }]);
+      const created = await createIssueType(form);
+      setIssueTypes((prev) => [...prev, created]);
     }
     setForm({ ...EMPTY });
     setShowForm(false);
@@ -71,18 +84,22 @@ export function IssueTypesPage() {
   function startEdit(t: IssueType) {
     setForm({
       name: t.name, description: t.description, priority: t.priority,
-      color: t.color, requiresApproval: t.requiresApproval, slaHours: t.slaHours, active: t.active,
+      color: t.color, slaHours: t.slaHours, active: t.active,
     });
     setEditId(t.id);
     setShowForm(true);
   }
 
-  function deleteType(id: string) {
+  async function deleteType(id: string) {
+    await deleteIssueType(id);
     setIssueTypes((prev) => prev.filter((t) => t.id !== id));
   }
 
-  function toggleActive(id: string) {
-    setIssueTypes((prev) => prev.map((t) => t.id === id ? { ...t, active: !t.active } : t));
+  async function toggleActive(id: string) {
+    const current = issueTypes.find((t) => t.id === id);
+    if (!current) return;
+    const updated = await updateIssueType(id, { active: !current.active });
+    setIssueTypes((prev) => prev.map((t) => t.id === id ? updated : t));
   }
 
   return (
@@ -160,12 +177,6 @@ export function IssueTypesPage() {
               </div>
               <div className="flex flex-col gap-2 justify-end">
                 <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input type="checkbox" checked={form.requiresApproval}
-                    onChange={(e) => setForm((f) => ({ ...f, requiresApproval: e.target.checked }))}
-                    className="rounded" />
-                  Requires Manager Approval
-                </label>
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                   <input type="checkbox" checked={form.active}
                     onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
                     className="rounded" />
@@ -195,14 +206,13 @@ export function IssueTypesPage() {
               <th className="text-left px-5 py-3 text-xs text-gray-500 font-medium">Name</th>
               <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Priority</th>
               <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">SLA Target</th>
-              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Approval</th>
               <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Status</th>
               <th className="text-right px-5 py-3 text-xs text-gray-500 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {issueTypes.length === 0 && (
-              <tr><td colSpan={6} className="text-center py-10 text-sm text-gray-400">No issue types defined.</td></tr>
+              <tr><td colSpan={5} className="text-center py-10 text-sm text-gray-400">No issue types defined.</td></tr>
             )}
             {issueTypes.map((t) => (
               <tr key={t.id} className={`hover:bg-gray-50/70 ${!t.active ? "opacity-50" : ""}`}>
@@ -222,11 +232,6 @@ export function IssueTypesPage() {
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {t.slaHours < 24 ? `${t.slaHours}h` : `${t.slaHours / 24}d`}
-                </td>
-                <td className="px-4 py-3">
-                  {t.requiresApproval
-                    ? <span className="flex items-center gap-1 text-xs text-amber-700"><CheckCircle className="w-3.5 h-3.5" />Required</span>
-                    : <span className="text-xs text-gray-400">—</span>}
                 </td>
                 <td className="px-4 py-3">
                   <button onClick={() => toggleActive(t.id)}

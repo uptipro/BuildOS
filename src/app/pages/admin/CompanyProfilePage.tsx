@@ -5,6 +5,47 @@ import {
   updateCompanyProfile,
 } from "../../api/admin-extras";
 
+const COUNTRY_OPTIONS = [
+  "Nigeria",
+  "United States",
+  "United Kingdom",
+  "United Arab Emirates",
+  "India",
+  "South Africa",
+  "Kenya",
+  "Ghana",
+  "Canada",
+  "Germany",
+];
+
+async function compressImage(file: File, maxWidth = 960, quality = 0.82): Promise<string> {
+  const imageData = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Failed to read image"));
+    reader.readAsDataURL(file);
+  });
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("Failed to load image"));
+    el.src = imageData;
+  });
+
+  const ratio = Math.min(1, maxWidth / img.width);
+  const width = Math.round(img.width * ratio);
+  const height = Math.round(img.height * ratio);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return imageData;
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
 export function CompanyProfilePage() {
   const [formData, setFormData] = useState({
     companyName: "",
@@ -46,13 +87,16 @@ export function CompanyProfilePage() {
     });
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      setLogoPreview(compressed);
+    } catch {
+      // Fallback for unsupported image formats.
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
+      reader.onloadend = () => setLogoPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -99,8 +143,8 @@ export function CompanyProfilePage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Company Logo
         </h2>
-        <div className="flex items-start gap-6">
-          <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col sm:flex-row items-start gap-6">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
             {logoPreview ? (
               <img
                 src={logoPreview}
@@ -111,7 +155,7 @@ export function CompanyProfilePage() {
               <Building2 className="w-12 h-12 text-gray-400" />
             )}
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label
               htmlFor="logo-upload"
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
@@ -185,13 +229,21 @@ export function CompanyProfilePage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Country
             </label>
-            <input
-              type="text"
+            <select
               name="country"
               value={formData.country}
-              onChange={handleInputChange}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, country: e.target.value }))
+              }
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-            />
+            >
+              <option value="">Select country</option>
+              {COUNTRY_OPTIONS.map((country) => (
+                <option key={country} value={country}>
+                  {country}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="md:col-span-2">

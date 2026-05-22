@@ -22,3 +22,10 @@ export async function fetchDepartments() {
     const data = await apiFetch<any[]>('/departments');
     return data.map(mapDepartment);
 }
+
+export function createDepartment(data: { name: string; description?: string }) {
+    return apiFetch<any>('/departments', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}

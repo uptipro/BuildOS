@@ -46,6 +46,26 @@ export class AdminExtrasController {
     @Delete('app-roles/:id')
     deleteRole(@Param('id') id: string) { return this.svc.deleteRole(id); }
 
+    // ── Issue Types ──
+    @Get('admin/issue-types')
+    getIssueTypes() { return this.svc.findAllIssueTypes(); }
+    @Post('admin/issue-types')
+    createIssueType(@Body() body: any) { return this.svc.createIssueType(body); }
+    @Put('admin/issue-types/:id')
+    updateIssueType(@Param('id') id: string, @Body() body: any) { return this.svc.updateIssueType(id, body); }
+    @Delete('admin/issue-types/:id')
+    deleteIssueType(@Param('id') id: string) { return this.svc.deleteIssueType(id); }
+
+    // ── Change Categories ──
+    @Get('admin/change-categories')
+    getChangeCategories() { return this.svc.findAllChangeCategories(); }
+    @Post('admin/change-categories')
+    createChangeCategory(@Body() body: any) { return this.svc.createChangeCategory(body); }
+    @Put('admin/change-categories/:id')
+    updateChangeCategory(@Param('id') id: string, @Body() body: any) { return this.svc.updateChangeCategory(id, body); }
+    @Delete('admin/change-categories/:id')
+    deleteChangeCategory(@Param('id') id: string) { return this.svc.deleteChangeCategory(id); }
+
     // ── Company Profile ──
     @Get('company-profile')
     getCompanyProfile() { return this.svc.getCompanyProfile(); }

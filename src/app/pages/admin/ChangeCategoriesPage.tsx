@@ -1,5 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Edit, Trash2, X, Search, RefreshCw } from "lucide-react";
+import {
+  getChangeCategories,
+  createChangeCategory,
+  updateChangeCategory,
+  deleteChangeCategory,
+} from "../../api/admin-extras";
 
 interface ChangeCategory {
   id: string;
@@ -17,18 +23,18 @@ function CategoryModal({
   onClose,
 }: {
   initial: Partial<ChangeCategory> & { name: string; description: string };
-  onSave: (data: Omit<ChangeCategory, "id"> & { id?: string }) => void;
+  onSave: (data: Omit<ChangeCategory, "id"> & { id?: string }) => Promise<void>;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ ...initial });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  function submit() {
+  async function submit() {
     if (!form.name.trim()) {
       setErrors({ name: "Name is required." });
       return;
     }
-    onSave(form);
+    await onSave(form);
     onClose();
   }
 
@@ -144,19 +150,25 @@ export function ChangeCategoriesPage() {
   const [editing, setEditing] = useState<ChangeCategory | null>(null);
   const [deleting, setDeleting] = useState<ChangeCategory | null>(null);
 
+  useEffect(() => {
+    getChangeCategories().then(setCategories).catch(() => {
+      setCategories([]);
+    });
+  }, []);
+
   const filtered = categories.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.description.toLowerCase().includes(search.toLowerCase()),
   );
 
-  function save(data: Omit<ChangeCategory, "id"> & { id?: string }) {
+  async function save(data: Omit<ChangeCategory, "id"> & { id?: string }) {
     if (data.id) {
-      setCategories((prev) =>
-        prev.map((c) => (c.id === data.id ? { ...data, id: data.id! } : c)),
-      );
+      const updated = await updateChangeCategory(data.id, data);
+      setCategories((prev) => prev.map((c) => (c.id === data.id ? updated : c)));
     } else {
-      setCategories((prev) => [...prev, { ...data, id: `cc-${Date.now()}` }]);
+      const created = await createChangeCategory(data);
+      setCategories((prev) => [...prev, created]);
     }
   }
 
@@ -277,9 +289,10 @@ export function ChangeCategoriesPage() {
       {deleting && (
         <DeleteModal
           name={deleting.name}
-          onConfirm={() =>
-            setCategories((prev) => prev.filter((c) => c.id !== deleting.id))
-          }
+          onConfirm={async () => {
+            await deleteChangeCategory(deleting.id);
+            setCategories((prev) => prev.filter((c) => c.id !== deleting.id));
+          }}
           onClose={() => setDeleting(null)}
         />
       )}

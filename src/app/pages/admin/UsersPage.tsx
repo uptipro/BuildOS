@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getUsers, AppUser } from "../../api/admin-extras";
+import { getUsers, inviteUser, deleteUser, AppUser } from "../../api/admin-extras";
 import {
   Search,
   Plus,
@@ -27,6 +27,8 @@ import {
   UserCheck,
   Upload,
 } from "lucide-react";
+import { getReferenceData } from "../../api/reference-data";
+import { createDepartment } from "../../api/departments";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type AppKey =
@@ -730,8 +732,9 @@ function AddUserModal({
     email: "",
     role: "",
     department: "",
-    password: "",
   });
+  const [newDepartment, setNewDepartment] = useState("");
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [roleOptions, setRoleOptions] = useState<
@@ -739,30 +742,72 @@ function AddUserModal({
   >([]);
 
   useEffect(() => {
-    import("../../api/admin-extras").then(({ getAppRoles }) => {
-      getAppRoles().then((roles) => {
+    Promise.all([
+      import("../../api/admin-extras").then(({ getAppRoles }) => getAppRoles()),
+      getReferenceData(),
+    ])
+      .then(([roles, referenceData]) => {
         setRoleOptions(roles.map((r) => ({ id: r.id, name: r.name })));
-        if (roles.length > 0) setForm((f) => ({ ...f, role: roles[0].name }));
+        setDepartments(referenceData.departments);
+        setForm((f) => ({
+          ...f,
+          role: f.role || roles[0]?.name || "",
+          department: f.department || referenceData.departments[0]?.name || "",
+        }));
+      })
+      .catch(() => {
+        setError("Failed to load role and department options.");
       });
-    });
   }, []);
 
   const handleSubmit = async () => {
-    if (!form.name || !form.email) {
-      setError("Name and email are required.");
+    if (!form.name || !form.email || !form.role || !form.department) {
+      setError("Name, email, role, and department are required.");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const { createUser } = await import("../../api/admin-extras");
-      const created = await createUser({ ...form, status: "Active" });
-      onCreated(userFromApi(created));
+      await inviteUser({ name: form.name, email: form.email, role: form.role });
+      onCreated({
+        id: `pending-${Date.now()}`,
+        name: form.name,
+        email: form.email,
+        phone: "",
+        location: "",
+        role: form.role,
+        department: form.department,
+        joinDate: new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+        status: "Pending",
+        apps: [],
+        lastActive: "Never",
+        processes: [],
+        activity: [],
+        requests: [],
+      });
       onClose();
     } catch {
-      setError("Failed to create user. Please try again.");
+      setError("Failed to send invite. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateDepartment = async () => {
+    const name = newDepartment.trim();
+    if (!name) return;
+    try {
+      const created = await createDepartment({ name });
+      const option = { id: created.id, name: created.name };
+      setDepartments((prev) => [...prev, option].sort((a, b) => a.name.localeCompare(b.name)));
+      setForm((prev) => ({ ...prev, department: option.name }));
+      setNewDepartment("");
+    } catch {
+      setError("Failed to create department.");
     }
   };
 
@@ -794,40 +839,68 @@ function AddUserModal({
               placeholder: "jane@company.com",
             },
             {
-              label: "Password",
-              key: "password",
-              type: "password",
-              placeholder: "Min. 8 characters",
-            },
-            {
               label: "Department",
               key: "department",
               type: "text",
-              placeholder: "e.g. Finance",
+              placeholder: "",
             },
           ].map(({ label, key, type, placeholder }) => (
             <div key={key}>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {label}
               </label>
-              <input
-                type={type}
-                placeholder={placeholder}
-                value={(form as any)[key]}
-                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              {key === "department" ? (
+                <>
+                  <select
+                    value={form.department}
+                    onChange={(e) => setForm({ ...form, department: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Select department</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newDepartment}
+                      onChange={(e) => setNewDepartment(e.target.value)}
+                      placeholder="Add new department"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateDepartment}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <input
+                  type={type}
+                  placeholder={placeholder}
+                  value={(form as any)[key]}
+                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              )}
             </div>
           ))}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Role
+              Role <span className="text-red-500">*</span>
             </label>
             <select
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
+              <option value="">Select role</option>
               {roleOptions.map((r) => (
                 <option key={r.id} value={r.name}>
                   {r.name}
@@ -849,7 +922,7 @@ function AddUserModal({
             disabled={loading}
             className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
           >
-            {loading ? "Creating…" : "Create User"}
+            {loading ? "Sending…" : "Send Invite"}
           </button>
         </div>
       </div>
@@ -1083,29 +1156,56 @@ export function UsersPage() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="relative flex justify-end">
-                    {/* ...existing code... */}
-                    {/* FIX: Remove invalid </label> and stray JSX, ensure correct closing tags */}
                     <button
                       onClick={() =>
                         setOpenMenuId(openMenuId === user.id ? null : user.id)
                       }
                       className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
                     >
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      {/* Add any additional button content here if needed */}
+                      <MoreVertical className="w-4 h-4" />
                     </button>
+                    {openMenuId === user.id && (
+                      <div className="absolute right-0 top-8 z-20 w-44 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5">
+                        <button
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full text-left px-2.5 py-2 rounded text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          View profile
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(user.email).catch(() => {});
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full text-left px-2.5 py-2 rounded text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          Copy email
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await deleteUser(user.id);
+                              setUsers((prev) => prev.filter((u) => u.id !== user.id));
+                            } finally {
+                              setOpenMenuId(null);
+                            }
+                          }}
+                          className="w-full text-left px-2.5 py-2 rounded text-sm text-red-600 hover:bg-red-50"
+                        >
+                          Delete user
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </td>
-                {/* ...existing code... */}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {/* ...existing code... */}
     </div>
   );
 }
