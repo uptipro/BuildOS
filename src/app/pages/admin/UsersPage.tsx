@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { getUsers, inviteUser, deleteUser, AppUser } from "../../api/admin-extras";
+import {
+  getUsers,
+  inviteUser,
+  deleteUser,
+  AppUser,
+} from "../../api/admin-extras";
 import {
   Search,
   Plus,
@@ -734,7 +739,9 @@ function AddUserModal({
     department: "",
   });
   const [newDepartment, setNewDepartment] = useState("");
-  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [departments, setDepartments] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [roleOptions, setRoleOptions] = useState<
@@ -803,7 +810,9 @@ function AddUserModal({
     try {
       const created = await createDepartment({ name });
       const option = { id: created.id, name: created.name };
-      setDepartments((prev) => [...prev, option].sort((a, b) => a.name.localeCompare(b.name)));
+      setDepartments((prev) =>
+        [...prev, option].sort((a, b) => a.name.localeCompare(b.name)),
+      );
       setForm((prev) => ({ ...prev, department: option.name }));
       setNewDepartment("");
     } catch {
@@ -853,7 +862,9 @@ function AddUserModal({
                 <>
                   <select
                     value={form.department}
-                    onChange={(e) => setForm({ ...form, department: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, department: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="">Select department</option>
@@ -1177,7 +1188,9 @@ export function UsersPage() {
                         </button>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(user.email).catch(() => {});
+                            navigator.clipboard
+                              .writeText(user.email)
+                              .catch(() => {});
                             setOpenMenuId(null);
                           }}
                           className="w-full text-left px-2.5 py-2 rounded text-sm text-gray-700 hover:bg-gray-50"
@@ -1188,7 +1201,9 @@ export function UsersPage() {
                           onClick={async () => {
                             try {
                               await deleteUser(user.id);
-                              setUsers((prev) => prev.filter((u) => u.id !== user.id));
+                              setUsers((prev) =>
+                                prev.filter((u) => u.id !== user.id),
+                              );
                             } finally {
                               setOpenMenuId(null);
                             }

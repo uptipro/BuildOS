@@ -30,7 +30,9 @@ export function AdminDashboardPage() {
   const fmt = (n: number | null) => (n === null ? "…" : String(n));
   const sinceCount = (days: number) => {
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    return allUsers.filter((u) => u.lastLogin && new Date(u.lastLogin).getTime() >= cutoff).length;
+    return allUsers.filter(
+      (u) => u.lastLogin && new Date(u.lastLogin).getTime() >= cutoff,
+    ).length;
   };
 
   const dau = sinceCount(1);
@@ -99,15 +101,27 @@ export function AdminDashboardPage() {
   const serviceStates = [
     {
       name: "Database",
-      status: summary?.healthPercent === 100 ? "Operational" : summary ? "Degraded" : "Checking",
+      status:
+        summary?.healthPercent === 100
+          ? "Operational"
+          : summary
+            ? "Degraded"
+            : "Checking",
       up: summary?.healthPercent === 100,
       detail: summary ? `Health ${summary.healthPercent}%` : "Running checks",
     },
     {
       name: "API",
-      status: summary?.health.status === "healthy" ? "Operational" : summary ? "Degraded" : "Checking",
+      status:
+        summary?.health.status === "healthy"
+          ? "Operational"
+          : summary
+            ? "Degraded"
+            : "Checking",
       up: summary?.health.status === "healthy",
-      detail: summary ? `${summary.pendingApprovals} pending approvals` : "Collecting metrics",
+      detail: summary
+        ? `${summary.pendingApprovals} pending approvals`
+        : "Collecting metrics",
     },
     {
       name: "Storage",
@@ -119,7 +133,9 @@ export function AdminDashboardPage() {
       name: "Email",
       status: summary ? "Operational" : "Checking",
       up: !!summary,
-      detail: summary ? `${summary.pendingInvites} pending invites` : "Collecting metrics",
+      detail: summary
+        ? `${summary.pendingInvites} pending invites`
+        : "Collecting metrics",
     },
   ];
 
@@ -250,10 +266,15 @@ export function AdminDashboardPage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {serviceStates.map((svc) => (
-            <div key={svc.name} className="rounded-lg border border-gray-100 p-3 bg-gray-50">
+            <div
+              key={svc.name}
+              className="rounded-lg border border-gray-100 p-3 bg-gray-50"
+            >
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-gray-800">{svc.name}</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${svc.up ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full ${svc.up ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                >
                   {svc.status}
                 </span>
               </div>

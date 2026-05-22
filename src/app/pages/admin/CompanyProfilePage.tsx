@@ -18,7 +18,11 @@ const COUNTRY_OPTIONS = [
   "Germany",
 ];
 
-async function compressImage(file: File, maxWidth = 960, quality = 0.82): Promise<string> {
+async function compressImage(
+  file: File,
+  maxWidth = 960,
+  quality = 0.82,
+): Promise<string> {
   const imageData = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);

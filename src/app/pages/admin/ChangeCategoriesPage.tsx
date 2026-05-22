@@ -151,9 +151,11 @@ export function ChangeCategoriesPage() {
   const [deleting, setDeleting] = useState<ChangeCategory | null>(null);
 
   useEffect(() => {
-    getChangeCategories().then(setCategories).catch(() => {
-      setCategories([]);
-    });
+    getChangeCategories()
+      .then(setCategories)
+      .catch(() => {
+        setCategories([]);
+      });
   }, []);
 
   const filtered = categories.filter(
@@ -165,7 +167,9 @@ export function ChangeCategoriesPage() {
   async function save(data: Omit<ChangeCategory, "id"> & { id?: string }) {
     if (data.id) {
       const updated = await updateChangeCategory(data.id, data);
-      setCategories((prev) => prev.map((c) => (c.id === data.id ? updated : c)));
+      setCategories((prev) =>
+        prev.map((c) => (c.id === data.id ? updated : c)),
+      );
     } else {
       const created = await createChangeCategory(data);
       setCategories((prev) => [...prev, created]);

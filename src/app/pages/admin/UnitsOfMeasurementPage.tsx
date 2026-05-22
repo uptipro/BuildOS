@@ -199,7 +199,7 @@ export function UnitsOfMeasurementPage() {
   const handleSave = () => {
     if (editingUnit) {
       setUnits((prev) =>
-        prev.map((u) => (u.id === editingUnit.id ? { ...u, ...formData } : u))
+        prev.map((u) => (u.id === editingUnit.id ? { ...u, ...formData } : u)),
       );
     } else {
       const newUnit: Unit = {
@@ -250,8 +250,9 @@ export function UnitsOfMeasurementPage() {
         <div>
           <h3 className="text-sm font-medium text-blue-900">About Units</h3>
           <p className="text-sm text-blue-700 mt-1">
-            Create custom units for materials specific to construction (e.g., bags, bundles, rolls).
-            All units are converted to base units for accurate calculations.
+            Create custom units for materials specific to construction (e.g.,
+            bags, bundles, rolls). All units are converted to base units for
+            accurate calculations.
           </p>
         </div>
       </div>
@@ -274,7 +275,9 @@ export function UnitsOfMeasurementPage() {
               <h2 className="text-lg font-semibold text-gray-900">
                 {editingUnit ? "Edit Unit" : "Add New Unit"}
               </h2>
-              <p className="text-sm text-gray-500 mt-1">Define the unit properties and conversion factor.</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Define the unit properties and conversion factor.
+              </p>
             </div>
 
             <div className="px-6 py-5 space-y-4">
@@ -316,7 +319,9 @@ export function UnitsOfMeasurementPage() {
                   <CreatableSelect
                     options={categoryOptions}
                     value={formData.category}
-                    onChange={(value) => setFormData({ ...formData, category: value })}
+                    onChange={(value) =>
+                      setFormData({ ...formData, category: value })
+                    }
                     onCreateOption={(label) => {
                       const opt = { label, value: label };
                       setCategoryOptions((prev) => [...prev, opt]);
@@ -359,7 +364,9 @@ export function UnitsOfMeasurementPage() {
                     placeholder="e.g., 1, 0.01, 1000"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Multiplier to convert this unit to its base unit</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Multiplier to convert this unit to its base unit
+                  </p>
                 </div>
               </div>
             </div>
@@ -385,7 +392,9 @@ export function UnitsOfMeasurementPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h2 className="text-base font-semibold text-gray-900">Delete Unit?</h2>
+            <h2 className="text-base font-semibold text-gray-900">
+              Delete Unit?
+            </h2>
             <p className="text-sm text-gray-500">
               <strong>{deleteTarget.name}</strong> will be permanently removed.
             </p>
@@ -398,7 +407,9 @@ export function UnitsOfMeasurementPage() {
               </button>
               <button
                 onClick={() => {
-                  setUnits((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+                  setUnits((prev) =>
+                    prev.filter((u) => u.id !== deleteTarget.id),
+                  );
                   setDeleteTarget(null);
                 }}
                 className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl"
