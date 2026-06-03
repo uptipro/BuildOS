@@ -1,6 +1,6 @@
 const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/$/, '');
 
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export async function apiFetch<T = any>(path: string, options?: RequestInit): Promise<T> {
     const token = localStorage.getItem('auth_token');
     const res = await fetch(`${BASE_URL}${path}`, {
         headers: {
@@ -14,5 +14,5 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
         const text = await res.text();
         throw new Error(`API error ${res.status}: ${text}`);
     }
-    return res.json();
+    return (await res.json()) as T;
 }

@@ -38,3 +38,19 @@ export async function fetchProjects(params?: { status?: string; type?: string })
     const data = await apiFetch<any[]>(`/projects${query}`);
     return data.map(mapProject);
 }
+
+export function getProject(id: string) {
+    return apiFetch<any>(`/projects/${id}`);
+}
+
+export function createProject(data: any) {
+    return apiFetch(`/projects`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateProject(id: string, data: any) {
+    return apiFetch(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteProject(id: string) {
+    return apiFetch(`/projects/${id}`, { method: 'DELETE' });
+}

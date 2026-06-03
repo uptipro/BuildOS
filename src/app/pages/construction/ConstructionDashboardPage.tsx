@@ -12,7 +12,6 @@ import {
   ArrowRight,
   HardHat,
   Package,
-  BarChart3,
   Activity,
 } from "lucide-react";
 

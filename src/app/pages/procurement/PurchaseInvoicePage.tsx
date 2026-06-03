@@ -537,7 +537,7 @@ export function PurchaseInvoicePage() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {form.lines.map((l, i) => (
+                  {form.lines.map((l) => (
                     <div
                       key={l.id}
                       className="grid grid-cols-12 gap-2 items-center"

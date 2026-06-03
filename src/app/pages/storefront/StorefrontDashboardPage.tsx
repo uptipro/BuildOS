@@ -2,11 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Store,
   FolderOpen,
-  ArrowLeftRight,
   AlertTriangle,
-  TrendingDown,
   Package,
-  DollarSign,
   CheckCircle2,
   Clock,
 } from "lucide-react";

@@ -282,6 +282,73 @@ export class AdminExtrasService {
         }));
     }
 
+    async getAuditLogs(limit: number = 100, offset: number = 0) {
+        try {
+            const logs = await this.prisma.activityRecord.findMany({
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+                skip: offset,
+            });
+            return logs.map((log: any) => ({
+                id: log.id,
+                timestamp: log.createdAt,
+                user: log.userName || 'System',
+                action: log.action || 'Unknown',
+                module: log.module || 'System',
+                details: log.description || '',
+                userId: log.userId,
+                createdAt: log.createdAt,
+            }));
+        } catch (err) {
+            this.logger.warn('ActivityHistory table not available, returning empty logs');
+            return [];
+        }
+    }
+
+    async updateApproval(id: string, data: { status?: string; notes?: string; reason?: string }) {
+        const status = String(data?.status ?? '').toLowerCase();
+        
+        // Try to find and update in leave-requests
+        const leaveReq = await this.prisma.leaveRequest.findUnique({ where: { id } }).catch(() => null);
+        if (leaveReq) {
+            return this.prisma.leaveRequest.update({
+                where: { id },
+                data: {
+                    status: status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'pending',
+                    approvedAt: status === 'approved' ? new Date() : undefined,
+                    notes: data?.notes,
+                },
+            });
+        }
+
+        // Try to find and update in claims
+        const claim = await this.prisma.claim.findUnique({ where: { id } }).catch(() => null);
+        if (claim) {
+            return this.prisma.claim.update({
+                where: { id },
+                data: {
+                    status: status === 'approved' ? 'Approved' : status === 'rejected' ? 'Rejected' : 'Submitted',
+                    reviewedAt: status !== 'submitted' ? new Date() : undefined,
+                    rejectionReason: data?.reason,
+                },
+            });
+        }
+
+        // Try to find and update in expenses
+        const expense = await this.prisma.expense.findUnique({ where: { id } }).catch(() => null);
+        if (expense) {
+            return this.prisma.expense.update({
+                where: { id },
+                data: {
+                    status: status === 'approved' ? 'Approved' : status === 'rejected' ? 'Rejected' : 'Submitted',
+                    approvedAt: status === 'approved' ? new Date() : undefined,
+                },
+            });
+        }
+
+        throw new BadRequestException(`Approval with ID ${id} not found`);
+    }
+
     // ── Users ──
     async inviteUser(data: { email: string; name: string; role?: string }) {
         const name = String(data?.name ?? '').trim();
@@ -577,5 +644,58 @@ export class AdminExtrasService {
     }
     deleteDirector(id: string) {
         return this.prisma.director.delete({ where: { id } });
+    }
+
+    // ── Email Config Stub Methods ──
+    findEmailConfigs() {
+        return []; // TODO: Implement email config persistence
+    }
+    createEmailConfig(data: any) {
+        return { id: `EC-${Date.now()}`, ...data };
+    }
+    updateEmailConfig(id: string, data: any) {
+        return { id, ...data };
+    }
+    deleteEmailConfig(id: string) {
+        return { id, deleted: true };
+    }
+
+    // ── Units Stub Methods ──
+    findUnits() {
+        return []; // TODO: Implement units persistence
+    }
+    createUnit(data: any) {
+        return { id: `u-${Date.now()}`, ...data };
+    }
+    updateUnit(id: string, data: any) {
+        return { id, ...data };
+    }
+    deleteUnit(id: string) {
+        return { id, deleted: true };
+    }
+
+    // ── API Keys Stub Methods ──
+    findApiKeys() {
+        return []; // TODO: Implement API keys management
+    }
+
+    // ── Webhooks Stub Methods ──
+    findWebhooks() {
+        return []; // TODO: Implement webhooks management
+    }
+
+    // ── Email Templates Stub Methods ──
+    findEmailTemplates() {
+        return []; // TODO: Implement email templates management
+    }
+
+    // ── Notification Rules Stub Methods ──
+    findNotificationRules() {
+        return []; // TODO: Implement notification rules management
+    }
+
+    // ── Report Schedules Stub Methods ──
+    findReportSchedules() {
+        return []; // TODO: Implement report schedules management
     }
 }

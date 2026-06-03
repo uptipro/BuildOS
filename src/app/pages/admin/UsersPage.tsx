@@ -11,7 +11,6 @@ import {
   Shield,
   MoreVertical,
   X,
-  ChevronRight,
   Mail,
   Phone,
   MapPin,
@@ -24,13 +23,10 @@ import {
   Edit,
   Copy,
   Trash2,
-  AlertCircle,
   Lock,
   Eye,
   PenLine,
   BadgeCheck,
-  UserCheck,
-  Upload,
 } from "lucide-react";
 import { getReferenceData } from "../../api/reference-data";
 import { createDepartment } from "../../api/departments";
@@ -44,8 +40,6 @@ type AppKey =
   | "admin"
   | "ess";
 type UserStatus = "Active" | "Inactive" | "Pending";
-type PermState = "allow" | "deny" | "inherit";
-
 interface AppDef {
   key: AppKey;
   label: string;
@@ -784,8 +778,11 @@ function AddUserModal({
       });
 
       if (inviteResult.inviteEmailSent === false) {
+        const inviteResultWithWarning = inviteResult as typeof inviteResult & {
+          inviteEmailWarning?: string;
+        };
         const warning =
-          inviteResult.inviteEmailWarning ||
+          inviteResultWithWarning.inviteEmailWarning ||
           "Invite created, but email delivery failed.";
         const message = `${warning} Activation link: ${inviteResult.activationLink}`;
         onInviteWarning(message);

@@ -11,6 +11,9 @@ export class AdminExtrasController {
     @Get('approvals')
     getApprovals(@Query('module') module?: string) { return this.svc.findApprovals(module); }
 
+    @Patch('approvals/:id')
+    updateApproval(@Param('id') id: string, @Body() body: any) { return this.svc.updateApproval(id, body); }
+
     @Get('reference-data')
     getReferenceData() { return this.svc.referenceData(); }
 
@@ -19,6 +22,11 @@ export class AdminExtrasController {
 
     @Get('admin/activity-log')
     getActivityLog() { return this.svc.activityLog(); }
+
+    @Get('audit-logs')
+    getAuditLogs(@Query('limit') limit?: number, @Query('offset') offset?: number) { 
+        return this.svc.getAuditLogs(limit, offset); 
+    }
 
     // ── Users ──
     @Post('admin/users/invite')
@@ -81,4 +89,44 @@ export class AdminExtrasController {
     updateDirector(@Param('id') id: string, @Body() body: any) { return this.svc.updateDirector(id, body); }
     @Delete('directors/:id')
     deleteDirector(@Param('id') id: string) { return this.svc.deleteDirector(id); }
+
+    // ── Email Config ──
+    @Get('email-config')
+    getEmailConfigs() { return this.svc.findEmailConfigs(); }
+    @Post('email-config')
+    createEmailConfig(@Body() body: any) { return this.svc.createEmailConfig(body); }
+    @Patch('email-config/:id')
+    updateEmailConfig(@Param('id') id: string, @Body() body: any) { return this.svc.updateEmailConfig(id, body); }
+    @Delete('email-config/:id')
+    deleteEmailConfig(@Param('id') id: string) { return this.svc.deleteEmailConfig(id); }
+
+    // ── Units of Measurement ──
+    @Get('units')
+    getUnits() { return this.svc.findUnits(); }
+    @Post('units')
+    createUnit(@Body() body: any) { return this.svc.createUnit(body); }
+    @Patch('units/:id')
+    updateUnit(@Param('id') id: string, @Body() body: any) { return this.svc.updateUnit(id, body); }
+    @Delete('units/:id')
+    deleteUnit(@Param('id') id: string) { return this.svc.deleteUnit(id); }
+
+    // ── API Keys ──
+    @Get('api-keys')
+    getApiKeys() { return this.svc.findApiKeys(); }
+
+    // ── Webhooks ──
+    @Get('webhooks')
+    getWebhooks() { return this.svc.findWebhooks(); }
+
+    // ── Email Templates ──
+    @Get('email-templates')
+    getEmailTemplates() { return this.svc.findEmailTemplates(); }
+
+    // ── Notification Rules ──
+    @Get('notification-rules')
+    getNotificationRules() { return this.svc.findNotificationRules(); }
+
+    // ── Report Schedules ──
+    @Get('report-schedules')
+    getReportSchedules() { return this.svc.findReportSchedules(); }
 }

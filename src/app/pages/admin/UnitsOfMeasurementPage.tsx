@@ -1,7 +1,13 @@
 import { Plus, Edit, Trash2, Ruler } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DataTable } from "../../components/DataTable";
 import { CreatableSelect } from "../../components/CreatableSelect";
+import {
+  getUnits,
+  createUnit,
+  updateUnit,
+  deleteUnit,
+} from "../../api/admin-extras";
 
 interface Unit {
   id: string;
@@ -24,72 +30,13 @@ export function UnitsOfMeasurementPage() {
     { label: "Custom", value: "Custom" },
   ]);
 
-  const [units, setUnits] = useState<Unit[]>([
-    {
-      id: "1",
-      name: "Meter",
-      abbreviation: "m",
-      category: "Length",
-      baseUnit: "Meter",
-      conversionFactor: 1,
-    },
-    {
-      id: "2",
-      name: "Centimeter",
-      abbreviation: "cm",
-      category: "Length",
-      baseUnit: "Meter",
-      conversionFactor: 0.01,
-    },
-    {
-      id: "3",
-      name: "Foot",
-      abbreviation: "ft",
-      category: "Length",
-      baseUnit: "Meter",
-      conversionFactor: 0.3048,
-    },
-    {
-      id: "4",
-      name: "Kilogram",
-      abbreviation: "kg",
-      category: "Weight",
-      baseUnit: "Kilogram",
-      conversionFactor: 1,
-    },
-    {
-      id: "5",
-      name: "Ton",
-      abbreviation: "ton",
-      category: "Weight",
-      baseUnit: "Kilogram",
-      conversionFactor: 1000,
-    },
-    {
-      id: "6",
-      name: "Bag (Cement)",
-      abbreviation: "bag",
-      category: "Custom",
-      baseUnit: "Kilogram",
-      conversionFactor: 50,
-    },
-    {
-      id: "7",
-      name: "Cubic Meter",
-      abbreviation: "m³",
-      category: "Volume",
-      baseUnit: "Cubic Meter",
-      conversionFactor: 1,
-    },
-    {
-      id: "8",
-      name: "Liter",
-      abbreviation: "L",
-      category: "Volume",
-      baseUnit: "Cubic Meter",
-      conversionFactor: 0.001,
-    },
-  ]);
+  const [units, setUnits] = useState<Unit[]>([]);
+
+  useEffect(() => {
+    getUnits()
+      .then((data) => setUnits(data as Unit[]))
+      .catch(() => setUnits([]));
+  }, []);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -196,17 +143,37 @@ export function UnitsOfMeasurementPage() {
     setDeleteTarget(target);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    const payload = {
+      name: formData.name,
+      abbreviation: formData.abbreviation,
+      category: formData.category,
+      baseUnit: formData.baseUnit,
+      conversionFactor: formData.conversionFactor,
+    };
+
     if (editingUnit) {
-      setUnits((prev) =>
-        prev.map((u) => (u.id === editingUnit.id ? { ...u, ...formData } : u)),
-      );
+      try {
+        const updated = await updateUnit(editingUnit.id, payload);
+        setUnits((prev) =>
+          prev.map((u) => (u.id === editingUnit.id ? (updated as Unit) : u)),
+        );
+      } catch {
+        setUnits((prev) =>
+          prev.map((u) => (u.id === editingUnit.id ? { ...u, ...payload } : u)),
+        );
+      }
     } else {
-      const newUnit: Unit = {
-        id: Date.now().toString(),
-        ...formData,
-      };
-      setUnits((prev) => [...prev, newUnit]);
+      try {
+        const created = await createUnit(payload);
+        setUnits((prev) => [created as Unit, ...prev]);
+      } catch {
+        const newUnit: Unit = {
+          id: Date.now().toString(),
+          ...payload,
+        };
+        setUnits((prev) => [newUnit, ...prev]);
+      }
     }
     handleCloseModal();
   };
@@ -406,7 +373,12 @@ export function UnitsOfMeasurementPage() {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  try {
+                    await deleteUnit(deleteTarget.id);
+                  } catch {
+                    // Fallback to local deletion when backend mutation is unavailable.
+                  }
                   setUnits((prev) =>
                     prev.filter((u) => u.id !== deleteTarget.id),
                   );

@@ -8,7 +8,7 @@ import {
   ChevronDown,
   AlertTriangle,
 } from "lucide-react";
-import { getApprovals } from "../../api/approvals";
+import { getApprovals, approveItem, rejectItem } from "../../api/approvals";
 
 type ESSApprovalType = string;
 type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -67,9 +67,7 @@ export function ESSApprovalsPage() {
   );
   const [typeFilter, setTypeFilter] = useState<ESSApprovalType | "all">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [approvalStates, setApprovalStates] = useState<
-    Record<string, ApprovalStatus>
-  >({});
+  const [approvalStates] = useState<Record<string, ApprovalStatus>>({});
   const [requestInfoFor, setRequestInfoFor] = useState<string | null>(null);
   const [infoNote, setInfoNote] = useState("");
   const [sentInfoFor, setSentInfoFor] = useState<Set<string>>(new Set());
@@ -84,10 +82,28 @@ export function ESSApprovalsPage() {
     return approvalStates[a.id] ?? a.status;
   }
   function approve(id: string) {
-    setApprovalStates((s) => ({ ...s, [id]: "approved" }));
+    approveItem(id)
+      .then(() => {
+        getApprovals("ess")
+          .then((items) => setApprovals(items as ESSApproval[]))
+          .catch(() => setApprovals([]));
+      })
+      .catch((err) => {
+        alert("Failed to approve. Please try again.");
+        console.error(err);
+      });
   }
   function reject(id: string) {
-    setApprovalStates((s) => ({ ...s, [id]: "rejected" }));
+    rejectItem(id)
+      .then(() => {
+        getApprovals("ess")
+          .then((items) => setApprovals(items as ESSApproval[]))
+          .catch(() => setApprovals([]));
+      })
+      .catch((err) => {
+        alert("Failed to reject. Please try again.");
+        console.error(err);
+      });
   }
   function sendInfoRequest(id: string) {
     if (!infoNote.trim()) return;

@@ -7,7 +7,6 @@ import {
   Search,
   Edit,
   Trash2,
-  Users,
   ChevronDown,
   ChevronRight,
   X,
@@ -39,7 +38,12 @@ const deptColors = [
 export function DepartmentsPage() {
   const [depts, setDepts] = useState<Department[]>([]);
   const [payrollSummary, setPayrollSummary] = useState<
-    { department: string; employees: number; grossPay: number; netPay: number }[]
+    {
+      department: string;
+      employees: number;
+      grossPay: number;
+      netPay: number;
+    }[]
   >([]);
   useEffect(() => {
     fetchDepartments().then(setDepts);

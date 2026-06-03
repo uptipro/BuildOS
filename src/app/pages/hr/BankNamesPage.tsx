@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Search, Edit, Trash2, Building2, CheckCircle } from "lucide-react";
+import { apiFetch } from "../../api/client";
 
 interface Bank {
   id: string;
@@ -30,13 +31,35 @@ export function BankNamesPage() {
     e.preventDefault();
     if (!form.name.trim()) return;
     if (editId) {
-      setBanks(prev => prev.map(b => b.id === editId ? { ...b, ...form } : b));
-      setEditId(null);
+      apiFetch(`/hr-extras/bank-names/${editId}`, {
+        method: "PATCH",
+        body: JSON.stringify(form),
+      })
+        .then(() => {
+          setBanks(prev => prev.map(b => b.id === editId ? { ...b, ...form } : b));
+          setEditId(null);
+          setForm(EMPTY_FORM);
+          setShowAdd(false);
+        })
+        .catch((err) => {
+          alert("Failed to update bank. Please try again.");
+          console.error(err);
+        });
     } else {
-      setBanks(prev => [...prev, { id: `b${Date.now()}`, ...form, active: true }]);
+      apiFetch("/hr-extras/bank-names", {
+        method: "POST",
+        body: JSON.stringify(form),
+      })
+        .then(() => {
+          setBanks(prev => [...prev, { id: `b${Date.now()}`, ...form, active: true }]);
+          setForm(EMPTY_FORM);
+          setShowAdd(false);
+        })
+        .catch((err) => {
+          alert("Failed to add bank. Please try again.");
+          console.error(err);
+        });
     }
-    setForm(EMPTY_FORM);
-    setShowAdd(false);
   }
 
   function startEdit(b: Bank) {
@@ -46,7 +69,16 @@ export function BankNamesPage() {
   }
 
   function toggleActive(id: string) {
-    setBanks(prev => prev.map(b => b.id === id ? { ...b, active: !b.active } : b));
+    apiFetch(`/hr-extras/bank-names/${id}/toggle`, {
+      method: "PATCH",
+    })
+      .then(() => {
+        setBanks(prev => prev.map(b => b.id === id ? { ...b, active: !b.active } : b));
+      })
+      .catch((err) => {
+        alert("Failed to toggle bank status. Please try again.");
+        console.error(err);
+      });
   }
 
   return (

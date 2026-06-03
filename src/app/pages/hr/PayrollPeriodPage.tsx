@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { getPayrollPeriods } from "../../api/hr-extras";
-import { Plus, Lock, Unlock, Clock, CheckCircle } from "lucide-react";
+import { getPayrollPeriods, createPayrollPeriod } from "../../api/hr-extras";
+import { Plus, Lock, Unlock, Clock } from "lucide-react";
 
 type PeriodStatus = "open" | "processing" | "closed";
 
@@ -88,25 +88,39 @@ export function PayrollPeriodPage() {
 
   function addPeriod() {
     if (!newName.trim() || !newStart || !newEnd) return;
-    setPeriods((prev) => [
-      {
-        id: `pp${Date.now()}`,
-        name: newName.trim(),
-        type: "Monthly",
-        startDate: newStart,
-        endDate: newEnd,
-        status: "open",
-        employeesIncluded: 0,
-        totalNetPay: 0,
-        processedBy: null,
-        processedAt: null,
-      },
-      ...prev,
-    ]);
-    setShowAdd(false);
-    setNewName("");
-    setNewStart("");
-    setNewEnd("");
+    createPayrollPeriod({
+      name: newName.trim(),
+      startDate: newStart,
+      endDate: newEnd,
+    })
+      .then(() => {
+        getPayrollPeriods()
+          .then((data) =>
+            setPeriods(
+              data.map((p) => ({
+                id: p.id,
+                name: p.name,
+                type: "Monthly" as const,
+                startDate: p.startDate,
+                endDate: p.endDate,
+                status: (p.status as PeriodStatus) || "open",
+                employeesIncluded: 0,
+                totalNetPay: 0,
+                processedBy: null,
+                processedAt: null,
+              })),
+            ),
+          )
+          .catch(console.error);
+        setShowAdd(false);
+        setNewName("");
+        setNewStart("");
+        setNewEnd("");
+      })
+      .catch((err) => {
+        alert("Failed to create payroll period. Please try again.");
+        console.error(err);
+      });
   }
 
   return (

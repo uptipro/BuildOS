@@ -29,6 +29,32 @@ function mapPayment(p: any) {
     };
 }
 
+export function createPayment(data: any) {
+    return apiFetch(`/payments`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function initiatePayment(id: string) {
+    return apiFetch(`/payments/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'PaymentInitiated', initiatedAt: new Date().toISOString() }),
+    });
+}
+
+export function completePayment(id: string) {
+    return apiFetch(`/payments/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'PaymentCompleted', completedAt: new Date().toISOString() }),
+    });
+}
+
+export function updatePayment(id: string, data: any) {
+    return apiFetch(`/payments/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deletePayment(id: string) {
+    return apiFetch(`/payments/${id}`, { method: 'DELETE' });
+}
+
 export async function fetchPayments(params?: { status?: string; type?: string }) {
     const qs = new URLSearchParams();
     if (params?.status) qs.set('status', params.status);

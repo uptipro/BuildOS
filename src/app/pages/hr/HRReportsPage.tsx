@@ -11,12 +11,7 @@ import {
   Clock,
   DollarSign,
   Users,
-  Calendar,
   CheckCircle,
-  Filter,
-  BarChart2,
-  TrendingUp,
-  ChevronRight,
 } from "lucide-react";
 
 type ReportType = "attendance" | "workforce" | "payroll";

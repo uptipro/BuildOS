@@ -34,3 +34,39 @@ export async function fetchClaims(params?: { status?: string; employeeId?: strin
     const data = await apiFetch<any[]>(`/claims${query}`);
     return data.map(mapClaim);
 }
+
+export function createClaim(data: any) {
+    return apiFetch(`/claims`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function approveClaim(id: string, notes?: string) {
+    return apiFetch(`/claims/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'approved', approvedAt: new Date().toISOString(), notes }),
+    });
+}
+
+export function rejectClaim(id: string, reason?: string) {
+    return apiFetch(`/claims/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'rejected', rejectionReason: reason }),
+    });
+}
+
+export function payClaim(id: string) {
+    return apiFetch(`/claims/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'paid', paidAt: new Date().toISOString() }),
+    });
+}
+
+export function updateClaimStatus(id: string, status: string) {
+    return apiFetch(`/claims/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+    });
+}
+
+export function deleteClaim(id: string) {
+    return apiFetch(`/claims/${id}`, { method: 'DELETE' });
+}

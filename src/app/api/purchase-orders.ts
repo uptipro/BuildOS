@@ -42,3 +42,22 @@ export async function fetchPurchaseOrders(params?: { status?: string; supplierId
     const data = await apiFetch<any[]>(`/purchase-orders${query}`);
     return data.map(mapPO);
 }
+
+export function createPurchaseOrder(data: any) {
+    return apiFetch(`/purchase-orders`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updatePurchaseOrder(id: string, data: any) {
+    return apiFetch(`/purchase-orders/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function approvePO(id: string) {
+    return apiFetch(`/purchase-orders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'confirmed' }),
+    });
+}
+
+export function deletePurchaseOrder(id: string) {
+    return apiFetch(`/purchase-orders/${id}`, { method: 'DELETE' });
+}

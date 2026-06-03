@@ -129,4 +129,24 @@ export class FinanceExtrasService {
     deleteTaxConfig(id: string) {
         return this.prisma.taxConfig.delete({ where: { id } });
     }
+
+    // ── Scheduled Postings Stub Methods ──
+    createScheduledPosting(data: any) {
+        return { id: `sp-${Date.now()}`, ...data };
+    }
+
+    // ── Payment Methods Stub Methods ──
+    togglePaymentMethod(id: string) {
+        return { id, enabled: true };
+    }
+
+    // ── Report Templates Stub Methods ──
+    getReportTemplates() {
+        return {}; // TODO: Implement report templates
+    }
+
+    // ── Config Stub Methods ──
+    saveConfig(data: any) {
+        return { saved: true, ...data };
+    }
 }

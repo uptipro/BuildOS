@@ -6,7 +6,6 @@ import {
 } from "../../api/procurement-requests";
 import { getReferenceData } from "../../api/reference-data";
 import {
-  Inbox,
   Search,
   ChevronDown,
   ChevronRight,
@@ -202,7 +201,10 @@ function RecordDocModal({
       .then((data) => {
         const vendorNames = data.suppliers.map((s) => s.name);
         const projectNames = data.projects.map((p) => p.name);
-        const storeOptions = data.stores.map((s) => ({ name: s.name, level: s.type }));
+        const storeOptions = data.stores.map((s) => ({
+          name: s.name,
+          level: s.type,
+        }));
         setVendors(vendorNames);
         setProjects(projectNames);
         setStores(storeOptions);
@@ -1024,7 +1026,7 @@ function CompareQuotesModal({
                     <td className="px-4 py-2.5 text-xs font-medium text-gray-700">
                       {mat}
                     </td>
-                    {quotes.map((q, qIdx) => {
+                    {quotes.map((q) => {
                       const item = q.items.find((it) => it.material === mat);
                       const itemNegoCount = item?.negotiations?.length ?? 0;
                       const lastRound =

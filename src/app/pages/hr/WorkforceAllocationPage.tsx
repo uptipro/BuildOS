@@ -1,17 +1,6 @@
 import { useState, useEffect } from "react";
 import { getWorkforceAllocations } from "../../api/workforce-allocation";
-import {
-  Users,
-  AlertTriangle,
-  CheckCircle,
-  Plus,
-  Search,
-  ChevronDown,
-  X,
-  Building2,
-  ArrowRight,
-  TrendingUp,
-} from "lucide-react";
+import { Users, AlertTriangle, Plus, Search, X, Building2 } from "lucide-react";
 
 interface Allocation {
   empId: string;
@@ -46,7 +35,7 @@ export function WorkforceAllocationPage() {
   const [filter, setFilter] = useState<"all" | "over" | "full" | "under">(
     "all",
   );
-  const [projectSearch, setProjectSearch] = useState("");
+  const [projectSearch] = useState("");
   const [showAssign, setShowAssign] = useState(false);
 
   useEffect(() => {

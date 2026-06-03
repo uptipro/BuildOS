@@ -347,7 +347,9 @@ function NewPRModal({
         setProjects(projectNames);
         setSuppliers(supplierNames);
         setProject((prev) => prev || projectNames[0] || "");
-        setSelectedSuppliers((prev) => prev.length ? prev : supplierNames.slice(0, 1));
+        setSelectedSuppliers((prev) =>
+          prev.length ? prev : supplierNames.slice(0, 1),
+        );
       })
       .catch(() => {});
   }, []);

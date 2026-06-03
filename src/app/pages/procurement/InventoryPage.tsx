@@ -3,7 +3,6 @@ import { getMaterials, Material as ApiMaterial } from "../../api/materials";
 import {
   Package,
   Search,
-  Filter,
   Plus,
   Edit,
   Archive,
@@ -58,7 +57,6 @@ function fromApiMaterial(m: ApiMaterial): LocalMaterial {
     status,
   };
 }
-
 
 const statusConfig: Record<
   string,

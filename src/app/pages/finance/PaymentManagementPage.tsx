@@ -8,7 +8,6 @@ import {
   CheckCircle,
   XCircle,
   Send,
-  Wallet,
   Eye,
   X,
   ChevronDown,
@@ -101,8 +100,41 @@ const STATUS_OPTS: Array<PaymentStatus | "All"> = [
 
 export function PaymentManagementPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
+
+  function toPayment(p: any): Payment {
+    const status: PaymentStatus =
+      p.status === "Approved Request" ||
+      p.status === "Sent to Finance" ||
+      p.status === "Payment Initiated" ||
+      p.status === "Payment Completed" ||
+      p.status === "Failed"
+        ? p.status
+        : "Approved Request";
+    const type: PaymentType =
+      p.type === "Expense" ||
+      p.type === "Payroll" ||
+      p.type === "Vendor" ||
+      p.type === "Contractor"
+        ? p.type
+        : "Expense";
+    return {
+      id: p.id,
+      type,
+      reference: p.reference ?? "",
+      recipient: p.recipient ?? "",
+      amount: Number(p.amount ?? 0),
+      method: p.method ?? "",
+      bank: p.bank ?? "",
+      date: p.date ?? "",
+      status,
+      initiatedBy: p.initiatedBy ?? "",
+      completedAt: p.completedAt,
+      note: p.note,
+    };
+  }
+
   useEffect(() => {
-    fetchPayments().then(setPayments);
+    fetchPayments().then((items) => setPayments(items.map(toPayment)));
   }, []);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<PaymentType | "All">("All");

@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { fetchLeaveRequests } from "../../api/leave-requests";
+import {
+  fetchLeaveRequests,
+  approveLeaveRequest,
+  rejectLeaveRequest,
+} from "../../api/leave-requests";
 import { fetchLeaveTypes } from "../../api/leave-types";
 import { Search, CheckCircle, XCircle, Clock, Filter } from "lucide-react";
 
@@ -56,33 +60,25 @@ export function LeaveRequestsPage() {
   const [typeFilter, setTypeFilter] = useState("All");
 
   function approve(id: string) {
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status: "approved" as const,
-              approvedBy: "Ngozi Okafor",
-              approvedAt: "Apr 10, 2026",
-            }
-          : r,
-      ),
-    );
+    approveLeaveRequest(id)
+      .then(() => {
+        fetchLeaveRequests().then(setRequests);
+      })
+      .catch((err) => {
+        console.error("Failed to approve leave request:", err);
+        alert("Failed to approve leave request. Please try again.");
+      });
   }
 
   function reject(id: string) {
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status: "rejected" as const,
-              approvedBy: "Ngozi Okafor",
-              approvedAt: "Apr 10, 2026",
-            }
-          : r,
-      ),
-    );
+    rejectLeaveRequest(id)
+      .then(() => {
+        fetchLeaveRequests().then(setRequests);
+      })
+      .catch((err) => {
+        console.error("Failed to reject leave request:", err);
+        alert("Failed to reject leave request. Please try again.");
+      });
   }
 
   const displayed = requests.filter((r) => {

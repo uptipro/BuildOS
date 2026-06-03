@@ -5,7 +5,6 @@ import {
   FileText,
   Briefcase,
   User,
-  Filter,
   Search,
   Download,
 } from "lucide-react";

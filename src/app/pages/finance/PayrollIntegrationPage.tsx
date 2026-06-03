@@ -9,10 +9,7 @@ import {
   Download,
   CheckCircle,
   Clock,
-  XCircle,
   Send,
-  Eye,
-  X,
   Users,
   AlertCircle,
 } from "lucide-react";
@@ -106,7 +103,6 @@ export function PayrollIntegrationPage() {
       .catch(console.error);
   }, []);
 
-
   useEffect(() => {
     if (!activeRun) {
       setEmployees([]);
@@ -160,6 +156,7 @@ export function PayrollIntegrationPage() {
       }),
     );
     setActiveRun((prev) => {
+      if (!prev) return prev;
       if (prev.id !== id) return prev;
       const idx = STATUS_FLOW.indexOf(prev.status);
       if (idx >= STATUS_FLOW.length - 1) return prev;
@@ -453,7 +450,9 @@ export function PayrollIntegrationPage() {
                       <p className="text-sm font-medium text-gray-900">
                         {e.name}
                       </p>
-                      <p className="text-xs text-gray-400">{e.department || "—"}</p>
+                      <p className="text-xs text-gray-400">
+                        {e.department || "—"}
+                      </p>
                     </td>
                     <td className="px-5 py-2.5 text-sm text-gray-700">
                       {fmt(e.grossPay - e.allowances)}

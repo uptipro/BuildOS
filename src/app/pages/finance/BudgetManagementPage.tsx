@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { fetchBudgetBreakdown, fetchBudgets } from "../../api/budgets";
+import {
+  fetchBudgetBreakdown,
+  fetchBudgets,
+  createBudget,
+} from "../../api/budgets";
 import {
   Plus,
   Search,
   Download,
   Target,
   AlertTriangle,
-  CheckCircle,
   X,
   Save,
   ChevronRight,
@@ -52,8 +55,31 @@ const emptyForm = {
 
 export function BudgetManagementPage() {
   const [budgets, setBudgets] = useState<BudgetLine[]>([]);
+
+  function toBudgetLine(b: any): BudgetLine {
+    const status: BudgetStatus =
+      b.status === "Active" ||
+      b.status === "On Track" ||
+      b.status === "At Risk" ||
+      b.status === "Over Budget" ||
+      b.status === "Closed"
+        ? b.status
+        : "Active";
+    const scope: BudgetScope = b.scope === "Department" ? "Department" : "Project";
+    return {
+      id: b.id,
+      name: b.name ?? "",
+      scope,
+      totalBudget: Number(b.totalBudget ?? 0),
+      spent: Number(b.spent ?? 0),
+      committed: Number(b.committed ?? 0),
+      period: b.period ?? "",
+      status,
+    };
+  }
+
   useEffect(() => {
-    fetchBudgets().then(setBudgets);
+    fetchBudgets().then((items) => setBudgets(items.map(toBudgetLine)));
   }, []);
   const [search, setSearch] = useState("");
   const [scopeFilter, setScopeFilter] = useState<BudgetScope | "All">("All");
@@ -65,7 +91,9 @@ export function BudgetManagementPage() {
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
-    fetchBudgetBreakdown().then(setBudgetBreakdown).catch(() => setBudgetBreakdown([]));
+    fetchBudgetBreakdown()
+      .then(setBudgetBreakdown)
+      .catch(() => setBudgetBreakdown([]));
   }, []);
 
   const fmt = (n: number) =>
@@ -90,19 +118,23 @@ export function BudgetManagementPage() {
 
   function addBudget() {
     if (!form.name || !form.totalBudget) return;
-    const newB: BudgetLine = {
-      id: `BUD-${String(budgets.length + 1).padStart(3, "0")}`,
+    createBudget({
       name: form.name,
       scope: form.scope,
       totalBudget: parseFloat(form.totalBudget.replace(/,/g, "")),
-      spent: 0,
-      committed: 0,
       period: form.period,
-      status: "Active",
-    };
-    setBudgets([...budgets, newB]);
-    setShowAddModal(false);
-    setForm(emptyForm);
+    })
+      .then(() => {
+        fetchBudgets()
+          .then((items) => setBudgets(items.map(toBudgetLine)))
+          .catch(console.error);
+        setShowAddModal(false);
+        setForm(emptyForm);
+      })
+      .catch((err) => {
+        alert("Failed to create budget. Please try again.");
+        console.error(err);
+      });
   }
 
   function handleExport() {

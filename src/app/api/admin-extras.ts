@@ -48,10 +48,42 @@ export interface ChangeCategoryConfig {
     description: string;
 }
 
+export interface UnitOfMeasurement {
+    id: string;
+    name: string;
+    abbreviation: string;
+    category: string;
+    baseUnit: string;
+    conversionFactor: number;
+}
+
+export interface EmailTemplateConfig {
+    id: string;
+    name: string;
+    subject: string;
+    trigger: string;
+}
+
+export interface NotificationRuleConfig {
+    id: string;
+    name: string;
+    event: string;
+    recipients: string;
+    channels: string[];
+    enabled: boolean;
+}
+
 export const getAdminSystemSummary = () =>
     apiFetch<AdminSystemSummary>('/admin/system-summary');
 export const getAdminActivityLog = () =>
     apiFetch<AdminActivity[]>('/admin/activity-log');
+export const getAuditLogs = (params?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set('limit', params.limit.toString());
+    if (params?.offset) qs.set('offset', params.offset.toString());
+    const query = qs.toString() ? `?${qs}` : '';
+    return apiFetch<any[]>(`/audit-logs${query}`);
+};
 export const inviteUser = (data: { email: string; name: string; role: string }) =>
     apiFetch<{
         id: string;
@@ -101,6 +133,21 @@ export const updateChangeCategory = (id: string, data: Partial<Omit<ChangeCatego
     apiFetch<ChangeCategoryConfig>(`/admin/change-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteChangeCategory = (id: string) =>
     apiFetch<{ ok: boolean }>(`/admin/change-categories/${id}`, { method: 'DELETE' });
+
+// Units of Measurement
+export const getUnits = () => apiFetch<UnitOfMeasurement[]>('/admin-extras/units');
+export const createUnit = (data: Omit<UnitOfMeasurement, 'id'>) =>
+    apiFetch<UnitOfMeasurement>('/admin-extras/units', { method: 'POST', body: JSON.stringify(data) });
+export const updateUnit = (id: string, data: Partial<Omit<UnitOfMeasurement, 'id'>>) =>
+    apiFetch<UnitOfMeasurement>(`/admin-extras/units/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteUnit = (id: string) =>
+    apiFetch<{ ok: boolean }>(`/admin-extras/units/${id}`, { method: 'DELETE' });
+
+// Notifications & Templates
+export const getEmailTemplates = () =>
+    apiFetch<EmailTemplateConfig[]>('/admin-extras/email-templates');
+export const getNotificationRules = () =>
+    apiFetch<NotificationRuleConfig[]>('/admin-extras/notification-rules');
 
 // Company Profile
 export interface CompanyProfile {

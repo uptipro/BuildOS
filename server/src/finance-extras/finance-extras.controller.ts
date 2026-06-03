@@ -69,4 +69,20 @@ export class FinanceExtrasController {
     updateTaxConfig(@Param('id') id: string, @Body() body: any) { return this.svc.updateTaxConfig(id, body); }
     @Delete('tax-configs/:id')
     deleteTaxConfig(@Param('id') id: string) { return this.svc.deleteTaxConfig(id); }
+
+    // ── Scheduled Postings ──
+    @Post('scheduled-postings')
+    createScheduledPosting(@Body() body: any) { return this.svc.createScheduledPosting(body); }
+
+    // ── Payment Methods ──
+    @Patch('payment-methods/:id/toggle')
+    togglePaymentMethod(@Param('id') id: string) { return this.svc.togglePaymentMethod(id); }
+
+    // ── Report Templates ──
+    @Get('report-templates')
+    getReportTemplates() { return this.svc.getReportTemplates(); }
+
+    // ── Config ──
+    @Post('config')
+    saveConfig(@Body() body: any) { return this.svc.saveConfig(body); }
 }

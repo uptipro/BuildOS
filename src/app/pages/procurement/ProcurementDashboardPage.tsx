@@ -5,10 +5,8 @@ import {
   AlertTriangle,
   ShoppingCart,
   DollarSign,
-  ArrowRight,
   ArrowUpRight,
   TrendingDown,
-  CheckCircle,
   Clock,
   Truck,
   PackageCheck,
@@ -59,11 +57,17 @@ export function ProcurementDashboardPage() {
   ).length;
   const totalSpend = allPOs.reduce((sum, po) => sum + (po.totalValue || 0), 0);
   const lowStock = materials.filter(
-    (m) => (m.availableQty ?? m.totalQty ?? 0) > 0 && (m.availableQty ?? m.totalQty ?? 0) <= (m.reorderLevel ?? 0),
+    (m) =>
+      (m.availableQty ?? m.totalQty ?? 0) > 0 &&
+      (m.availableQty ?? m.totalQty ?? 0) <= (m.reorderLevel ?? 0),
   );
-  const outOfStock = materials.filter((m) => (m.availableQty ?? m.totalQty ?? 0) <= 0);
+  const outOfStock = materials.filter(
+    (m) => (m.availableQty ?? m.totalQty ?? 0) <= 0,
+  );
   const pendingRequests = requests.filter((r) =>
-    ["pending", "submitted", "pending approval"].includes(String(r.status).toLowerCase()),
+    ["pending", "submitted", "pending approval"].includes(
+      String(r.status).toLowerCase(),
+    ),
   );
 
   const kpis = [
@@ -132,7 +136,11 @@ export function ProcurementDashboardPage() {
             Procurement Dashboard
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Inventory, requests, and purchasing overview — {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+            Inventory, requests, and purchasing overview —{" "}
+            {new Date().toLocaleDateString("en-GB", {
+              month: "long",
+              year: "numeric",
+            })}
           </p>
         </div>
         <div className="flex gap-2">
@@ -173,7 +181,9 @@ export function ProcurementDashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <h2 className="text-sm font-semibold text-gray-900">Low Stock Alerts</h2>
+            <h2 className="text-sm font-semibold text-gray-900">
+              Low Stock Alerts
+            </h2>
           </div>
           <button
             onClick={() => navigate("/apps/procurement/stock-levels")}
@@ -186,18 +196,24 @@ export function ProcurementDashboardPage() {
           <div className="flex flex-col items-center justify-center py-6 text-gray-400">
             <PackageCheck className="w-8 h-8 mb-2 opacity-30" />
             <p className="text-sm">No low stock alerts.</p>
-            <p className="text-xs mt-1">All tracked materials are above reorder level.</p>
+            <p className="text-xs mt-1">
+              All tracked materials are above reorder level.
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
             {lowStock.slice(0, 5).map((m) => (
-              <div key={m.id} className="flex items-center justify-between py-3">
+              <div
+                key={m.id}
+                className="flex items-center justify-between py-3"
+              >
                 <div>
                   <p className="text-sm font-medium text-gray-900">{m.name}</p>
                   <p className="text-xs text-gray-400">{m.category}</p>
                 </div>
                 <p className="text-sm text-amber-700 font-semibold">
-                  {(m.availableQty ?? m.totalQty ?? 0).toLocaleString()} {m.unit}
+                  {(m.availableQty ?? m.totalQty ?? 0).toLocaleString()}{" "}
+                  {m.unit}
                 </p>
               </div>
             ))}
@@ -209,7 +225,9 @@ export function ProcurementDashboardPage() {
         {/* Recent Material Requests */}
         <div className="col-span-3 bg-white rounded-lg border border-gray-200">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-900">Recent Material Requests</h2>
+            <h2 className="text-sm font-semibold text-gray-900">
+              Recent Material Requests
+            </h2>
             <button
               onClick={() => navigate("/apps/procurement/material-requests")}
               className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
@@ -225,17 +243,25 @@ export function ProcurementDashboardPage() {
           ) : (
             <div className="divide-y divide-gray-100">
               {recentRequests.map((req) => (
-                <div key={req.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                <div
+                  key={req.id}
+                  className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50"
+                >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{req.reference}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {req.reference}
+                    </p>
                     <p className="text-xs text-gray-400 truncate">
-                      {req.materialName} · {req.projectName || req.storeName || "Unassigned"}
+                      {req.materialName} ·{" "}
+                      {req.projectName || req.storeName || "Unassigned"}
                     </p>
                   </div>
                   <p className="text-sm font-semibold text-gray-900">
                     {req.qty?.toLocaleString?.() ?? req.qty} {req.unit}
                   </p>
-                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium capitalize ${reqStatusBadge[String(req.status).toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
+                  <span
+                    className={`text-xs px-1.5 py-0.5 rounded font-medium capitalize ${reqStatusBadge[String(req.status).toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}
+                  >
                     {req.status}
                   </span>
                 </div>
@@ -289,11 +315,15 @@ export function ProcurementDashboardPage() {
 
           {/* Spend by category */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Monthly Spend by Category</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">
+              Monthly Spend by Category
+            </h2>
             <div className="flex flex-col items-center justify-center py-6 text-gray-400">
               <DollarSign className="w-8 h-8 mb-2 opacity-30" />
               <p className="text-sm">No spend data available.</p>
-              <p className="text-xs mt-1">A spend analytics endpoint is not yet configured.</p>
+              <p className="text-xs mt-1">
+                A spend analytics endpoint is not yet configured.
+              </p>
             </div>
           </div>
         </div>

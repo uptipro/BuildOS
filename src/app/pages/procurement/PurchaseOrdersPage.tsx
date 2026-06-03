@@ -14,7 +14,6 @@ import {
   XCircle,
   Send,
   Download,
-  Package,
   X,
   Trash2,
   CreditCard,

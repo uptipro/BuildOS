@@ -7,7 +7,6 @@ import {
   MapPin,
   Calendar,
   Users,
-  DollarSign,
   ChevronDown,
   MoreHorizontal,
   Eye,
@@ -133,8 +132,43 @@ export function ProjectsListPage() {
   const [form, setForm] = useState(NEW_PROJECT_DEFAULTS);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [projectList, setProjectList] = useState<Project[]>([]);
+
+  function toProject(p: any): Project {
+    const status: ProjectStatus =
+      p.status === "Active" ||
+      p.status === "Planning" ||
+      p.status === "On Hold" ||
+      p.status === "Completed" ||
+      p.status === "Cancelled"
+        ? p.status
+        : "Planning";
+    const type: ProjectType =
+      p.type === "Commercial" ||
+      p.type === "Residential" ||
+      p.type === "Industrial" ||
+      p.type === "Infrastructure" ||
+      p.type === "Renovation"
+        ? p.type
+        : "Commercial";
+    return {
+      id: p.id,
+      name: p.name ?? "",
+      client: p.client ?? "",
+      location: p.location ?? "",
+      status,
+      type,
+      budget: Number(p.budget ?? 0),
+      spent: Number(p.spent ?? 0),
+      progress: Number(p.progress ?? 0),
+      startDate: p.startDate ?? "",
+      endDate: p.endDate ?? "",
+      manager: p.manager ?? "",
+      team: Array.isArray(p.team) ? p.team.length : Number(p.team ?? 0),
+    };
+  }
+
   useEffect(() => {
-    fetchProjects().then(setProjectList);
+    fetchProjects().then((items) => setProjectList(items.map(toProject)));
   }, []);
   const [editProject, setEditProject] = useState<Project | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);

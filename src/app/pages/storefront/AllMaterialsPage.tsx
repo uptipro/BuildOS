@@ -249,10 +249,31 @@ export function AllMaterialsPage() {
   const [trackTarget, setTrackTarget] = useState<Material | null>(null);
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
 
+  const toMaterial = (m: any): Material => ({
+    id: m.id,
+    name: m.name ?? "",
+    category: m.category ?? "",
+    unit: m.unit ?? "Units",
+    totalQty: Number(m.totalQty ?? 0),
+    availableQty: Number(m.availableQty ?? 0),
+    reservedQty: Number(m.reservedQty ?? 0),
+    unitCost: Number(m.unitCost ?? 0),
+    reorderLevel: Number(m.reorderLevel ?? 0),
+    materialType: m.materialType === "Reusable" ? "Reusable" : "Consumable",
+    allocationStatus:
+      m.allocationStatus === "Allocated" ||
+      m.allocationStatus === "Under Maintenance"
+        ? m.allocationStatus
+        : "Available",
+    allocatedTo: m.allocatedTo,
+    allocatedProject: m.allocatedProject,
+    condition: m.condition,
+  });
+
   useEffect(() => {
     Promise.all([getMaterials(), getReferenceData()])
       .then(([materialData, refs]) => {
-        setMaterials(materialData);
+        setMaterials(materialData.map(toMaterial));
         setProjectOptions(refs.projects.map((p) => p.name));
       })
       .catch(console.error)
@@ -290,13 +311,13 @@ export function AllMaterialsPage() {
       updateMaterial(editTarget.id, form)
         .then((updated) =>
           setMaterials((prev) =>
-            prev.map((m) => (m.id === updated.id ? updated : m)),
+            prev.map((m) => (m.id === updated.id ? toMaterial(updated) : m)),
           ),
         )
         .catch(console.error);
     } else {
       createMaterial(form)
-        .then((newMat) => setMaterials((prev) => [...prev, newMat]))
+        .then((newMat) => setMaterials((prev) => [...prev, toMaterial(newMat)]))
         .catch(console.error);
     }
     setShowModal(false);

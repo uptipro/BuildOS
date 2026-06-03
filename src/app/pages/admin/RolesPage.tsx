@@ -126,17 +126,6 @@ const NAV_ITEMS: Record<AppKey, { id: string; label: string }[]> = {
   ],
 };
 
-// ── Default nav access helpers ────────────────────────────────────────────────
-function navAll(...apps: AppKey[]): Record<string, boolean> {
-  const result: Record<string, boolean> = {};
-  apps.forEach((app) =>
-    NAV_ITEMS[app].forEach((item) => {
-      result[item.id] = true;
-    }),
-  );
-  return result;
-}
-
 function navPartial(items: string[]): Record<string, boolean> {
   return Object.fromEntries(
     Object.values(NAV_ITEMS)
@@ -160,20 +149,6 @@ const DEFAULT_PROCESSES: ProcessDef[] = [
   { id: "p_gen_rpt", label: "Generate Reports", app: "admin" },
   { id: "p_manage_usr", label: "Manage Users", app: "admin" },
 ];
-
-const ALL_PROC = (granted: string[]): Record<string, ProcessPerm> =>
-  Object.fromEntries(
-    DEFAULT_PROCESSES.map((p) => [
-      p.id,
-      {
-        view: granted.includes(`${p.id}_v`),
-        create: granted.includes(`${p.id}_c`),
-        edit: granted.includes(`${p.id}_e`),
-        approve: granted.includes(`${p.id}_a`),
-        delete: granted.includes(`${p.id}_d`),
-      },
-    ]),
-  );
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const PERM_KEYS: Array<keyof ProcessPerm> = [
@@ -430,7 +405,9 @@ function AddRoleModal({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
-  const [roleStatus, setRoleStatus] = useState<Record<string, "saving" | "saved" | "error">>({});
+  const [roleStatus, setRoleStatus] = useState<
+    Record<string, "saving" | "saved" | "error">
+  >({});
 
   const rolePayload = (role: Role) => ({
     name: role.name,
@@ -761,7 +738,9 @@ export function RolesPage() {
                                 </span>
                               )}
                               {roleStatus[role.id] === "saving" && (
-                                <span className="text-[10px] text-gray-400 shrink-0">saving…</span>
+                                <span className="text-[10px] text-gray-400 shrink-0">
+                                  saving…
+                                </span>
                               )}
                               {roleStatus[role.id] === "saved" && (
                                 <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />

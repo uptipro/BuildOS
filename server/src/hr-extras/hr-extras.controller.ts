@@ -88,4 +88,28 @@ export class HrExtrasController {
     updateIssue(@Param('id') id: string, @Body() body: any) { return this.svc.updateIssue(id, body); }
     @Delete('issues/:id')
     deleteIssue(@Param('id') id: string) { return this.svc.deleteIssue(id); }
+
+    // ── Bank Names ──
+    @Get('bank-names')
+    getBankNames() { return this.svc.findBankNames(); }
+    @Post('bank-names')
+    createBankName(@Body() body: any) { return this.svc.createBankName(body); }
+    @Patch('bank-names/:id')
+    updateBankName(@Param('id') id: string, @Body() body: any) { return this.svc.updateBankName(id, body); }
+    @Patch('bank-names/:id/toggle')
+    toggleBankNameActive(@Param('id') id: string) { return this.svc.toggleBankNameActive(id); }
+    @Delete('bank-names/:id')
+    deleteBankName(@Param('id') id: string) { return this.svc.deleteBankName(id); }
+
+    // ── Salary Bands ──
+    @Get('salary-bands')
+    getSalaryBands() { return this.svc.findSalaryBands(); }
+
+    // ── Holidays ──
+    @Post('holidays')
+    createHoliday(@Body() body: any) { return this.svc.createHoliday(body); }
+
+    // ── HR Setup ──
+    @Post('setup')
+    saveHrSetup(@Body() body: any) { return this.svc.saveHrSetup(body); }
 }

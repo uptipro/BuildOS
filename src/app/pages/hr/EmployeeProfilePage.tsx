@@ -20,7 +20,7 @@ import {
   X,
   Save,
 } from "lucide-react";
-import { fetchEmployee } from "../../api/employees";
+import { fetchEmployee, updateEmployee } from "../../api/employees";
 import {
   getAttendance,
   getPayslips,
@@ -125,8 +125,15 @@ export function EmployeeProfilePage() {
   }
 
   function saveEdit() {
-    setEmp((prev: any) => ({ ...prev, ...editDraft }));
-    setEditOpen(false);
+    updateEmployee(emp.id, editDraft)
+      .then(() => {
+        setEmp((prev: any) => ({ ...prev, ...editDraft }));
+        setEditOpen(false);
+      })
+      .catch((err) => {
+        alert("Failed to save employee. Please try again.");
+        console.error(err);
+      });
   }
 
   function df(key: string, value: string) {

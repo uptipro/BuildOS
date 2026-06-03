@@ -3,7 +3,6 @@ import { getAttendance } from "../../api/hr-extras";
 import {
   Search,
   Download,
-  Filter,
   ChevronLeft,
   ChevronRight,
   CheckCircle,

@@ -24,7 +24,6 @@ import { getApprovals } from "../api/approvals";
 import { fetchBudgets } from "../api/budgets";
 import { fetchExpenses } from "../api/expenses";
 import { fetchPayments } from "../api/payments";
-import { fetchIncome } from "../api/income";
 import { fetchEmployees } from "../api/employees";
 import { fetchLeaveRequests } from "../api/leave-requests";
 import { getJobRoles } from "../api/job-roles";
@@ -38,7 +37,6 @@ import {
   getAdminSystemSummary,
   getAdminActivityLog,
   getUsers,
-  getAppRoles,
 } from "../api/admin-extras";
 import { fetchAppCatalog, type AppCatalogItem } from "../api/app-catalog";
 
@@ -168,7 +166,6 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
     budgets,
     expenses,
     payments,
-    incomes,
     employees,
     leaveRequests,
     jobRoles,
@@ -184,7 +181,6 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
     adminSummary,
     adminActivity,
     users,
-    roles,
   ] = await Promise.all([
     safe(() => fetchAppCatalog(), []),
     safe(() => fetchProjects(), []),
@@ -193,7 +189,6 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
     safe(() => fetchBudgets(), []),
     safe(() => fetchExpenses(), []),
     safe(() => fetchPayments(), []),
-    safe(() => fetchIncome(), []),
     safe(() => fetchEmployees(), []),
     safe(() => fetchLeaveRequests(), []),
     safe(() => getJobRoles(), []),
@@ -209,7 +204,6 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
     safe(() => getAdminSystemSummary(), null),
     safe(() => getAdminActivityLog(), []),
     safe(() => getUsers(), []),
-    safe(() => getAppRoles(), []),
   ]);
 
   const activityBy = (keys: string[]) =>
@@ -245,15 +239,6 @@ async function buildAppsFromApi(authName?: string): Promise<AppDef[]> {
   const pendingPayments = payments.filter(
     (p) => !isClosedStatus((p as { status?: string }).status),
   );
-  const totalExpenseValue = expenses.reduce(
-    (acc, e) => acc + Number((e as { amount?: number }).amount ?? 0),
-    0,
-  );
-  const totalIncomeValue = incomes.reduce(
-    (acc, i) => acc + Number((i as { amount?: number }).amount ?? 0),
-    0,
-  );
-
   const pendingLeave = leaveRequests.filter((r) =>
     isPendingStatus((r as { status?: string }).status),
   ).length;

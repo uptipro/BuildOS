@@ -7,13 +7,8 @@ import {
   CreditCard,
   ArrowUpRight,
   ArrowDownRight,
-  Clock,
-  CheckCircle2,
-  XCircle,
   BarChart3,
-  Wallet,
   Receipt,
-  Building2,
 } from "lucide-react";
 import { NavLink } from "react-router";
 import { fetchExpenses } from "../../api/expenses";

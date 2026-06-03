@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Mail, Trash2, Edit2, Check, X } from "lucide-react";
+import { apiFetch } from "../../api/client";
 
 type TriggerModule =
   | "Finance"
@@ -178,18 +179,41 @@ export function EmailConfigPage() {
 
   function saveConfig() {
     if (editId) {
-      setConfigs((prev) =>
-        prev.map((c) => (c.id === editId ? { ...form, id: editId } : c)),
-      );
+      apiFetch(`/admin-extras/email-config/${editId}`, {
+        method: "PATCH",
+        body: JSON.stringify(form),
+      })
+        .then(() => {
+          setConfigs((prev) =>
+            prev.map((c) => (c.id === editId ? { ...form, id: editId } : c)),
+          );
+          setShowModal(false);
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2500);
+        })
+        .catch((err) => {
+          alert("Failed to save email config. Please try again.");
+          console.error(err);
+        });
     } else {
-      setConfigs([
-        ...configs,
-        { ...form, id: `EC-${String(configs.length + 1).padStart(3, "0")}` },
-      ]);
+      apiFetch("/admin-extras/email-config", {
+        method: "POST",
+        body: JSON.stringify(form),
+      })
+        .then(() => {
+          setConfigs([
+            ...configs,
+            { ...form, id: `EC-${String(configs.length + 1).padStart(3, "0")}` },
+          ]);
+          setShowModal(false);
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2500);
+        })
+        .catch((err) => {
+          alert("Failed to create email config. Please try again.");
+          console.error(err);
+        });
     }
-    setShowModal(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
   }
 
   function toggleEnabled(id: string) {

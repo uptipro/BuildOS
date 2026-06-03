@@ -1,17 +1,8 @@
 import { useState, useEffect } from "react";
 import { getMaterials, Material as ApiMaterial } from "../../api/materials";
 import {
-  Package,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  Plus,
-  Minus,
   RefreshCw,
   Search,
-  Filter,
-  CheckCircle,
-  XCircle,
   ChevronUp,
   ChevronDown,
   Download,
@@ -45,7 +36,6 @@ function fromApiStock(m: ApiMaterial): StockItem {
     lastUpdated: m.createdAt ? new Date(m.createdAt).toLocaleDateString() : "",
   };
 }
-
 
 function getStatus(item: StockItem) {
   if (item.current === 0) return "out_of_stock";

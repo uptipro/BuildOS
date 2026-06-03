@@ -1,17 +1,14 @@
 import { useState, useEffect } from "react";
 import { getPayslips } from "../../api/hr-extras";
 import {
-  DollarSign,
   Download,
   CheckCircle,
   Clock,
   AlertCircle,
   TrendingUp,
-  Users,
   ChevronUp,
   ChevronDown,
   Search,
-  Filter,
 } from "lucide-react";
 import { exportCSV } from "../../utils/exportCSV";
 

@@ -36,3 +36,15 @@ export async function fetchBudgetBreakdown(projectId?: string) {
     const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : '';
     return apiFetch<BudgetBreakdown[]>(`/budgets/breakdown${query}`);
 }
+
+export function createBudget(data: any) {
+    return apiFetch(`/budgets`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateBudget(id: string, data: any) {
+    return apiFetch(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteBudget(id: string) {
+    return apiFetch(`/budgets/${id}`, { method: 'DELETE' });
+}

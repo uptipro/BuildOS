@@ -48,15 +48,6 @@ const STATUS_STYLE: Record<RequestStatus, string> = {
   "Forwarded to Procurement": "bg-purple-50 text-purple-700",
 };
 
-const STATUSES: (RequestStatus | "All")[] = [
-  "All",
-  "Pending",
-  "Approved",
-  "Fulfilled",
-  "Rejected",
-  "Forwarded to Procurement",
-];
-
 function toRequest(r: ApiRequest): MaterialRequest {
   return {
     id: r.reference || r.id,

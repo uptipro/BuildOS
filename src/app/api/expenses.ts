@@ -36,3 +36,29 @@ export async function fetchExpenses(params?: { status?: string; projectId?: stri
     const data = await apiFetch<any[]>(`/expenses${query}`);
     return data.map(mapExpense);
 }
+
+export function createExpense(data: any) {
+    return apiFetch(`/expenses`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateExpense(id: string, data: any) {
+    return apiFetch(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function approveExpense(id: string, notes?: string) {
+    return apiFetch(`/expenses/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'Approved', approvedAt: new Date().toISOString(), notes }),
+    });
+}
+
+export function rejectExpense(id: string, reason?: string) {
+    return apiFetch(`/expenses/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'Rejected', rejectionReason: reason }),
+    });
+}
+
+export function deleteExpense(id: string) {
+    return apiFetch(`/expenses/${id}`, { method: 'DELETE' });
+}

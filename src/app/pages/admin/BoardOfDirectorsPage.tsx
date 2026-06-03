@@ -23,12 +23,9 @@ export function BoardOfDirectorsPage() {
 
   const [directors, setDirectors] = useState<Director[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getDirectors()
-      .then(setDirectors)
-      .finally(() => setLoading(false));
+    getDirectors().then(setDirectors);
   }, []);
 
   const [formData, setFormData] = useState({

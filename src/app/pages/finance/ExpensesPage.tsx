@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { Search, Filter, Plus } from "lucide-react";
-import { fetchExpenses } from "../../api/expenses";
+import {
+  fetchExpenses,
+  approveExpense,
+  rejectExpense,
+} from "../../api/expenses";
 
 interface Expense {
   id: string;
@@ -23,7 +27,9 @@ export function ExpensesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [approvalNotes, setApprovalNotes] = useState("");
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchExpenses()
@@ -249,6 +255,8 @@ export function ExpensesPage() {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Notes</p>
                 <textarea
+                  value={approvalNotes}
+                  onChange={(e) => setApprovalNotes(e.target.value)}
                   rows={3}
                   placeholder="Add approval notes..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -259,18 +267,98 @@ export function ExpensesPage() {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => {
-                  setShowApproveModal(false);
-                  setSelectedExpense(null);
+                  setApprovalNotes("");
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                disabled={isSubmitting}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
-                Reject
+              <button
+                onClick={() => {
+                  if (!selectedExpense) return;
+                  setIsSubmitting(true);
+                  rejectExpense(selectedExpense.id, approvalNotes)
+                    .then(() => {
+                      fetchExpenses()
+                        .then((data) =>
+                          setExpenses(
+                            data.map((e) => ({
+                              id: e.id,
+                              description: e.description,
+                              project: e.project,
+                              category: e.category,
+                              amount: `$${Number(e.amount).toLocaleString()}`,
+                              submittedBy: e.createdBy,
+                              date: e.date,
+                              status: ([
+                                "Pending",
+                                "Approved",
+                                "Rejected",
+                              ].includes(e.status)
+                                ? e.status
+                                : "Pending") as Expense["status"],
+                            })),
+                          ),
+                        )
+                        .catch(console.error);
+                      setShowApproveModal(false);
+                      setSelectedExpense(null);
+                      setApprovalNotes("");
+                    })
+                    .catch((err) => {
+                      console.error("Failed to reject expense:", err);
+                      alert("Failed to reject expense. Please try again.");
+                    })
+                    .finally(() => setIsSubmitting(false));
+                }}
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {isSubmitting ? "Processing..." : "Reject"}
               </button>
-              <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
-                Approve
+              <button
+                onClick={() => {
+                  if (!selectedExpense) return;
+                  setIsSubmitting(true);
+                  approveExpense(selectedExpense.id, approvalNotes)
+                    .then(() => {
+                      fetchExpenses()
+                        .then((data) =>
+                          setExpenses(
+                            data.map((e) => ({
+                              id: e.id,
+                              description: e.description,
+                              project: e.project,
+                              category: e.category,
+                              amount: `$${Number(e.amount).toLocaleString()}`,
+                              submittedBy: e.createdBy,
+                              date: e.date,
+                              status: ([
+                                "Pending",
+                                "Approved",
+                                "Rejected",
+                              ].includes(e.status)
+                                ? e.status
+                                : "Pending") as Expense["status"],
+                            })),
+                          ),
+                        )
+                        .catch(console.error);
+                      setShowApproveModal(false);
+                      setSelectedExpense(null);
+                      setApprovalNotes("");
+                    })
+                    .catch((err) => {
+                      console.error("Failed to approve expense:", err);
+                      alert("Failed to approve expense. Please try again.");
+                    })
+                    .finally(() => setIsSubmitting(false));
+                }}
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+              >
+                {isSubmitting ? "Processing..." : "Approve"}
               </button>
             </div>
           </div>

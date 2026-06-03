@@ -8,7 +8,6 @@ import {
   ExternalLink,
   CheckCircle,
   Clock,
-  AlertTriangle,
 } from "lucide-react";
 import { exportCSV } from "../../utils/exportCSV";
 import { getTransactions } from "../../api/finance-extras";

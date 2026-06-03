@@ -13,7 +13,6 @@ import {
   BookOpen,
   ChevronDown,
   ChevronRight,
-  ArrowUpDown,
 } from "lucide-react";
 import { exportCSV } from "../../utils/exportCSV";
 
@@ -71,12 +70,12 @@ export function JournalEntryPage() {
               : "Draft") as EntryStatus,
             createdBy: e.createdBy ?? "",
             lines: (e.lines ?? []).map((l) => ({
-              id: l.id,
-              account: l.account,
-              glCode: l.glCode,
+              id: l.id ?? `ln-${Date.now()}-${Math.random()}`,
+              account: l.accountName ?? "",
+              glCode: l.accountCode ?? "",
               debit: l.debit,
               credit: l.credit,
-              description: l.description,
+              description: l.description ?? "",
             })),
           })),
         );

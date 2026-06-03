@@ -3,13 +3,9 @@ import { getPayrollRuns, getPayrollEntries } from "../../api/hr-extras";
 import {
   CheckCircle,
   AlertCircle,
-  Clock,
   Download,
   Play,
   RefreshCw,
-  ChevronDown,
-  ChevronUp,
-  Loader,
   FileText,
   ArrowRight,
 } from "lucide-react";
@@ -82,8 +78,7 @@ export function PayrollProcessingPage() {
       })
       .catch(() => {});
   }, []);
-  const [showPreview, setShowPreview] = useState(false);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [, setShowPreview] = useState(false);
 
   const included = entries.filter((e) => e.status === "included");
   const onHold = entries.filter((e) => e.status === "on_hold");
@@ -102,7 +97,7 @@ export function PayrollProcessingPage() {
       minute: "2-digit",
     }) + " — Apr 10, 2026";
 
-  function advanceStage(from: ApprovalStage, to: ApprovalStage) {
+  function advanceStage(to: ApprovalStage) {
     setApprovalStage(to);
     setStageTimestamps((t) => ({ ...t, [to]: now() }));
   }
@@ -111,7 +106,7 @@ export function PayrollProcessingPage() {
     setRunStatus("running");
     setTimeout(() => {
       setRunStatus("complete");
-      advanceStage("draft", "sent_for_approval");
+      advanceStage("sent_for_approval");
     }, 2500);
   }
 
@@ -215,7 +210,6 @@ export function PayrollProcessingPage() {
             {APPROVAL_STAGES.map((stage, i) => {
               const done = i < stageIndex;
               const active = i === stageIndex;
-              const future = i > stageIndex;
               return (
                 <div
                   key={stage.key}
@@ -264,9 +258,7 @@ export function PayrollProcessingPage() {
           <div className="mt-5 flex items-center gap-3 border-t border-gray-100 pt-4">
             {approvalStage === "sent_for_approval" && (
               <button
-                onClick={() =>
-                  advanceStage("sent_for_approval", "manager_approved")
-                }
+                onClick={() => advanceStage("manager_approved")}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
               >
                 <CheckCircle className="w-4 h-4" /> Approve as Manager
@@ -274,9 +266,7 @@ export function PayrollProcessingPage() {
             )}
             {approvalStage === "manager_approved" && (
               <button
-                onClick={() =>
-                  advanceStage("manager_approved", "sent_to_finance")
-                }
+                onClick={() => advanceStage("sent_to_finance")}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
               >
                 <ArrowRight className="w-4 h-4" /> Send to Finance
@@ -284,9 +274,7 @@ export function PayrollProcessingPage() {
             )}
             {approvalStage === "sent_to_finance" && (
               <button
-                onClick={() =>
-                  advanceStage("sent_to_finance", "finance_confirmed")
-                }
+                onClick={() => advanceStage("finance_confirmed")}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700"
               >
                 <CheckCircle className="w-4 h-4" /> Confirm Payment (Finance)
@@ -294,7 +282,7 @@ export function PayrollProcessingPage() {
             )}
             {approvalStage === "finance_confirmed" && (
               <button
-                onClick={() => advanceStage("finance_confirmed", "paid")}
+                onClick={() => advanceStage("paid")}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
               >
                 <CheckCircle className="w-4 h-4" /> Mark as Paid

@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
-import { fetchExpenses } from "../../api/expenses";
+import {
+  fetchExpenses,
+  approveExpense,
+  rejectExpense,
+} from "../../api/expenses";
 import { fetchProjects } from "../../api/projects";
 import { getChartAccounts } from "../../api/finance-extras";
 import {
   Plus,
   Search,
-  Filter,
   Download,
   Receipt,
   ChevronDown,
@@ -99,15 +102,45 @@ export function ExpenseManagementPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [projectNames, setProjectNames] = useState<string[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+
+  function toExpense(e: any): Expense {
+    const status: ExpenseStatus =
+      e.status === "Draft" ||
+      e.status === "Submitted" ||
+      e.status === "Approved" ||
+      e.status === "Rejected" ||
+      e.status === "Sent to Finance" ||
+      e.status === "Paid"
+        ? e.status
+        : "Draft";
+    return {
+      id: e.id,
+      project: e.project ?? "",
+      category: e.category ?? "",
+      amount: Number(e.amount ?? 0),
+      description: e.description ?? "",
+      createdBy: e.createdBy ?? "",
+      date: e.date ?? "",
+      status,
+      receipt: e.receipt,
+      approvedBy: e.approvedBy,
+      approvedAt: e.approvedAt,
+      rejectedBy: e.rejectedBy,
+      rejectedAt: e.rejectedAt,
+      rejectionReason: e.rejectionReason,
+    };
+  }
+
   useEffect(() => {
     Promise.all([fetchExpenses(), fetchProjects(), getChartAccounts("Expense")])
       .then(([expenseData, projects, accounts]) => {
-        setExpenses(expenseData);
+        const mappedExpenses = expenseData.map(toExpense);
+        setExpenses(mappedExpenses);
         setProjectNames(projects.map((p) => p.name));
         setCategoryOptions(
           Array.from(
             new Set([
-              ...expenseData.map((e) => e.category).filter(Boolean),
+              ...mappedExpenses.map((e) => e.category).filter(Boolean),
               ...accounts.map((a) => a.name).filter(Boolean),
             ]),
           ),
@@ -164,36 +197,27 @@ export function ExpenseManagementPage() {
   }
 
   function approve(id: string) {
-    setExpenses((prev) =>
-      prev.map((e) =>
-        e.id === id
-          ? {
-              ...e,
-              status: "Approved",
-              approvedBy: "Finance Manager",
-              approvedAt: "Apr 13, 2026",
-            }
-          : e,
-      ),
-    );
+    approveExpense(id)
+      .then(() => {
+        fetchExpenses().then((items) => setExpenses(items.map(toExpense))).catch(console.error);
+      })
+      .catch((err) => {
+        alert("Failed to approve expense. Please try again.");
+        console.error(err);
+      });
     setViewExpense(null);
   }
 
   function submitReject() {
     if (!rejectState || !rejectState.reason.trim()) return;
-    setExpenses((prev) =>
-      prev.map((e) =>
-        e.id === rejectState.id
-          ? {
-              ...e,
-              status: "Rejected",
-              rejectedBy: "Finance Manager",
-              rejectedAt: "Apr 13, 2026",
-              rejectionReason: rejectState.reason,
-            }
-          : e,
-      ),
-    );
+    rejectExpense(rejectState.id, rejectState.reason)
+      .then(() => {
+        fetchExpenses().then((items) => setExpenses(items.map(toExpense))).catch(console.error);
+      })
+      .catch((err) => {
+        alert("Failed to reject expense. Please try again.");
+        console.error(err);
+      });
     setRejectState(null);
     setViewExpense(null);
   }

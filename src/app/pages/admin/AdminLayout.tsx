@@ -14,8 +14,6 @@ import {
   LayoutDashboard,
   ChevronDown,
   CheckSquare,
-  AlertTriangle,
-  RefreshCw,
   BarChart3,
 } from "lucide-react";
 import { useState } from "react";
@@ -30,7 +28,9 @@ interface NavSection {
 }
 
 export function AdminLayout() {
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    new Set(),
+  );
 
   const toggleSection = (label: string) => {
     setCollapsedSections((prev) => {
@@ -197,7 +197,11 @@ export function AdminLayout() {
                         >
                           {({ isActive }) => (
                             <>
-                              <span className={isActive ? "text-indigo-600" : "text-gray-400"}>
+                              <span
+                                className={
+                                  isActive ? "text-indigo-600" : "text-gray-400"
+                                }
+                              >
                                 {item.icon}
                               </span>
                               {item.label}

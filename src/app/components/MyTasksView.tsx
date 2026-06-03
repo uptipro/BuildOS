@@ -52,55 +52,12 @@ export interface MyTasksViewProps {
 
 const DEPT_USERS: Record<string, string[]> = {};
 
-const MANAGERS: Record<string, string> = {};
-
 const PRIORITY_BADGE: Record<TaskPriority, string> = {
   Low: "px-1.5 py-0.5 text-xs rounded font-semibold bg-gray-100 text-gray-500",
   Medium:
     "px-1.5 py-0.5 text-xs rounded font-semibold bg-amber-100 text-amber-700",
   High: "px-1.5 py-0.5 text-xs rounded font-semibold bg-red-100 text-red-700",
 };
-
-type SeedDef = {
-  name: string;
-  description: string;
-  priority: TaskPriority;
-  category: "process" | "general";
-  status: TaskStatus;
-  userIdx: number;
-  dueDate: string;
-  startedAt?: string;
-  submittedAt?: string;
-  resolvedAt?: string;
-  declineReason?: string;
-};
-
-const APP_SEEDS: Record<string, SeedDef[]> = {};
-
-function makeId() {
-  return `TK-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-}
-
-function buildSeeds(app: string): MyTask[] {
-  const users = DEPT_USERS[app] ?? ["Team Member"];
-  const manager = MANAGERS[app] ?? "Manager";
-  const seeds = APP_SEEDS[app] ?? APP_SEEDS.finance;
-  return seeds.map((s) => ({
-    id: makeId(),
-    name: s.name,
-    description: s.description,
-    assignedTo: users[s.userIdx % users.length],
-    assignedBy: manager,
-    dueDate: s.dueDate,
-    priority: s.priority,
-    category: s.category,
-    status: s.status,
-    startedAt: s.startedAt,
-    submittedAt: s.submittedAt,
-    resolvedAt: s.resolvedAt,
-    declineReason: s.declineReason,
-  }));
-}
 
 function computePipeline(task: MyTask): PipelineStep[] {
   const notStarted = task.status === "To Do";

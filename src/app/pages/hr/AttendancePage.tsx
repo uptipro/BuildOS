@@ -8,9 +8,6 @@ import {
   Search,
   Download,
   CalendarDays,
-  Filter,
-  ChevronDown,
-  Users,
   AlertTriangle,
 } from "lucide-react";
 import { exportCSV } from "../../utils/exportCSV";
@@ -29,160 +26,6 @@ interface AttRecord {
 }
 
 const today = "Monday, April 28, 2025";
-
-// NOTE: placeholder data — replaced by API in component
-const _initialRecords: AttRecord[] = [
-  {
-    id: "EMP-001",
-    name: "Chukwudi Eze",
-    role: "Site Engineer",
-    department: "Engineering",
-    checkIn: "07:48 AM",
-    checkOut: "05:10 PM",
-    status: "present",
-    hrs: 9.4,
-  },
-  {
-    id: "EMP-002",
-    name: "Aisha Bello",
-    role: "Project Manager",
-    department: "Operations",
-    checkIn: "08:05 AM",
-    checkOut: "06:00 PM",
-    status: "present",
-    hrs: 9.9,
-  },
-  {
-    id: "EMP-003",
-    name: "Robert Lee",
-    role: "Structural Engineer",
-    department: "Engineering",
-    checkIn: "07:55 AM",
-    checkOut: "04:50 PM",
-    status: "present",
-    hrs: 8.9,
-  },
-  {
-    id: "EMP-004",
-    name: "Sarah Johnson",
-    role: "Accountant",
-    department: "Finance",
-    checkIn: "09:47 AM",
-    checkOut: "05:00 PM",
-    status: "late",
-    hrs: 7.2,
-  },
-  {
-    id: "EMP-005",
-    name: "Mike Davis",
-    role: "Site Foreman",
-    department: "Engineering",
-    checkIn: "—",
-    checkOut: "—",
-    status: "leave",
-    hrs: 0,
-  },
-  {
-    id: "EMP-006",
-    name: "Alice Ware",
-    role: "HR Officer",
-    department: "Human Resources",
-    checkIn: "08:00 AM",
-    checkOut: "05:00 PM",
-    status: "present",
-    hrs: 9.0,
-  },
-  {
-    id: "EMP-007",
-    name: "Tom Fox",
-    role: "Quantity Surveyor",
-    department: "Procurement",
-    checkIn: "08:10 AM",
-    checkOut: "05:15 PM",
-    status: "present",
-    hrs: 9.1,
-  },
-  {
-    id: "EMP-008",
-    name: "Ngozi Eze",
-    role: "Site Supervisor",
-    department: "Engineering",
-    checkIn: "07:52 AM",
-    checkOut: "04:40 PM",
-    status: "present",
-    hrs: 8.8,
-  },
-  {
-    id: "EMP-009",
-    name: "Kwame Asante",
-    role: "Civil Engineer",
-    department: "Engineering",
-    checkIn: "08:20 AM",
-    checkOut: "05:00 PM",
-    status: "present",
-    hrs: 8.7,
-  },
-  {
-    id: "EMP-010",
-    name: "Emeka Nwosu",
-    role: "HSE Officer",
-    department: "Health & Safety",
-    checkIn: "07:45 AM",
-    checkOut: "04:00 PM",
-    status: "half_day",
-    hrs: 4.3,
-  },
-  {
-    id: "EMP-011",
-    name: "Bisi Akinola",
-    role: "Admin Officer",
-    department: "Administration",
-    checkIn: "08:02 AM",
-    checkOut: "05:05 PM",
-    status: "present",
-    hrs: 9.0,
-  },
-  {
-    id: "EMP-012",
-    name: "Lawal Musa",
-    role: "MEP Engineer",
-    department: "Engineering",
-    checkIn: "—",
-    checkOut: "—",
-    status: "absent",
-    hrs: 0,
-  },
-  {
-    id: "EMP-013",
-    name: "Funke Adeyemi",
-    role: "Finance Analyst",
-    department: "Finance",
-    checkIn: "08:15 AM",
-    checkOut: "05:00 PM",
-    status: "present",
-    hrs: 8.8,
-  },
-  {
-    id: "EMP-014",
-    name: "David Obi",
-    role: "IT Officer",
-    department: "IT & Systems",
-    checkIn: "09:55 AM",
-    checkOut: "05:00 PM",
-    status: "late",
-    hrs: 7.1,
-  },
-  {
-    id: "EMP-015",
-    name: "Yemi Olusegun",
-    role: "Project Manager",
-    department: "Operations",
-    checkIn: "08:00 AM",
-    checkOut: "06:30 PM",
-    status: "present",
-    hrs: 10.5,
-  },
-];
 
 const statusConfig: Record<
   AttStatus,
@@ -221,15 +64,6 @@ const statusConfig: Record<
 };
 
 // NOTE: depts derived inside component from API records
-const statusOptions: { key: AttStatus | "all"; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "present", label: "Present" },
-  { key: "absent", label: "Absent" },
-  { key: "late", label: "Late" },
-  { key: "half_day", label: "Half Day" },
-  { key: "leave", label: "On Leave" },
-];
-
 export function AttendancePage() {
   const [records, setRecords] = useState<AttRecord[]>([]);
   const [search, setSearch] = useState("");

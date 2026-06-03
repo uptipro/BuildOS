@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getBankAccounts, getTaxConfigs } from "../../api/finance-extras";
+import { apiFetch } from "../../api/client";
 import {
   Save,
   Plus,
@@ -60,7 +61,7 @@ const FISCAL_MONTHS = [
 
 export function FinanceConfigPage() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [paymentMethods] = useState<PaymentMethod[]>([]);
   const [saved, setSaved] = useState(false);
 
   // General settings state
@@ -134,8 +135,58 @@ export function FinanceConfigPage() {
   const fmt = (n: number) => `$${n.toLocaleString()}`;
 
   function saveAll() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    apiFetch("/finance-extras/config", {
+      method: "POST",
+      body: JSON.stringify({
+        currency,
+        fiscalYearStart,
+        approvalThreshold: parseFloat(approvalThreshold),
+      }),
+    }).then(() => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    });
+    apiFetch("/finance-extras/bank-accounts", {
+      method: "POST",
+      body: JSON.stringify({
+        accountName: bankForm.name,
+        bankName: bankForm.bank,
+        accountNumber: bankForm.accountNumber,
+        currency: bankForm.currency,
+        balance: parseFloat(bankForm.balance || "0"),
+        isDefault: bankAccounts.length === 0,
+      }),
+    })
+      .then(() => {
+        const acc: BankAccount = {
+          id: `b${Date.now()}`,
+          name: bankForm.name,
+          bank: bankForm.bank,
+          accountNumber: bankForm.accountNumber,
+          currency: bankForm.currency,
+          balance: parseFloat(bankForm.balance || "0"),
+          isDefault: bankAccounts.length === 0,
+        };
+        setBankAccounts([...bankAccounts, acc]);
+        setShowBankModal(false);
+        setBankForm({
+          name: "",
+          bank: "",
+          accountNumber: "",
+          currency: "USD",
+          balance: "",
+        });
+      })
+      .catch((err) => {
+        alert("Failed to add bank account. Please try again.");
+        console.error(err);
+      });
+  }
+
+  function setDefault(id: string) {
+    setBankAccounts((prev) =>
+      prev.map((b) => ({ ...b, isDefault: b.id === id })),
+    );
   }
 
   function toggleMethod(id: string) {
@@ -145,7 +196,9 @@ export function FinanceConfigPage() {
   }
 
   function addBankAccount() {
-    if (!bankForm.name || !bankForm.bank || !bankForm.accountNumber) return;
+    if (!bankForm.name.trim() || !bankForm.bank.trim() || !bankForm.accountNumber.trim()) {
+      return;
+    }
     const acc: BankAccount = {
       id: `b${Date.now()}`,
       name: bankForm.name,
@@ -155,7 +208,7 @@ export function FinanceConfigPage() {
       balance: parseFloat(bankForm.balance || "0"),
       isDefault: bankAccounts.length === 0,
     };
-    setBankAccounts([...bankAccounts, acc]);
+    setBankAccounts((prev) => [...prev, acc]);
     setShowBankModal(false);
     setBankForm({
       name: "",
@@ -164,12 +217,6 @@ export function FinanceConfigPage() {
       currency: "USD",
       balance: "",
     });
-  }
-
-  function setDefault(id: string) {
-    setBankAccounts((prev) =>
-      prev.map((b) => ({ ...b, isDefault: b.id === id })),
-    );
   }
 
   function toggleTax(id: string) {
@@ -204,13 +251,37 @@ export function FinanceConfigPage() {
       enabled: true,
     };
     if (taxEditId) {
-      setTaxEntries((prev) =>
-        prev.map((t) => (t.id === taxEditId ? { ...t, ...entry } : t)),
-      );
+      apiFetch(`/finance-extras/tax-configs/${taxEditId}`, {
+        method: "PATCH",
+        body: JSON.stringify(entry),
+      })
+        .then(() => {
+          setTaxEntries((prev) =>
+            prev.map((t) => (t.id === taxEditId ? { ...t, ...entry } : t)),
+          );
+          setShowTaxModal(false);
+        })
+        .catch((err) => {
+          alert("Failed to update tax config. Please try again.");
+          console.error(err);
+        });
     } else {
-      setTaxEntries((prev) => [...prev, { id: `t${Date.now()}`, ...entry }]);
+      apiFetch("/finance-extras/tax-configs", {
+        method: "POST",
+        body: JSON.stringify(entry),
+      })
+        .then(() => {
+          setTaxEntries((prev) => [
+            ...prev,
+            { id: `t${Date.now()}`, ...entry },
+          ]);
+          setShowTaxModal(false);
+        })
+        .catch((err) => {
+          alert("Failed to create tax config. Please try again.");
+          console.error(err);
+        });
     }
-    setShowTaxModal(false);
   }
 
   return (

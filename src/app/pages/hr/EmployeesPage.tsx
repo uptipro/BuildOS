@@ -95,6 +95,21 @@ interface AddEmpForm {
   employmentType: string;
 }
 
+interface EmployeeRow {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  department: string;
+  status: EmpStatus;
+  email: string;
+  phone: string;
+  dateHired: string;
+  employmentType: string;
+  projectCount: number;
+  projects: string[];
+}
+
 const emptyEmpForm: AddEmpForm = {
   firstName: "",
   lastName: "",
@@ -248,11 +263,20 @@ function AddEmployeeModal({
 
 export function EmployeesPage() {
   const navigate = useNavigate();
-  const [empList, setEmpList] = useState<ReturnType<(typeof Array<any>)[0]>[]>(
-    [],
-  );
+  const [empList, setEmpList] = useState<EmployeeRow[]>([]);
   useEffect(() => {
-    fetchEmployees().then(setEmpList);
+    fetchEmployees().then((data) =>
+      setEmpList(
+        data.map((e: any) => ({
+          ...e,
+          status:
+            e.status === "active" || e.status === "inactive" || e.status === "on_leave"
+              ? e.status
+              : "active",
+          projects: Array.isArray(e.projects) ? e.projects : [],
+        })),
+      ),
+    );
   }, []);
   const [search, setSearch] = useState("");
   const [advFilters, setAdvFilters] = useState<ActiveFilters>({});
@@ -362,7 +386,7 @@ export function EmployeesPage() {
       e.lastName,
       e.role,
       e.department,
-      statusConfig[e.status].label,
+      statusConfig[e.status as EmpStatus].label,
       e.email,
       e.phone,
       e.dateHired,
@@ -372,7 +396,7 @@ export function EmployeesPage() {
     exportCSV("employees", headers, rows);
   }
 
-  const initials = (e: (typeof empList)[0]) =>
+  const initials = (e: EmployeeRow) =>
     `${e.firstName[0]}${e.lastName[0]}`;
   const avatarColors = [
     "bg-indigo-100 text-indigo-700",
@@ -474,7 +498,7 @@ export function EmployeesPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.map((emp) => {
-              const cfg = statusConfig[emp.status];
+              const cfg = statusConfig[emp.status as EmpStatus];
               return (
                 <tr
                   key={emp.id}

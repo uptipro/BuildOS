@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  BarChart3,
   TrendingDown,
   ArrowLeftRight,
   RotateCcw,
@@ -294,8 +293,7 @@ export function StorefrontReportsPage() {
               },
               {
                 label: "Low Stock",
-                value: stockData.filter((s) => s.status === "Low Stock")
-                  .length,
+                value: stockData.filter((s) => s.status === "Low Stock").length,
               },
               {
                 label: "Out of Stock",
@@ -367,8 +365,7 @@ export function StorefrontReportsPage() {
               Total Stock Value
             </p>
             <p className="text-2xl font-bold text-teal-900 mt-1">
-              ₦
-              {stockData.reduce((sum, s) => sum + s.value, 0).toLocaleString()}
+              ₦{stockData.reduce((sum, s) => sum + s.value, 0).toLocaleString()}
             </p>
           </div>
         </div>
@@ -587,19 +584,16 @@ export function StorefrontReportsPage() {
               { label: "Total Returns", value: returnData.length },
               {
                 label: "Received",
-                value: returnData.filter((r) => r.status === "Received")
-                  .length,
+                value: returnData.filter((r) => r.status === "Received").length,
               },
               {
                 label: "Pending Approval",
-                value: returnData.filter(
-                  (r) => r.status === "Pending Approval",
-                ).length,
+                value: returnData.filter((r) => r.status === "Pending Approval")
+                  .length,
               },
               {
                 label: "Rejected",
-                value: returnData.filter((r) => r.status === "Rejected")
-                  .length,
+                value: returnData.filter((r) => r.status === "Rejected").length,
               },
             ].map((k) => (
               <div

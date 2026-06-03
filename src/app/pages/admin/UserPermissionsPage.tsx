@@ -3,16 +3,11 @@ import { getUsers } from "../../api/admin-extras";
 import {
   Search,
   ChevronDown,
-  ChevronRight,
   CheckCircle2,
   XCircle,
   AlertTriangle,
   Save,
-  Eye,
-  Plus,
   PenLine,
-  BadgeCheck,
-  Trash2,
   X,
 } from "lucide-react";
 
@@ -478,14 +473,6 @@ const PERM_KEYS: Array<keyof ProcessOverride> = [
   "approve",
   "delete",
 ];
-const PERM_SHORT: Record<keyof ProcessOverride, string> = {
-  view: "V",
-  create: "C",
-  edit: "E",
-  approve: "A",
-  delete: "D",
-};
-
 const OV_CYCLE: Record<OverrideState, OverrideState> = {
   inherit: "allow",
   allow: "deny",
@@ -631,7 +618,7 @@ function UserPermPane({
                               {proc.label}
                             </td>
                             {PERM_KEYS.map((k) => {
-                              const { effective, source } = effectivePerm(
+                              const { effective } = effectivePerm(
                                 proc.id,
                                 k,
                                 user,
@@ -742,7 +729,10 @@ export function UserPermissionsPage() {
             email: u.email,
             role: u.role,
             department: u.department || "—",
-            status: u.isActive ? "active" : "inactive",
+            status:
+              (u.status ?? "").toLowerCase() === "active"
+                ? "active"
+                : "inactive",
             lastLogin: u.lastLogin || "Never",
             rolePerms: ROLE_PERMS[u.role] || {},
             overrides: {},

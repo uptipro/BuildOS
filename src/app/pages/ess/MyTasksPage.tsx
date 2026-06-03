@@ -58,10 +58,6 @@ const priorityConfig = {
 
 // allProjects loaded from API — see component state below
 
-function makeId() {
-  return `TASK-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-}
-
 export function MyTasksPage() {
   const today = new Date().toISOString().slice(0, 10);
   const [tasks, setTasks] = useState<Task[]>([]);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getChartAccounts } from "../../api/finance-extras";
+import { apiFetch } from "../../api/client";
 import {
   CalendarClock,
   Plus,
@@ -598,8 +599,18 @@ export function ScheduledPostingPage() {
           accountOptions={accountOptions}
           onClose={() => setShowModal(false)}
           onSave={(p) => {
-            setPostings((prev) => [p, ...prev]);
-            setShowModal(false);
+            apiFetch("/finance-extras/scheduled-postings", {
+              method: "POST",
+              body: JSON.stringify(p),
+            })
+              .then(() => {
+                setPostings((prev) => [p, ...prev]);
+                setShowModal(false);
+              })
+              .catch((err) => {
+                alert("Failed to create scheduled posting. Please try again.");
+                console.error(err);
+              });
           }}
         />
       )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import {
   Plus,
@@ -12,6 +12,7 @@ import {
   CalendarDays,
   User,
 } from "lucide-react";
+import { apiFetch } from "../api/client";
 
 type TaskStatus = "Pending" | "In Progress" | "Completed";
 type TaskPriority = "Low" | "Medium" | "High";
@@ -37,11 +38,6 @@ interface TasksPageProps {
 }
 
 const DEPT_USERS: Record<string, string[]> = {};
-
-const SEED_TASKS: Record<
-  string,
-  { name: string; description: string; priority: TaskPriority }[]
-> = {};
 
 function makeId() {
   return `TASK-${String(Math.floor(Math.random() * 9000) + 1000)}`;
@@ -79,7 +75,14 @@ export function TasksPage({
 
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const [currentUser, setCurrentUser] = useState(users[0] ?? "");
+  useEffect(() => {
+    apiFetch(`/tasks?app=${app}`)
+      .then(setTasks)
+      .catch((err) => {
+        console.error(`Failed to load tasks for ${app}:`, err);
+        setTasks([]);
+      });
+  }, [app]);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "All">("All");

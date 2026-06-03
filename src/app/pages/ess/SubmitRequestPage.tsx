@@ -11,15 +11,11 @@ import {
   X,
   ChevronDown,
   Calendar,
-  Activity,
   FileText,
-  CreditCard,
   AlertTriangle,
   Edit2,
   Wrench,
   Search,
-  Plus,
-  ExternalLink,
   Send,
   PlusCircle,
 } from "lucide-react";
@@ -165,8 +161,6 @@ function MaterialCombobox({
 }
 
 type Tab = "material" | "finance" | "leave" | "issue" | "change";
-type FinanceSubType = "activity" | "expense" | "claim";
-
 // ─── Shared Attachments Component ────────────────────────────────────────────
 function AttachmentsSection({
   files,

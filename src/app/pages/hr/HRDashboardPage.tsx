@@ -6,15 +6,12 @@ import {
   UserX,
   Clock,
   DollarSign,
-  Network,
   AlertTriangle,
   ChevronRight,
   TrendingUp,
   ArrowUpRight,
   CheckCircle,
   XCircle,
-  Minus,
-  Building2,
 } from "lucide-react";
 import { fetchEmployees } from "../../api/employees";
 import { fetchDepartments } from "../../api/departments";
@@ -245,7 +242,12 @@ export function HRDashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">HR Dashboard</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Workforce overview — {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+            Workforce overview —{" "}
+            {new Date().toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
           </p>
         </div>
         <div className="flex gap-2">

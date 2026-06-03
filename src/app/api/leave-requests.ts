@@ -31,3 +31,29 @@ export async function fetchLeaveRequests(params?: { status?: string; employeeId?
     const data = await apiFetch<any[]>(`/leave-requests${query}`);
     return data.map(mapLeaveRequest);
 }
+
+export function createLeaveRequest(data: any) {
+    return apiFetch(`/leave-requests`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function approveLeaveRequest(id: string, notes?: string) {
+    return apiFetch(`/leave-requests/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'approved', approvedAt: new Date().toISOString(), notes }),
+    });
+}
+
+export function rejectLeaveRequest(id: string, reason?: string) {
+    return apiFetch(`/leave-requests/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'rejected', rejectionReason: reason }),
+    });
+}
+
+export function updateLeaveRequest(id: string, data: any) {
+    return apiFetch(`/leave-requests/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteLeaveRequest(id: string) {
+    return apiFetch(`/leave-requests/${id}`, { method: 'DELETE' });
+}

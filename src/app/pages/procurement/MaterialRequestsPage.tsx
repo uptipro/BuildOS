@@ -12,14 +12,9 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  AlertTriangle,
-  Eye,
-  MoreHorizontal,
   X,
   Trash2,
   ShoppingCart,
-  ArrowRight,
-  Users,
 } from "lucide-react";
 import {
   AdvancedFilter,
@@ -522,7 +517,7 @@ function RaisePRModal({
       .then((data) => {
         const supplierNames = data.suppliers.map((s) => s.name);
         setSuppliers(supplierNames);
-        setSelected((prev) => prev.length ? prev : supplierNames.slice(0, 1));
+        setSelected((prev) => (prev.length ? prev : supplierNames.slice(0, 1)));
       })
       .catch(() => {});
   }, []);

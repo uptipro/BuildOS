@@ -138,7 +138,6 @@ export function ChartOfAccountsPage() {
     return 1 + getDepth(a.parentId);
   }
 
-  const topLevelAccounts = accounts.filter((a) => a.parentId === null);
   const countByType = (t: AccountType) =>
     accounts.filter((a) => a.type === t).length;
 

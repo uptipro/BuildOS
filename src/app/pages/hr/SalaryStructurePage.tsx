@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { apiFetch } from "../../api/client";
 import {
   Plus,
   Edit,
@@ -424,6 +425,15 @@ function ComponentModal({
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function SalaryStructurePage() {
   const [bands, setBands] = useState<SalaryBand[]>([]);
+
+  useEffect(() => {
+    apiFetch("/hr-extras/salary-bands")
+      .then(setBands)
+      .catch((err) => {
+        console.error("Failed to load salary bands:", err);
+        setBands([]);
+      });
+  }, []);
   const [expanded, setExpanded] = useState<Set<string>>(new Set(["b1"]));
   const [modalBand, setModalBand] = useState<SalaryBand | null>(null);
   const [editComp, setEditComp] = useState<SalaryComponent | null>(null);

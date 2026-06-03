@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Clock, Mail, BarChart3, Trash2 } from "lucide-react";
+import { apiFetch } from "../../api/client";
 
 type Frequency = "Daily" | "Weekly" | "Monthly";
 type ReportModule =
@@ -46,6 +47,12 @@ export function ReportAutomationPage() {
   const [schedules, setSchedules] = useState<ReportSchedule[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ ...BLANK_FORM });
+
+  useEffect(() => {
+    apiFetch("/admin-extras/report-schedules")
+      .then(setSchedules)
+      .catch(() => setSchedules([]));
+  }, []);
 
   function toggleEnabled(id: string) {
     setSchedules((prev) =>

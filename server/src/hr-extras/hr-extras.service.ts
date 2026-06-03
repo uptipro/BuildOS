@@ -153,4 +153,36 @@ export class HrExtrasService {
     deleteIssue(id: string) {
         return this.prisma.issue.delete({ where: { id } });
     }
+
+    // ── Bank Names Stub Methods ──
+    findBankNames() {
+        return []; // TODO: Implement bank names persistence
+    }
+    createBankName(data: any) {
+        return { id: `b-${Date.now()}`, ...data, active: true };
+    }
+    updateBankName(id: string, data: any) {
+        return { id, ...data };
+    }
+    toggleBankNameActive(id: string) {
+        return { id, active: true };
+    }
+    deleteBankName(id: string) {
+        return { id, deleted: true };
+    }
+
+    // ── Salary Bands Stub Methods ──
+    findSalaryBands() {
+        return []; // TODO: Implement salary bands persistence
+    }
+
+    // ── Holidays Stub Methods ──
+    createHoliday(data: any) {
+        return { id: `h-${Date.now()}`, ...data };
+    }
+
+    // ── HR Setup Stub Methods ──
+    saveHrSetup(data: any) {
+        return { saved: true, ...data };
+    }
 }

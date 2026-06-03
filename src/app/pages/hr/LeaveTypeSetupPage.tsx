@@ -5,7 +5,7 @@ import {
   createLeaveType,
   updateLeaveType,
   deleteLeaveType,
-  type LeaveType,
+  type LeaveType as ApiLeaveType,
 } from "../../api/leave-types";
 
 type LeaveGender = "all" | "male" | "female";
@@ -52,13 +52,29 @@ const EMPTY = {
 };
 
 export function LeaveTypeSetupPage() {
-  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+  type UILeaveType = Omit<ApiLeaveType, "approvalsRequired" | "gender"> & {
+    approvalsRequired: 1 | 2;
+    gender: LeaveGender;
+  };
+
+  const normalizeLeaveType = (t: ApiLeaveType): UILeaveType => ({
+    ...t,
+    approvalsRequired: t.approvalsRequired === 2 ? 2 : 1,
+    gender:
+      t.gender === "male" || t.gender === "female" || t.gender === "all"
+        ? t.gender
+        : "all",
+  });
+
+  const [leaveTypes, setLeaveTypes] = useState<UILeaveType[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<typeof EMPTY>(EMPTY);
 
   useEffect(() => {
-    fetchLeaveTypes().then(setLeaveTypes).catch(console.error);
+    fetchLeaveTypes()
+      .then((items) => setLeaveTypes(items.map(normalizeLeaveType)))
+      .catch(console.error);
   }, []);
 
   async function save(e: React.FormEvent) {
@@ -66,11 +82,13 @@ export function LeaveTypeSetupPage() {
     if (!form.name.trim()) return;
     if (editId) {
       const updated = await updateLeaveType(editId, form);
-      setLeaveTypes((prev) => prev.map((t) => (t.id === editId ? updated : t)));
+      setLeaveTypes((prev) =>
+        prev.map((t) => (t.id === editId ? normalizeLeaveType(updated) : t)),
+      );
       setEditId(null);
     } else {
       const created = await createLeaveType(form);
-      setLeaveTypes((prev) => [...prev, created]);
+      setLeaveTypes((prev) => [...prev, normalizeLeaveType(created)]);
     }
     setForm(EMPTY);
     setShowForm(false);

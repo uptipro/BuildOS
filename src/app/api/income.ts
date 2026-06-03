@@ -26,3 +26,15 @@ export async function fetchIncome(params?: { status?: string; projectId?: string
     const data = await apiFetch<any[]>(`/income${query}`);
     return data.map(mapIncome);
 }
+
+export function createIncome(data: any) {
+    return apiFetch(`/income`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateIncome(id: string, data: any) {
+    return apiFetch(`/income/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteIncome(id: string) {
+    return apiFetch(`/income/${id}`, { method: 'DELETE' });
+}

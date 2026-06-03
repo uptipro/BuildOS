@@ -10,28 +10,25 @@ import {
   LayoutDashboard,
   Clock,
   ListTodo,
-  Wrench,
   Package,
   Cog,
   Receipt,
   FileText,
   History,
   Plus,
-  MoreHorizontal,
   Edit,
   Upload,
   Download,
-  CheckCircle,
-  AlertCircle,
-  XCircle,
   ChevronRight,
-  Flag,
   Paperclip,
   Search,
-  Filter,
   Eye,
 } from "lucide-react";
 import { fetchProjects } from "../../api/projects";
+import { getTasks } from "../../api/tasks";
+import { getWorkforceAllocations } from "../../api/workforce-allocation";
+import { fetchExpenses } from "../../api/expenses";
+import { getResourcePlans } from "../../api/resource-planning";
 
 // ─── Shared data ────────────────────────────────────────────────────────────
 
@@ -135,14 +132,9 @@ const milestones: Milestone[] = [];
 
 const tasks: Task[] = [];
 
-
-const workers: Worker[] = [];
-
 const materials: Material[] = [];
 
 const equipment: Equipment[] = [];
-
-const expenses: Expense[] = [];
 
 const docs: Document[] = [];
 
@@ -394,7 +386,6 @@ function ScheduleTab() {
               const e = new Date(task.endDate);
               const startMonth = s.getMonth(); // 0-based
               const endMonth = e.getMonth();
-              const spanMonths = Math.max(1, endMonth - startMonth + 1);
               const barColor =
                 task.status === "done"
                   ? "bg-green-500"
@@ -445,7 +436,7 @@ function ScheduleTab() {
   );
 }
 
-function TasksTab() {
+function TasksTab({ tasks }: { tasks: Task[] }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const filtered = tasks.filter((t) =>
@@ -570,7 +561,7 @@ function TasksTab() {
   );
 }
 
-function WorkforceTab() {
+function WorkforceTab({ workers }: { workers: Worker[] }) {
   const navigate = useNavigate();
   const present = workers.filter((w) => w.attendance === "present").length;
   return (
@@ -674,7 +665,7 @@ function WorkforceTab() {
   );
 }
 
-function MaterialsTab() {
+function MaterialsTab({ materials }: { materials: Material[] }) {
   const navigate = useNavigate();
   return (
     <div className="space-y-4">
@@ -962,7 +953,7 @@ function EquipmentTab() {
   );
 }
 
-function ExpensesTab() {
+function ExpensesTab({ expenses }: { expenses: Expense[] }) {
   const total = expenses.reduce((s, e) => s + e.amount, 0);
   const approved = expenses
     .filter((e) => e.status === "approved")
@@ -1269,8 +1260,14 @@ export function ProjectDetailsPage() {
   } | null>(null);
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
-
+  const [projectTasks, setProjectTasks] = useState<Task[]>([]);
+  const [projectWorkers, setProjectWorkers] = useState<Worker[]>([]);
+  const [projectExpenses, setProjectExpenses] = useState<Expense[]>([]);
+  const [, setProjectResources] = useState<any[]>([]);
   useEffect(() => {
+    if (!id) return;
+
+    // Load project details
     fetchProjects()
       .then((items) => {
         const found = items.find((item: any) => item.id === id) ?? items[0];
@@ -1290,12 +1287,88 @@ export function ProjectDetailsPage() {
                 endDate: found.endDate,
                 manager: found.manager,
                 team: Array.isArray(found.team) ? found.team.length : 0,
-                description: found.description ?? "",
+                description: (found as any).description ?? "",
               }
             : null,
         );
       })
-      .catch(() => setProject(null));
+      .catch(console.error);
+
+    // Load project-specific data
+    Promise.all([
+      getTasks()
+        .then((items) =>
+          setProjectTasks(
+            items
+              .filter((t: any) => t.projectId === id)
+              .map((t: any) => ({
+                id: t.id,
+                name: t.title ?? t.name ?? "Untitled Task",
+                parent: null,
+                assignee: t.assignedTo ?? "Unassigned",
+                startDate: t.createdAt ?? t.startDate ?? "",
+                endDate: t.dueDate ?? t.endDate ?? t.createdAt ?? "",
+                status:
+                  t.status === "done" || t.status === "completed"
+                    ? "done"
+                    : t.status === "in-progress" || t.status === "InProgress"
+                      ? "in-progress"
+                      : t.status === "blocked"
+                        ? "blocked"
+                        : "todo",
+                priority:
+                  t.priority === "critical" ||
+                  t.priority === "high" ||
+                  t.priority === "medium" ||
+                  t.priority === "low"
+                    ? t.priority
+                    : "medium",
+                progress: Number(t.progress ?? 0),
+              })),
+          ),
+        )
+        .catch(console.error),
+      getWorkforceAllocations()
+        .then((items) =>
+          setProjectWorkers(
+            items
+              .filter((w: any) => w.projectId === id)
+              .map((w: any) => ({
+                id: w.id,
+                name: w.employeeName ?? "",
+                role: w.role ?? "",
+                phone: "—",
+                attendance: "present" as const,
+                hoursThisWeek: Math.max(0, Math.round(Number(w.allocPct ?? 0) * 0.4)),
+              })),
+          ),
+        )
+        .catch(console.error),
+      fetchExpenses({ projectId: id })
+        .then((items) =>
+          setProjectExpenses(
+            items.map((e: any) => ({
+              id: e.id,
+              category: e.category ?? "Other",
+              description: e.description ?? "",
+              amount: Number(e.amount ?? 0),
+              date: e.date ?? "",
+              status:
+                e.status === "Approved"
+                  ? "approved"
+                  : e.status === "Rejected"
+                    ? "rejected"
+                    : "pending",
+            })),
+          ),
+        )
+        .catch(console.error),
+      getResourcePlans()
+        .then((items) =>
+          setProjectResources(items.filter((r: any) => r.projectId === id)),
+        )
+        .catch(console.error),
+    ]);
   }, [id]);
 
   if (!project) {
@@ -1416,11 +1489,15 @@ export function ProjectDetailsPage() {
         <div className="p-5">
           {activeTab === "overview" && <OverviewTab p={p} />}
           {activeTab === "schedule" && <ScheduleTab />}
-          {activeTab === "tasks" && <TasksTab />}
-          {activeTab === "workforce" && <WorkforceTab />}
-          {activeTab === "materials" && <MaterialsTab />}
+          {activeTab === "tasks" && <TasksTab tasks={projectTasks} />}
+          {activeTab === "workforce" && (
+            <WorkforceTab workers={projectWorkers} />
+          )}
+          {activeTab === "materials" && <MaterialsTab materials={materials} />}
           {activeTab === "equipment" && <EquipmentTab />}
-          {activeTab === "expenses" && <ExpensesTab />}
+          {activeTab === "expenses" && (
+            <ExpensesTab expenses={projectExpenses} />
+          )}
           {activeTab === "documents" && <DocumentsTab />}
           {activeTab === "activity" && <ActivityTab />}
         </div>

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  FolderCog,
   Plus,
   Edit,
   Trash2,
@@ -608,9 +607,6 @@ export function ProjectConfigurationPage() {
               <div className="divide-y divide-gray-100">
                 {workflows.map((wf) => {
                   const isExpanded = expandedWfId === wf.id;
-                  const wfTypeDef = APPROVAL_WORKFLOW_TYPES.find(
-                    (w) => w.key === wf.workflowType,
-                  );
                   return (
                     <div key={wf.id}>
                       <div className="flex items-center px-5 py-4 gap-4 hover:bg-gray-50/60 group transition-colors">

@@ -32,3 +32,15 @@ export async function fetchEmployee(id: string) {
     const data = await apiFetch<any>(`/employees/${id}`);
     return mapEmployee(data);
 }
+
+export function createEmployee(data: any) {
+    return apiFetch(`/employees`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateEmployee(id: string, data: any) {
+    return apiFetch(`/employees/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export function deleteEmployee(id: string) {
+    return apiFetch(`/employees/${id}`, { method: 'DELETE' });
+}

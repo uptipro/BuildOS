@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { fetchClaims } from "../../api/claims";
+import {
+  fetchClaims,
+  approveClaim,
+  rejectClaim,
+  payClaim,
+  updateClaimStatus,
+} from "../../api/claims";
 import {
   Search,
   Download,
@@ -73,8 +79,34 @@ const STATUS_OPTS: Array<ClaimStatus | "All"> = [
 
 export function ClaimsManagementPage() {
   const [claims, setClaims] = useState<Claim[]>([]);
+
+  function toClaim(c: any): Claim {
+    const status: ClaimStatus =
+      c.status === "Submitted" ||
+      c.status === "Under Review" ||
+      c.status === "Approved" ||
+      c.status === "Rejected" ||
+      c.status === "Paid"
+        ? c.status
+        : "Submitted";
+    return {
+      id: c.id,
+      employee: c.employee ?? "",
+      department: c.department ?? "",
+      type: c.type ?? "",
+      amount: Number(c.amount ?? 0),
+      description: c.description ?? "",
+      date: c.date ?? "",
+      status,
+      reviewedBy: c.reviewedBy,
+      reviewedAt: c.reviewedAt,
+      rejectionReason: c.rejectionReason,
+      paidAt: c.paidAt,
+    };
+  }
+
   useEffect(() => {
-    fetchClaims().then(setClaims);
+    fetchClaims().then((items) => setClaims(items.map(toClaim)));
   }, []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ClaimStatus | "All">("All");
@@ -104,53 +136,52 @@ export function ClaimsManagementPage() {
     );
 
   function approve(id: string) {
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              status: "Approved",
-              reviewedBy: "Finance Manager",
-              reviewedAt: "Apr 13, 2026",
-            }
-          : c,
-      ),
-    );
+    approveClaim(id)
+      .then(() => {
+        fetchClaims().then((items) => setClaims(items.map(toClaim))).catch(console.error);
+      })
+      .catch((err) => {
+        alert("Failed to approve claim. Please try again.");
+        console.error(err);
+      });
     setViewClaim(null);
   }
 
   function submitReject() {
     if (!rejectState || !rejectState.reason.trim()) return;
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === rejectState.id
-          ? {
-              ...c,
-              status: "Rejected",
-              reviewedBy: "Finance Manager",
-              reviewedAt: "Apr 13, 2026",
-              rejectionReason: rejectState.reason,
-            }
-          : c,
-      ),
-    );
+    rejectClaim(rejectState.id, rejectState.reason)
+      .then(() => {
+        fetchClaims().then((items) => setClaims(items.map(toClaim))).catch(console.error);
+      })
+      .catch((err) => {
+        alert("Failed to reject claim. Please try again.");
+        console.error(err);
+      });
     setRejectState(null);
     setViewClaim(null);
   }
 
   function markPaid(id: string) {
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, status: "Paid", paidAt: "Apr 13, 2026" } : c,
-      ),
-    );
+    payClaim(id)
+      .then(() => {
+        fetchClaims().then((items) => setClaims(items.map(toClaim))).catch(console.error);
+      })
+      .catch((err) => {
+        alert("Failed to mark claim as paid. Please try again.");
+        console.error(err);
+      });
     setViewClaim(null);
   }
 
   function setUnderReview(id: string) {
-    setClaims((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: "Under Review" } : c)),
-    );
+    updateClaimStatus(id, "UnderReview")
+      .then(() => {
+        fetchClaims().then((items) => setClaims(items.map(toClaim))).catch(console.error);
+      })
+      .catch((err) => {
+        alert("Failed to set claim under review. Please try again.");
+        console.error(err);
+      });
     setViewClaim(null);
   }
 

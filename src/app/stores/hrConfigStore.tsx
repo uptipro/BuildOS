@@ -49,7 +49,20 @@ export function HRConfigProvider({ children }: { children: ReactNode }) {
   const [claimTypes, setClaimTypes] = useState<ClaimType[]>([]);
 
   useEffect(() => {
-    fetchLeaveTypes().then(setLeaveTypes).catch(console.error);
+    fetchLeaveTypes()
+      .then((items) =>
+        setLeaveTypes(
+          items.map((t) => ({
+            ...t,
+            approvalsRequired: t.approvalsRequired === 2 ? 2 : 1,
+            gender:
+              t.gender === "male" || t.gender === "female" || t.gender === "all"
+                ? (t.gender as LeaveGender)
+                : "all",
+          })),
+        ),
+      )
+      .catch(console.error);
     fetchClaimTypes().then(setClaimTypes).catch(console.error);
   }, []);
 

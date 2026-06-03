@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchIncome } from "../../api/income";
+import { fetchIncome, createIncome } from "../../api/income";
 import { fetchProjects } from "../../api/projects";
 import { getChartAccounts } from "../../api/finance-extras";
 import {
@@ -98,18 +98,23 @@ export function IncomeManagementPage() {
 
   function addIncome() {
     if (!form.source || !form.amount || !form.description || !form.date) return;
-    const newInc: Income = {
-      id: `INC-${String(incomes.length + 22).padStart(4, "0")}`,
+    createIncome({
       source: form.source,
       project: form.project || "General",
       amount: parseFloat(form.amount.replace(/,/g, "")),
       description: form.description,
       date: form.date,
       status: "Draft",
-    };
-    setIncomes([newInc, ...incomes]);
-    setShowAddModal(false);
-    setForm(emptyForm);
+    })
+      .then(() => {
+        fetchIncome().then(setIncomes).catch(console.error);
+        setShowAddModal(false);
+        setForm(emptyForm);
+      })
+      .catch((err) => {
+        alert("Failed to create income. Please try again.");
+        console.error(err);
+      });
   }
 
   function advance(id: string) {

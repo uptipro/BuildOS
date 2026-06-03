@@ -4,12 +4,10 @@ import {
   Search,
   Truck,
   CheckCircle,
-  Clock,
   AlertTriangle,
   ChevronDown,
   ChevronRight,
   XCircle,
-  BarChart2,
   X,
   Plus,
   Trash2,
@@ -47,6 +45,32 @@ const tabs: { key: GRNStatus | "all"; label: string }[] = [
   { key: "completed", label: "Completed" },
   { key: "over_supply", label: "Over Supply" },
 ];
+
+const statusConfig: Record<
+  GRNStatus,
+  { label: string; badge: string; border: string }
+> = {
+  pending: {
+    label: "Pending",
+    badge: "bg-amber-100 text-amber-700",
+    border: "border-amber-200",
+  },
+  partial: {
+    label: "Partial",
+    badge: "bg-blue-100 text-blue-700",
+    border: "border-blue-200",
+  },
+  completed: {
+    label: "Completed",
+    badge: "bg-emerald-100 text-emerald-700",
+    border: "border-emerald-200",
+  },
+  over_supply: {
+    label: "Over Supply",
+    badge: "bg-red-100 text-red-700",
+    border: "border-red-200",
+  },
+};
 
 const GRN_PO_REFS: string[] = [];
 const GRN_UNITS = [
@@ -99,7 +123,9 @@ function RecordDeliveryModal({
       .then((data) => {
         const storeNames = data.stores.map((s) => s.name);
         setWarehouses(storeNames);
-        setWarehouse((prev) => prev || existingGrn?.warehouse || storeNames[0] || "");
+        setWarehouse(
+          (prev) => prev || existingGrn?.warehouse || storeNames[0] || "",
+        );
       })
       .catch(() => {});
   }, [existingGrn?.warehouse]);
