@@ -17,6 +17,7 @@ type AppKey =
   | "finance"
   | "hr"
   | "procurement"
+  | "storefront"
   | "admin"
   | "ess";
 type OverrideState = "inherit" | "allow" | "deny";
@@ -55,6 +56,7 @@ const APP_COLORS: Record<AppKey, string> = {
   finance: "bg-emerald-100 text-emerald-700",
   hr: "bg-purple-100 text-purple-700",
   procurement: "bg-blue-100 text-blue-700",
+  storefront: "bg-pink-100 text-pink-700",
   admin: "bg-indigo-100 text-indigo-700",
   ess: "bg-teal-100 text-teal-700",
 };
@@ -63,6 +65,7 @@ const APP_LABELS: Record<AppKey, string> = {
   finance: "Finance",
   hr: "HR",
   procurement: "Procurement",
+  storefront: "Storefront",
   admin: "Admin",
   ess: "ESS",
 };
@@ -79,6 +82,16 @@ const ALL_PROCESSES: ProcessDef[] = [
   { id: "p_assign_wf", label: "Assign Workforce", app: "construction" },
   { id: "p_create_proj", label: "Create Project", app: "construction" },
   { id: "p_approve_bud", label: "Approve Project Budget", app: "construction" },
+  {
+    id: "p_manage_store_inv",
+    label: "Manage Storefront Inventory",
+    app: "storefront",
+  },
+  {
+    id: "p_approve_store_req",
+    label: "Approve Storefront Request",
+    app: "storefront",
+  },
   { id: "p_gen_rpt", label: "Generate Reports", app: "admin" },
   { id: "p_manage_usr", label: "Manage Users", app: "admin" },
 ];

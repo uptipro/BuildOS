@@ -1,7 +1,60 @@
 import { Outlet } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { HRConfigProvider } from "../stores/hrConfigStore";
+import {
+  ensureValidAccessToken,
+  hasValidAuthSession,
+  clearAuthSession,
+} from "../utils/authSession";
 
 export function AppLayout() {
+  const navigate = useNavigate();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const enforceSession = async () => {
+      if (!hasValidAuthSession()) {
+        clearAuthSession();
+        if (mounted) navigate("/auth/login", { replace: true });
+        return;
+      }
+
+      const token = await ensureValidAccessToken();
+      if (!token) {
+        clearAuthSession();
+        if (mounted) navigate("/auth/login", { replace: true });
+        return;
+      }
+
+      if (mounted) setReady(true);
+    };
+
+    void enforceSession();
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void enforceSession();
+      }
+    };
+
+    const timer = window.setInterval(() => {
+      void enforceSession();
+    }, 60_000);
+
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [navigate]);
+
+  if (!ready) return null;
+
   return (
     <HRConfigProvider>
       <div className="min-h-screen bg-gray-50">

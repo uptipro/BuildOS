@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Building2, Eye, EyeOff } from "lucide-react";
 import { apiFetch } from "../../api/client";
+import { saveAuthSession } from "../../utils/authSession";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -17,7 +18,14 @@ export function LoginPage() {
     try {
       const res = await apiFetch<{
         access_token: string;
-        user: { id: string; name: string; email: string; role: string };
+        refresh_token: string;
+        user: {
+          id: string;
+          name: string;
+          email: string;
+          role: string;
+          assignedApps?: string[];
+        };
       }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({
@@ -25,8 +33,11 @@ export function LoginPage() {
           password: formData.password,
         }),
       });
-      localStorage.setItem("auth_token", res.access_token);
-      localStorage.setItem("auth_user", JSON.stringify(res.user));
+      saveAuthSession({
+        accessToken: res.access_token,
+        refreshToken: res.refresh_token,
+        user: res.user,
+      });
       navigate("/apps");
     } catch {
       setError("Invalid email or password.");

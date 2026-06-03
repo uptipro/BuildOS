@@ -6,6 +6,7 @@ export function useAuthUser() {
   let name = "";
   let email = "";
   let role = "";
+  let assignedApps: string[] = [];
 
   try {
     const raw = localStorage.getItem("auth_user");
@@ -14,6 +15,9 @@ export function useAuthUser() {
       name = parsed.name ?? "";
       email = parsed.email ?? "";
       role = parsed.role ?? "";
+      assignedApps = Array.isArray(parsed.assignedApps)
+        ? parsed.assignedApps.map((app: unknown) => String(app))
+        : [];
     }
   } catch {
     // ignore
@@ -26,5 +30,5 @@ export function useAuthUser() {
     .slice(0, 2)
     .join("");
 
-  return { name, email, role, initials };
+  return { name, email, role, initials, assignedApps };
 }

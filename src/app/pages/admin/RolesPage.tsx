@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   getAppRoles,
+  getUsers,
+  getProcessCatalog,
   createAppRole,
   updateAppRole,
   deleteAppRole,
 } from "../../api/admin-extras";
 import {
   Shield,
-  Plus,
   Edit,
   Copy,
   Trash2,
@@ -20,6 +21,7 @@ import {
   Users,
 } from "lucide-react";
 import { Fragment } from "react";
+import { useNavigate } from "react-router";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type AppKey =
@@ -27,6 +29,7 @@ type AppKey =
   | "finance"
   | "hr"
   | "procurement"
+  | "storefront"
   | "admin"
   | "ess";
 
@@ -61,6 +64,7 @@ const APP_COLORS: Record<AppKey, string> = {
   finance: "bg-emerald-100 text-emerald-700",
   hr: "bg-purple-100 text-purple-700",
   procurement: "bg-blue-100 text-blue-700",
+  storefront: "bg-pink-100 text-pink-700",
   admin: "bg-indigo-100 text-indigo-700",
   ess: "bg-teal-100 text-teal-700",
 };
@@ -69,6 +73,7 @@ const APP_LABELS: Record<AppKey, string> = {
   finance: "Finance",
   hr: "HR",
   procurement: "Procurement",
+  storefront: "Storefront",
   admin: "Admin",
   ess: "ESS",
 };
@@ -109,6 +114,13 @@ const NAV_ITEMS: Record<AppKey, { id: string; label: string }[]> = {
     { id: "pro_suppliers", label: "Suppliers" },
     { id: "pro_reports", label: "Reports" },
   ],
+  storefront: [
+    { id: "sto_dashboard", label: "Dashboard" },
+    { id: "sto_inventory", label: "Inventory" },
+    { id: "sto_materials", label: "Materials" },
+    { id: "sto_requests", label: "Store Requests" },
+    { id: "sto_reports", label: "Reports" },
+  ],
   admin: [
     { id: "adm_users", label: "Users" },
     { id: "adm_roles", label: "Roles & Permissions" },
@@ -134,21 +146,27 @@ function navPartial(items: string[]): Record<string, boolean> {
   );
 }
 
-// ── Default process catalog ────────────────────────────────────────────────────
-const DEFAULT_PROCESSES: ProcessDef[] = [
-  { id: "p_create_pr", label: "Create Purchase Request", app: "procurement" },
-  { id: "p_approve_po", label: "Approve Purchase Order", app: "procurement" },
-  { id: "p_issue_mat", label: "Issue Materials", app: "procurement" },
-  { id: "p_create_exp", label: "Create Expense", app: "finance" },
-  { id: "p_approve_exp", label: "Approve Expense", app: "finance" },
-  { id: "p_create_pay", label: "Create Payroll", app: "hr" },
-  { id: "p_approve_lv", label: "Approve Leave Request", app: "hr" },
-  { id: "p_assign_wf", label: "Assign Workforce", app: "construction" },
-  { id: "p_create_proj", label: "Create Project", app: "construction" },
-  { id: "p_approve_bud", label: "Approve Project Budget", app: "construction" },
-  { id: "p_gen_rpt", label: "Generate Reports", app: "admin" },
-  { id: "p_manage_usr", label: "Manage Users", app: "admin" },
-];
+function toRoleProcessDefs(
+  input: Array<{ id: string; label: string; app: string }>,
+): ProcessDef[] {
+  const allowedApps = new Set<AppKey>([
+    "construction",
+    "finance",
+    "hr",
+    "procurement",
+    "storefront",
+    "admin",
+    "ess",
+  ]);
+
+  return input
+    .map((item) => ({
+      id: String(item.id),
+      label: String(item.label),
+      app: String(item.app).toLowerCase() as AppKey,
+    }))
+    .filter((item) => allowedApps.has(item.app));
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const PERM_KEYS: Array<keyof ProcessPerm> = [
@@ -174,145 +192,6 @@ function emptyPerm(): ProcessPerm {
     approve: false,
     delete: false,
   };
-}
-
-// ── AddProcessModal ───────────────────────────────────────────────────────────
-function AddProcessModal({
-  existing,
-  onAdd,
-  onClose,
-}: {
-  existing: ProcessDef[];
-  onAdd: (p: ProcessDef) => void;
-  onClose: () => void;
-}) {
-  const [label, setLabel] = useState("");
-  const [app, setApp] = useState<AppKey>("construction");
-
-  const available = DEFAULT_PROCESSES.filter(
-    (p) => !existing.find((e) => e.id === p.id),
-  );
-
-  const [mode, setMode] = useState<"catalog" | "custom">("catalog");
-  const [catalogId, setCatalogId] = useState(available[0]?.id ?? "");
-
-  const handleAdd = () => {
-    if (mode === "catalog" && catalogId) {
-      const proc = DEFAULT_PROCESSES.find((p) => p.id === catalogId);
-      if (proc) {
-        onAdd(proc);
-        onClose();
-      }
-    } else if (mode === "custom" && label.trim()) {
-      onAdd({ id: `custom_${Date.now()}`, label: label.trim(), app });
-      onClose();
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">
-              Add Process Column
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Add a process to the permission matrix
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-700 rounded"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="p-6 space-y-4">
-          <div className="flex gap-2">
-            {(["catalog", "custom"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${mode === m ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-              >
-                {m === "catalog" ? "From Catalog" : "Custom Process"}
-              </button>
-            ))}
-          </div>
-          {mode === "catalog" ? (
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Select Process
-              </label>
-              {available.length === 0 ? (
-                <p className="text-sm text-gray-500 py-2">
-                  All catalog processes have been added.
-                </p>
-              ) : (
-                <select
-                  value={catalogId}
-                  onChange={(e) => setCatalogId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {available.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      [{APP_LABELS[p.app]}] {p.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          ) : (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Process Label
-                </label>
-                <input
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  placeholder="e.g. Submit Site Report"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Application
-                </label>
-                <select
-                  value={app}
-                  onChange={(e) => setApp(e.target.value as AppKey)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {(Object.keys(APP_LABELS) as AppKey[]).map((k) => (
-                    <option key={k} value={k}>
-                      {APP_LABELS[k]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
-          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAdd}
-              disabled={mode === "catalog" && available.length === 0}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-            >
-              Add Process
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ── AddRoleModal ──────────────────────────────────────────────────────────────
@@ -402,12 +281,106 @@ function AddRoleModal({
   );
 }
 
+function EditRoleModal({
+  role,
+  onSave,
+  onClose,
+}: {
+  role: Role;
+  onSave: (data: { name: string; description: string }) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(role.name);
+  const [desc, setDesc] = useState(role.description);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      setError("Role name is required.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      await onSave({ name: name.trim(), description: desc.trim() });
+      onClose();
+    } catch {
+      setError("Failed to update role.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-gray-900">Edit Role</h2>
+          <button
+            onClick={onClose}
+            className="p-1 text-gray-400 hover:text-gray-700 rounded"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              Role Name
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              Description
+            </label>
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function RolesPage() {
+  const navigate = useNavigate();
   const [roles, setRoles] = useState<Role[]>([]);
+  const [roleUserCounts, setRoleUserCounts] = useState<Record<string, number>>(
+    {},
+  );
   const [roleStatus, setRoleStatus] = useState<
     Record<string, "saving" | "saved" | "error">
   >({});
+  const roleSaveQueueRef = useRef<Record<string, Promise<void>>>({});
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
 
   const rolePayload = (role: Role) => ({
     name: role.name,
@@ -420,8 +393,18 @@ export function RolesPage() {
     },
   });
 
+  const normalizeRoleKey = (value: string) => value.trim().toLowerCase();
+
   useEffect(() => {
-    getAppRoles().then((apiRoles) => {
+    Promise.all([getAppRoles(), getUsers()]).then(([apiRoles, users]) => {
+      const counts = users.reduce<Record<string, number>>((acc, user) => {
+        const key = normalizeRoleKey(String(user.role ?? ""));
+        if (!key) return acc;
+        acc[key] = (acc[key] ?? 0) + 1;
+        return acc;
+      }, {});
+
+      setRoleUserCounts(counts);
       setRoles((prev) =>
         apiRoles.map((r) => {
           const persisted =
@@ -435,19 +418,32 @@ export function RolesPage() {
                 })
               : {};
           const existing = prev.find((p) => p.id === r.id);
-          if (existing) return { ...existing, name: r.name };
+          if (existing) {
+            return {
+              ...existing,
+              name: r.name,
+              users: counts[normalizeRoleKey(r.name)] ?? 0,
+            };
+          }
           return {
             id: r.id,
             name: r.name,
             description: r.description ?? "",
-            users: 0,
-            isSuper: Boolean(r.isSuper ?? r.isSystem),
+            users: counts[normalizeRoleKey(r.name)] ?? 0,
+            isSuper: Boolean(
+              r.isSuper ??
+              r.isSystem ??
+              String(r.name ?? "")
+                .trim()
+                .toLowerCase() === "admin",
+            ),
             permissions: persisted.processPermissions ?? {},
             appAccess: {
               construction: false,
               finance: false,
               hr: false,
               procurement: false,
+              storefront: false,
               admin: Boolean(r.isSuper ?? r.isSystem),
               ess: false,
               ...(persisted.appAccess ?? {}),
@@ -458,10 +454,16 @@ export function RolesPage() {
       );
     });
   }, []);
-  const [processes, setProcesses] = useState<ProcessDef[]>(
-    DEFAULT_PROCESSES.slice(0, 8),
-  );
-  const [showAddProcess, setShowAddProcess] = useState(false);
+  const [processes, setProcesses] = useState<ProcessDef[]>([]);
+  const [processesLoading, setProcessesLoading] = useState(true);
+
+  useEffect(() => {
+    getProcessCatalog()
+      .then((items) => setProcesses(toRoleProcessDefs(items)))
+      .catch(() => setProcesses([]))
+      .finally(() => setProcessesLoading(false));
+  }, []);
+
   const [showAddRole, setShowAddRole] = useState(false);
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
   const [expandedRoleTab, setExpandedRoleTab] = useState<
@@ -490,7 +492,14 @@ export function RolesPage() {
     );
     if (nextRole) {
       setRoleStatus((s) => ({ ...s, [roleId]: "saving" }));
-      updateAppRole((nextRole as Role).id, rolePayload(nextRole as Role))
+
+      const queuedSave = (roleSaveQueueRef.current[roleId] ?? Promise.resolve())
+        .catch(() => {
+          // Continue the queue even if a previous request failed.
+        })
+        .then(() =>
+          updateAppRole((nextRole as Role).id, rolePayload(nextRole as Role)),
+        )
         .then(() => {
           setRoleStatus((s) => ({ ...s, [roleId]: "saved" }));
           setTimeout(
@@ -505,7 +514,10 @@ export function RolesPage() {
         })
         .catch(() => {
           setRoleStatus((s) => ({ ...s, [roleId]: "error" }));
+          throw new Error("Failed to persist role updates");
         });
+
+      roleSaveQueueRef.current[roleId] = queuedSave;
     }
   };
 
@@ -538,10 +550,6 @@ export function RolesPage() {
       ...r,
       navAccess: { ...r.navAccess, [navId]: !r.navAccess[navId] },
     }));
-  };
-
-  const removeProcess = (procId: string) => {
-    setProcesses((prev) => prev.filter((p) => p.id !== procId));
   };
 
   const duplicateRole = async (role: Role) => {
@@ -587,6 +595,41 @@ export function RolesPage() {
     }
   };
 
+  const saveRoleMeta = async (
+    roleId: string,
+    data: { name: string; description: string },
+  ) => {
+    const original = roles.find((r) => r.id === roleId);
+    if (!original) return;
+
+    const nextRole: Role = {
+      ...original,
+      name: data.name,
+      description: data.description,
+    };
+
+    setRoles((prev) => prev.map((r) => (r.id === roleId ? nextRole : r)));
+    setRoleStatus((s) => ({ ...s, [roleId]: "saving" }));
+
+    try {
+      await updateAppRole(roleId, rolePayload(nextRole));
+      setRoleStatus((s) => ({ ...s, [roleId]: "saved" }));
+      setTimeout(
+        () =>
+          setRoleStatus((s) => {
+            const copy = { ...s };
+            delete copy[roleId];
+            return copy;
+          }),
+        2000,
+      );
+    } catch {
+      setRoles((prev) => prev.map((r) => (r.id === roleId ? original : r)));
+      setRoleStatus((s) => ({ ...s, [roleId]: "error" }));
+      throw new Error("Update failed");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -601,13 +644,6 @@ export function RolesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowAddProcess(true)}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            Select Process
-          </button>
           <button
             onClick={() => setShowAddRole(true)}
             className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
@@ -634,6 +670,9 @@ export function RolesPage() {
       </div>
 
       {/* Matrix — horizontally scrollable */}
+      {processesLoading && (
+        <p className="text-sm text-gray-500">Loading process catalog...</p>
+      )}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm border-collapse">
@@ -642,7 +681,7 @@ export function RolesPage() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th
                   rowSpan={3}
-                  className="sticky left-0 z-20 bg-gray-50 px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-r border-gray-200 min-w-[200px] align-bottom"
+                  className="sticky left-0 z-20 bg-gray-50 px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-r border-gray-200 min-w-[160px] w-[180px] align-bottom"
                 >
                   Role
                 </th>
@@ -675,13 +714,6 @@ export function RolesPage() {
                       >
                         {proc.label}
                       </span>
-                      <button
-                        onClick={() => removeProcess(proc.id)}
-                        className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-opacity ml-0.5"
-                        title="Remove process column"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
                     </div>
                   </th>
                 ))}
@@ -710,7 +742,7 @@ export function RolesPage() {
                 <Fragment key={role.id}>
                   <tr key={role.id} className="hover:bg-gray-50/70 group">
                     {/* Role name cell — sticky */}
-                    <td className="sticky left-0 z-10 bg-white group-hover:bg-gray-50/70 border-r border-gray-200 px-5 py-3 min-w-[200px]">
+                    <td className="sticky left-0 z-10 bg-white group-hover:bg-gray-50/70 border-r border-gray-200 px-4 py-3 min-w-[160px] w-[180px]">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <button
@@ -753,12 +785,13 @@ export function RolesPage() {
                             </div>
                             <span className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
                               <Users className="w-3 h-3" />
-                              {role.users}
+                              {roleUserCounts[normalizeRoleKey(role.name)] ?? 0}
                             </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 shrink-0">
                           <button
+                            onClick={() => setEditingRole(role)}
                             className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
                             title="Edit"
                           >
@@ -787,7 +820,9 @@ export function RolesPage() {
                     {/* Permission cells — one td per perm key per process */}
                     {processes.map((proc, pi) =>
                       PERM_KEYS.map((k, ki) => {
-                        const val = role.permissions[proc.id]?.[k] ?? false;
+                        const val = role.isSuper
+                          ? true
+                          : (role.permissions[proc.id]?.[k] ?? false);
                         return (
                           <td
                             key={`${proc.id}_${k}`}
@@ -866,7 +901,9 @@ export function RolesPage() {
                           <div className="grid grid-cols-6 gap-3">
                             {(Object.keys(APP_LABELS) as AppKey[]).map(
                               (app) => {
-                                const granted = role.appAccess[app];
+                                const granted = role.isSuper
+                                  ? true
+                                  : role.appAccess[app];
                                 return (
                                   <button
                                     key={app}
@@ -910,8 +947,9 @@ export function RolesPage() {
                                   </p>
                                   <div className="space-y-1">
                                     {NAV_ITEMS[app].map((item) => {
-                                      const granted =
-                                        role.navAccess[item.id] ?? false;
+                                      const granted = role.isSuper
+                                        ? true
+                                        : (role.navAccess[item.id] ?? false);
                                       return (
                                         <label
                                           key={item.id}
@@ -969,24 +1007,19 @@ export function RolesPage() {
       {processes.length === 0 && (
         <div className="flex flex-col items-center justify-center py-10 gap-3 text-center bg-white rounded-xl border border-dashed border-gray-300">
           <AlertCircle className="w-8 h-8 text-gray-300" />
-          <p className="text-sm text-gray-500">No processes added yet.</p>
+          <p className="text-sm text-gray-500">
+            No processes configured yet for role permissions.
+          </p>
           <button
-            onClick={() => setShowAddProcess(true)}
-            className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:underline"
+            onClick={() => navigate("/apps/admin/project-config")}
+            className="text-sm text-indigo-600 font-medium hover:underline"
           >
-            <Plus className="w-4 h-4" /> Select Process
+            Go to Process Configuration
           </button>
         </div>
       )}
 
       {/* Modals */}
-      {showAddProcess && (
-        <AddProcessModal
-          existing={processes}
-          onAdd={(p) => setProcesses((prev) => [...prev, p])}
-          onClose={() => setShowAddProcess(false)}
-        />
-      )}
       {showAddRole && (
         <AddRoleModal
           onAdd={async ({ name, description }) => {
@@ -995,11 +1028,12 @@ export function RolesPage() {
               finance: false,
               hr: false,
               procurement: false,
+              storefront: false,
               admin: false,
               ess: true,
             };
             const permissions = Object.fromEntries(
-              DEFAULT_PROCESSES.map((p) => [p.id, emptyPerm()]),
+              processes.map((p) => [p.id, emptyPerm()]),
             );
             const navAccess = navPartial([
               "ess_dashboard",
@@ -1033,6 +1067,13 @@ export function RolesPage() {
             ]);
           }}
           onClose={() => setShowAddRole(false)}
+        />
+      )}
+      {editingRole && (
+        <EditRoleModal
+          role={editingRole}
+          onSave={(data) => saveRoleMeta(editingRole.id, data)}
+          onClose={() => setEditingRole(null)}
         />
       )}
     </div>

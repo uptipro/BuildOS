@@ -24,8 +24,10 @@ export function BoardOfDirectorsPage() {
   const [directors, setDirectors] = useState<Director[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const loadDirectors = () => getDirectors().then(setDirectors);
+
   useEffect(() => {
-    getDirectors().then(setDirectors);
+    void loadDirectors();
   }, []);
 
   const [formData, setFormData] = useState({
@@ -96,7 +98,6 @@ export function BoardOfDirectorsPage() {
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.designation.trim())
       newErrors.designation = "Designation is required";
-    if (!formData.sequence) newErrors.sequence = "Sequence is required";
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -104,15 +105,24 @@ export function BoardOfDirectorsPage() {
     setErrors({});
 
     if (editingDirector) {
-      updateDirector(editingDirector.id, formData).then((updated) => {
-        setDirectors((prev) =>
-          prev.map((d) => (d.id === editingDirector.id ? updated : d)),
-        );
+      updateDirector(editingDirector.id, {
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        designation: formData.designation,
+      }).then(() => {
+        void loadDirectors();
         handleCloseModal();
       });
     } else {
-      createDirector(formData).then((created) => {
-        setDirectors((prev) => [...prev, created]);
+      createDirector({
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        designation: formData.designation,
+        sequence: formData.sequence,
+      }).then(() => {
+        void loadDirectors();
         handleCloseModal();
       });
     }
@@ -130,6 +140,11 @@ export function BoardOfDirectorsPage() {
       sequence: directors.length + 1,
     });
   };
+
+  useEffect(() => {
+    if (!showModal || editingDirector) return;
+    setFormData((prev) => ({ ...prev, sequence: directors.length + 1 }));
+  }, [showModal, editingDirector, directors.length]);
 
   return (
     <div className="space-y-6">
@@ -256,7 +271,7 @@ export function BoardOfDirectorsPage() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">
@@ -344,14 +359,12 @@ export function BoardOfDirectorsPage() {
                   <input
                     type="number"
                     value={formData.sequence}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        sequence: parseInt(e.target.value) || 1,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    readOnly
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Sequence is auto-assigned by the system.
+                  </p>
                   {errors.sequence && (
                     <p className="mt-1 text-xs text-red-500">
                       {errors.sequence}
@@ -401,9 +414,7 @@ export function BoardOfDirectorsPage() {
               <button
                 onClick={async () => {
                   await deleteDirector(deleteTarget.id);
-                  setDirectors((prev) =>
-                    prev.filter((d) => d.id !== deleteTarget.id),
-                  );
+                  await loadDirectors();
                   setDeleteTarget(null);
                 }}
                 className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl"

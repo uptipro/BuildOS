@@ -21,6 +21,51 @@ export class AdminExtrasService {
 
     private settingsFilePath = path.join(process.cwd(), 'data', 'admin-settings.json');
 
+    private allApps = ['construction', 'finance', 'hr', 'procurement', 'admin', 'ess', 'storefront'];
+
+    private buildFullAdminPermissions(processCatalog: any[]) {
+        const processPermissions = Object.fromEntries(
+            (Array.isArray(processCatalog) ? processCatalog : []).map((proc: any) => [
+                String(proc?.id ?? ''),
+                {
+                    view: true,
+                    create: true,
+                    edit: true,
+                    approve: true,
+                    delete: true,
+                },
+            ]),
+        );
+
+        const appAccess = Object.fromEntries(this.allApps.map((app) => [app, true]));
+
+        return {
+            processPermissions,
+            appAccess,
+            navAccess: {},
+        };
+    }
+
+    private async ensureAdminRole() {
+        const settings = await this.readAdminSettings();
+        const fullPermissions = this.buildFullAdminPermissions(settings.processCatalog);
+
+        await this.prisma.appRole.upsert({
+            where: { name: 'Admin' },
+            create: {
+                name: 'Admin',
+                description: 'System administrator with unrestricted access',
+                isSuper: true,
+                permissions: fullPermissions,
+            },
+            update: {
+                description: 'System administrator with unrestricted access',
+                isSuper: true,
+                permissions: fullPermissions,
+            },
+        });
+    }
+
     private async readAdminSettings() {
         try {
             const raw = await fs.readFile(this.settingsFilePath, 'utf-8');
@@ -28,15 +73,158 @@ export class AdminExtrasService {
             return {
                 issueTypes: Array.isArray(parsed.issueTypes) ? parsed.issueTypes : [],
                 changeCategories: Array.isArray(parsed.changeCategories) ? parsed.changeCategories : [],
+                processCatalog: Array.isArray(parsed.processCatalog) ? parsed.processCatalog : [],
+                processWorkflows: Array.isArray(parsed.processWorkflows) ? parsed.processWorkflows : [],
             };
         } catch {
-            return { issueTypes: [], changeCategories: [] };
+            return { issueTypes: [], changeCategories: [], processCatalog: [], processWorkflows: [] };
         }
     }
 
-    private async writeAdminSettings(data: { issueTypes: any[]; changeCategories: any[] }) {
+    private async writeAdminSettings(data: { issueTypes: any[]; changeCategories: any[]; processCatalog: any[]; processWorkflows: any[] }) {
         await fs.mkdir(path.dirname(this.settingsFilePath), { recursive: true });
         await fs.writeFile(this.settingsFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    }
+
+    private normalizeProcessCatalogItem(input: any) {
+        const id = String(input?.id ?? '').trim() || crypto.randomUUID();
+        const label = String(input?.label ?? '').trim();
+        const app = String(input?.app ?? '').trim();
+        const description = String(input?.description ?? '').trim();
+        const requiresApproval = input?.requiresApproval !== false;
+
+        if (!label) throw new BadRequestException('Process label is required');
+        if (!app) throw new BadRequestException('Process app is required');
+
+        return {
+            id,
+            label,
+            app,
+            description,
+            requiresApproval,
+        };
+    }
+
+    async findProcessCatalog() {
+        const settings = await this.readAdminSettings();
+        return settings.processCatalog;
+    }
+
+    async createProcessCatalogItem(data: any) {
+        const settings = await this.readAdminSettings();
+        const next = this.normalizeProcessCatalogItem(data);
+
+        if (settings.processCatalog.some((item: any) => item.id === next.id)) {
+            throw new ConflictException('Process id already exists');
+        }
+
+        settings.processCatalog.push(next);
+        await this.writeAdminSettings(settings);
+        await this.ensureAdminRole();
+        return next;
+    }
+
+    async updateProcessCatalogItem(id: string, data: any) {
+        const settings = await this.readAdminSettings();
+        const idx = settings.processCatalog.findIndex((item: any) => item.id === id);
+        if (idx < 0) throw new BadRequestException('Process not found');
+
+        const merged = {
+            ...settings.processCatalog[idx],
+            ...data,
+            id,
+        };
+        settings.processCatalog[idx] = this.normalizeProcessCatalogItem(merged);
+        await this.writeAdminSettings(settings);
+        await this.ensureAdminRole();
+        return settings.processCatalog[idx];
+    }
+
+    async deleteProcessCatalogItem(id: string) {
+        const settings = await this.readAdminSettings();
+        settings.processCatalog = settings.processCatalog.filter((item: any) => item.id !== id);
+        settings.processWorkflows = settings.processWorkflows.filter((item: any) => item.processId !== id);
+        await this.writeAdminSettings(settings);
+        await this.ensureAdminRole();
+        return { ok: true };
+    }
+
+    private normalizeProcessWorkflowItem(input: any) {
+        const id = String(input?.id ?? '').trim() || crypto.randomUUID();
+        const processId = String(input?.processId ?? '').trim();
+        const process = String(input?.process ?? '').trim();
+        const app = String(input?.app ?? '').trim();
+        const workflowType = String(input?.workflowType ?? '').trim().toLowerCase();
+
+        if (!processId) throw new BadRequestException('Workflow processId is required');
+        if (!process) throw new BadRequestException('Workflow process is required');
+        if (!app) throw new BadRequestException('Workflow app is required');
+        if (!['single', 'group', 'tier'].includes(workflowType)) {
+            throw new BadRequestException('Workflow type must be one of single, group, or tier');
+        }
+
+        const approver = input?.approver ? String(input.approver).trim() : undefined;
+        const groupApprovers = Array.isArray(input?.groupApprovers)
+            ? input.groupApprovers.map((item: any) => String(item).trim()).filter(Boolean)
+            : undefined;
+        const tierLevels = Array.isArray(input?.tierLevels)
+            ? input.tierLevels.map((item: any, index: number) => ({
+                level: Number(item?.level ?? index + 1),
+                approver: String(item?.approver ?? '').trim(),
+                condition: String(item?.condition ?? '').trim(),
+            }))
+            : undefined;
+
+        return {
+            id,
+            processId,
+            process,
+            app,
+            workflowType,
+            approver,
+            groupApprovers,
+            tierLevels,
+        };
+    }
+
+    async findProcessWorkflows() {
+        const settings = await this.readAdminSettings();
+        return settings.processWorkflows;
+    }
+
+    async createProcessWorkflow(data: any) {
+        const settings = await this.readAdminSettings();
+        const next = this.normalizeProcessWorkflowItem(data);
+
+        if (settings.processWorkflows.some((item: any) => item.id === next.id)) {
+            throw new ConflictException('Workflow id already exists');
+        }
+
+        settings.processWorkflows.push(next);
+        await this.writeAdminSettings(settings);
+        return next;
+    }
+
+    async updateProcessWorkflow(id: string, data: any) {
+        const settings = await this.readAdminSettings();
+        const idx = settings.processWorkflows.findIndex((item: any) => item.id === id);
+        if (idx < 0) throw new BadRequestException('Workflow not found');
+
+        const merged = {
+            ...settings.processWorkflows[idx],
+            ...data,
+            id,
+        };
+        settings.processWorkflows[idx] = this.normalizeProcessWorkflowItem(merged);
+        await this.writeAdminSettings(settings);
+        return settings.processWorkflows[idx];
+    }
+
+    async deleteProcessWorkflow(id: string) {
+        const settings = await this.readAdminSettings();
+        settings.processWorkflows = settings.processWorkflows.filter((item: any) => item.id !== id);
+        await this.writeAdminSettings(settings);
+        return { ok: true };
     }
 
     private async sendInviteEmail(email: string, name: string, activationLink: string): Promise<void> {
@@ -53,20 +241,170 @@ export class AdminExtrasService {
             throw new BadRequestException('Invite email is not configured: set RESEND_API_KEY and EMAIL_FROM (or INVITE_FROM_EMAIL)');
         }
 
+                const companyProfile = await this.prisma.companyProfile.findUnique({ where: { id: 'singleton' } }).catch(() => null);
+                const companyName = String(companyProfile?.name ?? '').trim() || 'BuildOS';
+                const logo = this.resolveInviteLogo(companyProfile?.logoUrl);
+                const escapedName = this.escapeHtml(name);
+                const escapedCompanyName = this.escapeHtml(companyName);
+                const escapedActivationLink = this.escapeHtml(activationLink);
+
         const resend = new Resend(resendApiKey);
-        await resend.emails.send({
+                const payload: any = {
             from,
             to: [email],
-            subject: 'You are invited to BuildOS',
-            text: `Hi ${name},\n\nYou have been invited to BuildOS. Activate your account here: ${activationLink}\n\nThis link expires in 7 days.`,
-        });
+                    subject: `Activate your ${companyName} account`,
+                    text: `Hi ${name},\n\nYou have been invited to ${companyName}. Activate your account here: ${activationLink}\n\nThis link expires in 7 days.`,
+                    html: `
+<!doctype html>
+<html lang="en">
+    <body style="margin:0;padding:0;background:#f3f8ff;font-family:Segoe UI,Arial,sans-serif;color:#1f2937;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;">
+            <tr>
+                <td align="center">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border:1px solid #dbeafe;border-radius:18px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,0.08);">
+                        <tr>
+                            <td style="background:linear-gradient(135deg,#1d4ed8,#2563eb);padding:28px 28px 20px;color:#ffffff;">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                                    <tr>
+                                        <td style="vertical-align:middle;">
+                                            <img src="${this.escapeHtml(logo.src)}" alt="${escapedCompanyName} logo" width="36" height="36" style="display:inline-block;border-radius:8px;background:#ffffff;padding:4px;vertical-align:middle;" />
+                                            <span style="display:inline-block;margin-left:10px;font-size:22px;font-weight:700;vertical-align:middle;letter-spacing:0.2px;">${escapedCompanyName}</span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:28px;">
+                                <p style="margin:0 0 12px;font-size:20px;font-weight:700;color:#111827;">Activate your account</p>
+                                <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapedName},</p>
+                                <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;">You have been invited to join <strong>${escapedCompanyName}</strong> on BuildOS. Click the button below to activate your account and set your password.</p>
+                                <p style="margin:0 0 24px;">
+                                    <a href="${escapedActivationLink}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 20px;border-radius:10px;">Activate Account</a>
+                                </p>
+                                <p style="margin:0 0 8px;font-size:13px;color:#6b7280;line-height:1.6;">If the button does not work, use this link:</p>
+                                <p style="margin:0 0 18px;font-size:13px;word-break:break-all;"><a href="${escapedActivationLink}" style="color:#2563eb;text-decoration:underline;">${escapedActivationLink}</a></p>
+                                <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;">This activation link expires in 7 days.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>`,
+        };
+
+        if (logo.attachments.length > 0) {
+            payload.attachments = logo.attachments;
+        }
+
+        await resend.emails.send(payload);
     }
+
+    private resolveInviteLogo(
+        logoUrl: string | null | undefined,
+    ): {
+        src: string;
+        attachments: Array<{ filename: string; content: string; content_id: string }>;
+    } {
+        const raw = String(logoUrl ?? '').trim();
+        const cid = 'buildos-logo';
+
+        const dataMatch = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/i);
+        if (dataMatch?.[1] && dataMatch?.[2]) {
+            const mime = dataMatch[1].toLowerCase();
+            const base64 = dataMatch[2].replace(/\s+/g, '');
+            const ext =
+                mime === 'image/png'
+                    ? 'png'
+                    : mime === 'image/webp'
+                        ? 'webp'
+                        : mime === 'image/gif'
+                            ? 'gif'
+                            : mime === 'image/svg+xml'
+                                ? 'svg'
+                                : 'jpg';
+
+            return {
+                src: `cid:${cid}`,
+                attachments: [
+                    {
+                        filename: `logo.${ext}`,
+                        content: base64,
+                        content_id: cid,
+                    },
+                ],
+            };
+        }
+
+        if (/^https?:\/\//i.test(raw)) {
+            return { src: raw, attachments: [] };
+        }
+
+        if (raw.startsWith('/')) {
+            return {
+                src: `${this.getFrontendBaseUrl()}${raw}`,
+                attachments: [],
+            };
+        }
+
+        const defaultLogoDataUrl = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iIzBmMTcyYSIvPgogIDxwYXRoIGQ9Ik02IDI2VjE0bDEwLTggMTAgOHYxMkg2eiIgZmlsbD0iI2Y5NzMxNiIgb3BhY2l0eT0iMC4xNSIvPgogIDxwYXRoIGQ9Ik02IDI2VjE0bDEwLTggMTAgOHYxMiIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cmVjdCB4PSIxMyIgeT0iMTgiIHdpZHRoPSI2IiBoZWlnaHQ9IjgiIHJ4PSIxIiBmaWxsPSIjZjk3MzE2Ii8+CiAgPHJlY3QgeD0iOSIgeT0iMTYiIHdpZHRoPSI0IiBoZWlnaHQ9IjQiIHJ4PSIwLjUiIGZpbGw9IiNmOTczMTYiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjE5IiB5PSIxNiIgd2lkdGg9IjQiIGhlaWdodD0iNCIgcng9IjAuNSIgZmlsbD0iI2Y5NzMxNiIgb3BhY2l0eT0iMC43Ii8+Cjwvc3ZnPgo=';
+
+        return {
+            src: defaultLogoDataUrl,
+            attachments: [],
+        };
+    }
+
+        private getFrontendBaseUrl(): string {
+                const configured = String(process.env.FRONTEND_URL || '').trim();
+                if (configured) return configured.replace(/\/$/, '');
+
+                const fallback = String(process.env.APP_URL || '').trim();
+                if (fallback) return fallback.replace(/\/$/, '');
+
+                return 'http://localhost:5173';
+        }
+
+        private buildActivationLink(token: string): string {
+                return `${this.getFrontendBaseUrl()}/auth/activate?token=${encodeURIComponent(token)}`;
+        }
+
+        private escapeHtml(value: string): string {
+                return String(value)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+        }
 
     private normalizeStatus(status: string) {
         const s = String(status || '').toLowerCase();
         if (s.includes('reject')) return 'rejected';
         if (s.includes('approve') || s.includes('paid') || s.includes('complete')) return 'approved';
         return 'pending';
+    }
+
+    private normalizeAssignedApps(input: unknown, role?: string): string[] {
+        const normalizedRole = String(role ?? '').trim().toLowerCase();
+        if (normalizedRole.includes('admin')) return this.allApps;
+
+        const defaultApps = ['ess'];
+        if (!Array.isArray(input)) return defaultApps;
+
+        const allowed = new Set(this.allApps);
+        const normalized = Array.from(
+            new Set(
+                input
+                    .map((item) => String(item || '').trim().toLowerCase())
+                    .filter((item) => allowed.has(item)),
+            ),
+        );
+
+        if (!normalized.includes('ess')) normalized.unshift('ess');
+        return normalized.length > 0 ? normalized : defaultApps;
     }
 
     async findApprovals(module?: string) {
@@ -357,10 +695,12 @@ export class AdminExtrasService {
     }
 
     // ── Users ──
-    async inviteUser(data: { email: string; name: string; role?: string }) {
+    async inviteUser(data: { email: string; name: string; role?: string; assignedApps?: string[]; department?: string }) {
         const name = String(data?.name ?? '').trim();
         const role = String(data?.role ?? '').trim();
+        const department = String(data?.department ?? '').trim();
         const normalizedEmail = String(data?.email ?? '').trim().toLowerCase();
+        const assignedApps = this.normalizeAssignedApps(data?.assignedApps, role);
 
         if (!name) throw new BadRequestException('Name is required');
         if (!normalizedEmail) throw new BadRequestException('Email is required');
@@ -382,6 +722,8 @@ export class AdminExtrasService {
                 email: normalizedEmail,
                 name,
                 role,
+                department: department || null,
+                assignedApps,
                 password: placeholder,
                 status: 'pending_invite',
                 inviteToken: token,
@@ -389,9 +731,7 @@ export class AdminExtrasService {
             },
         });
 
-        const frontendUrl = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
-        const activationPath = `/auth/activate?token=${token}`;
-        const activationLink = frontendUrl ? `${frontendUrl}${activationPath}` : activationPath;
+        const activationLink = this.buildActivationLink(token);
 
         try {
             await this.sendInviteEmail(normalizedEmail, name, activationLink);
@@ -405,7 +745,43 @@ export class AdminExtrasService {
         return {
             id: user.id,
             email: user.email,
+            status: user.status,
+            assignedApps: user.assignedApps,
             inviteToken: token,
+            activationLink,
+            inviteEmailSent: true,
+        };
+    }
+
+    async resendInvite(userId: string) {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) throw new BadRequestException('User not found');
+
+        const currentStatus = String(user.status || '').toLowerCase();
+        if (currentStatus === 'active') {
+            throw new BadRequestException('User is already active');
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        const updated = await this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                status: 'pending_invite',
+                inviteToken: token,
+                inviteExpiresAt: expiresAt,
+            },
+        });
+
+        const activationLink = this.buildActivationLink(token);
+
+        await this.sendInviteEmail(updated.email, updated.name, activationLink);
+
+        return {
+            id: updated.id,
+            email: updated.email,
+            status: updated.status,
             activationLink,
             inviteEmailSent: true,
         };
@@ -443,6 +819,7 @@ export class AdminExtrasService {
             select: {
                 id: true, name: true, email: true, role: true,
                 department: true, phone: true, status: true, lastLogin: true,
+                assignedApps: true,
                 createdAt: true,
             },
             orderBy: { name: 'asc' },
@@ -455,18 +832,32 @@ export class AdminExtrasService {
             select: {
                 id: true, name: true, email: true, role: true,
                 department: true, phone: true, status: true, lastLogin: true,
+                assignedApps: true,
                 createdAt: true,
             },
         });
     }
 
     async createUser(data: any) {
+        const normalizedEmail = String(data?.email ?? '').trim().toLowerCase();
+        const name = String(data?.name ?? '').trim();
+        if (!name) throw new BadRequestException('Name is required');
+        if (!normalizedEmail) throw new BadRequestException('Email is required');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+            throw new BadRequestException('Invalid email address');
+        }
+
+        const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (existing) throw new ConflictException('Email already registered');
+
         const hashed = await bcrypt.hash(data.password || 'BuildOS@2025', 10);
+        const role = String(data?.role ?? '').trim();
+        const assignedApps = this.normalizeAssignedApps(data?.assignedApps, role);
         return this.prisma.user.create({
-            data: { ...data, password: hashed },
+            data: { ...data, email: normalizedEmail, name, assignedApps, password: hashed },
             select: {
                 id: true, name: true, email: true, role: true,
-                department: true, phone: true, status: true, createdAt: true,
+                department: true, phone: true, status: true, assignedApps: true, createdAt: true,
             },
         });
     }
@@ -474,13 +865,34 @@ export class AdminExtrasService {
     async updateUser(id: string, data: any) {
         const { password, ...rest } = data;
         const update: any = { ...rest };
+        if (typeof data?.email === 'string') {
+            const normalizedEmail = data.email.trim().toLowerCase();
+            if (!normalizedEmail) throw new BadRequestException('Email is required');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+                throw new BadRequestException('Invalid email address');
+            }
+            const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+            if (existing && existing.id !== id) {
+                throw new ConflictException('Email already registered');
+            }
+            update.email = normalizedEmail;
+        }
+
+        if ('assignedApps' in data) {
+            update.assignedApps = this.normalizeAssignedApps(data.assignedApps, data?.role);
+        } else if (typeof data?.role === 'string' && data.role.trim().toLowerCase().includes('admin')) {
+            update.assignedApps = this.normalizeAssignedApps([], data.role);
+        } else if (typeof data?.role === 'string') {
+            update.assignedApps = this.normalizeAssignedApps([], data.role);
+        }
+
         if (password) update.password = await bcrypt.hash(password, 10);
         return this.prisma.user.update({
             where: { id },
             data: update,
             select: {
                 id: true, name: true, email: true, role: true,
-                department: true, phone: true, status: true, createdAt: true,
+                department: true, phone: true, status: true, assignedApps: true, createdAt: true,
             },
         });
     }
@@ -490,19 +902,40 @@ export class AdminExtrasService {
     }
 
     // ── App Roles ──
-    findAllRoles() {
+    async findAllRoles() {
+        await this.ensureAdminRole();
         return this.prisma.appRole.findMany({ orderBy: { name: 'asc' } });
     }
-    findRole(id: string) {
+    async findRole(id: string) {
+        await this.ensureAdminRole();
         return this.prisma.appRole.findUniqueOrThrow({ where: { id } });
     }
-    createRole(data: any) {
+    async createRole(data: any) {
+        const isAdminName = String(data?.name ?? '').trim().toLowerCase() === 'admin';
+        if (isAdminName || data?.isSuper) {
+            await this.ensureAdminRole();
+            return this.prisma.appRole.findUniqueOrThrow({ where: { name: 'Admin' } });
+        }
         return this.prisma.appRole.create({ data });
     }
-    updateRole(id: string, data: any) {
+    async updateRole(id: string, data: any) {
+        const current = await this.prisma.appRole.findUnique({ where: { id } });
+        const isAdminRole =
+            String(current?.name ?? '').trim().toLowerCase() === 'admin' ||
+            String(data?.name ?? '').trim().toLowerCase() === 'admin';
+
+        if (isAdminRole || data?.isSuper) {
+            await this.ensureAdminRole();
+            return this.prisma.appRole.findUniqueOrThrow({ where: { name: 'Admin' } });
+        }
+
         return this.prisma.appRole.update({ where: { id }, data });
     }
-    deleteRole(id: string) {
+    async deleteRole(id: string) {
+        const current = await this.prisma.appRole.findUnique({ where: { id } });
+        if (String(current?.name ?? '').trim().toLowerCase() === 'admin') {
+            throw new BadRequestException('Admin role cannot be deleted');
+        }
         return this.prisma.appRole.deleteMany({ where: { id } });
     }
 
@@ -603,6 +1036,7 @@ export class AdminExtrasService {
             { key: 'address', label: 'Address' },
             { key: 'city', label: 'City' },
             { key: 'state', label: 'State / Province' },
+            { key: 'country', label: 'Country' },
         ] as const;
 
         const missing = requiredFields
@@ -642,15 +1076,50 @@ export class AdminExtrasService {
     findAllDirectors() {
         return this.prisma.director.findMany({ orderBy: { sequence: 'asc' } });
     }
-    createDirector(data: any) {
-        return this.prisma.director.create({ data });
+
+    async createDirector(data: any) {
+        const firstName = String(data?.firstName ?? '').trim();
+        const lastName = String(data?.lastName ?? '').trim();
+        const designation = String(data?.designation ?? '').trim();
+        const middleName = String(data?.middleName ?? '').trim();
+
+        if (!firstName || !lastName || !designation) {
+            throw new BadRequestException('First name, last name, and designation are required');
+        }
+
+        const highestSequence = await this.prisma.director.findFirst({
+            orderBy: { sequence: 'desc' },
+            select: { sequence: true },
+        });
+        const nextSequence = (highestSequence?.sequence ?? 0) + 1;
+
+        return this.prisma.director.create({
+            data: {
+                firstName,
+                middleName,
+                lastName,
+                designation,
+                sequence: nextSequence,
+            },
+        });
     }
+
     updateDirector(id: string, data: any) {
-        const { id: _id, createdAt, updatedAt, ...rest } = data;
+        const { id: _id, createdAt, updatedAt, sequence, ...rest } = data;
         return this.prisma.director.update({ where: { id }, data: rest });
     }
-    deleteDirector(id: string) {
-        return this.prisma.director.delete({ where: { id } });
+
+    async deleteDirector(id: string) {
+        await this.prisma.director.delete({ where: { id } });
+        const directors = await this.prisma.director.findMany({ orderBy: { sequence: 'asc' } });
+
+        await this.prisma.$transaction(
+            directors.map((director, index) =>
+                this.prisma.director.update({ where: { id: director.id }, data: { sequence: index + 1 } }),
+            ),
+        );
+
+        return { ok: true };
     }
 
     // ── Email Config ──

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import {
   getUsers,
   inviteUser,
+  resendInvite,
+  updateUser,
   deleteUser,
   AppUser,
 } from "../../api/admin-extras";
@@ -29,7 +31,6 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { getReferenceData } from "../../api/reference-data";
-import { createDepartment } from "../../api/departments";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type AppKey =
@@ -37,6 +38,7 @@ type AppKey =
   | "finance"
   | "hr"
   | "procurement"
+  | "storefront"
   | "admin"
   | "ess";
 type UserStatus = "Active" | "Inactive" | "Pending";
@@ -70,6 +72,12 @@ const ALL_APPS: AppDef[] = [
     label: "Procurement",
     color: "bg-blue-100 text-blue-700",
     abbr: "PROC",
+  },
+  {
+    key: "storefront",
+    label: "Storefront",
+    color: "bg-pink-100 text-pink-700",
+    abbr: "STO",
   },
   {
     key: "admin",
@@ -129,9 +137,25 @@ function userFromApi(u: AppUser): UserRecord {
   const status: UserStatus =
     rawStatus === "active"
       ? "Active"
-      : rawStatus === "pending"
+      : ["pending", "pending_invite", "invited", "pending invite"].includes(
+            rawStatus,
+          )
         ? "Pending"
         : "Inactive";
+
+  const apps: AppKey[] = Array.isArray(u.assignedApps)
+    ? (u.assignedApps.filter((app): app is AppKey =>
+        [
+          "construction",
+          "finance",
+          "hr",
+          "procurement",
+          "storefront",
+          "admin",
+          "ess",
+        ].includes(app),
+      ) as AppKey[])
+    : (["ess"] as AppKey[]);
 
   return {
     id: u.id,
@@ -149,7 +173,7 @@ function userFromApi(u: AppUser): UserRecord {
         })
       : "",
     status,
-    apps: [],
+    apps: apps.length > 0 ? apps : (["ess"] as AppKey[]),
     lastActive: u.lastLogin
       ? new Date(u.lastLogin).toLocaleDateString("en-US", {
           month: "short",
@@ -204,10 +228,12 @@ function UserDetailPanel({
   user,
   onClose,
   onUpdateSignature,
+  onUpdateApps,
 }: {
   user: UserRecord;
   onClose: () => void;
   onUpdateSignature: (id: string, has: boolean, initials?: string) => void;
+  onUpdateApps: (id: string, apps: AppKey[]) => Promise<void>;
 }) {
   const [tab, setTab] = useState<
     "info" | "apps" | "permissions" | "activity" | "requests" | "signature"
@@ -222,6 +248,10 @@ function UserDetailPanel({
   );
   const [hasSignature, setHasSignature] = useState(user.hasSignature ?? false);
   const [uploadSimulated, setUploadSimulated] = useState(false);
+  const [selectedApps, setSelectedApps] = useState<AppKey[]>(
+    user.apps.length > 0 ? user.apps : ["ess"],
+  );
+  const [savingApps, setSavingApps] = useState(false);
 
   const tabs = [
     { key: "info", label: "Basic Info" },
@@ -338,18 +368,31 @@ function UserDetailPanel({
           {tab === "apps" && (
             <div className="space-y-3">
               <p className="text-xs text-gray-500 mb-4">
-                {user.apps.length === 0
-                  ? "This user has no application access assigned."
-                  : `${user.apps.length} of ${ALL_APPS.length} applications assigned.`}
+                {selectedApps.length} of {ALL_APPS.length} applications
+                assigned.
               </p>
               {ALL_APPS.map((app) => {
-                const has = user.apps.includes(app.key);
+                const has = selectedApps.includes(app.key);
                 return (
                   <div
                     key={app.key}
                     className={`flex items-center justify-between p-3 rounded-lg border ${has ? "border-emerald-200 bg-emerald-50" : "border-gray-200 bg-gray-50"}`}
                   >
                     <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={has}
+                        disabled={app.key === "ess"}
+                        onChange={() => {
+                          if (app.key === "ess") return;
+                          setSelectedApps((prev) =>
+                            prev.includes(app.key)
+                              ? prev.filter((key) => key !== app.key)
+                              : [...prev, app.key],
+                          );
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
                       <span
                         className={`px-2 py-1 rounded text-xs font-semibold ${app.color}`}
                       >
@@ -379,6 +422,25 @@ function UserDetailPanel({
                   </div>
                 );
               })}
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={async () => {
+                    setSavingApps(true);
+                    const next = Array.from(
+                      new Set(["ess", ...selectedApps]),
+                    ) as AppKey[];
+                    try {
+                      await onUpdateApps(user.id, next);
+                    } finally {
+                      setSavingApps(false);
+                    }
+                  }}
+                  disabled={savingApps}
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
+                >
+                  {savingApps ? "Saving..." : "Save App Access"}
+                </button>
+              </div>
             </div>
           )}
 
@@ -733,8 +795,8 @@ function AddUserModal({
     email: "",
     role: "",
     department: "",
+    assignedApps: ["ess"] as AppKey[],
   });
-  const [newDepartment, setNewDepartment] = useState("");
   const [departments, setDepartments] = useState<
     { id: string; name: string }[]
   >([]);
@@ -763,6 +825,53 @@ function AddUserModal({
       });
   }, []);
 
+  const toReadableError = (err: unknown) => {
+    const fallback = "Failed to send invite. Please try again.";
+    if (!(err instanceof Error)) return fallback;
+
+    const text = err.message;
+    const lower = text.toLowerCase();
+    const match = text.match(/API error\s+\d+\s*:\s*(.+)$/i);
+    if (!match?.[1]) {
+      if (lower.includes("email already") || lower.includes("duplicate")) {
+        return "This email is already in use. Try another email address.";
+      }
+      return text;
+    }
+
+    try {
+      const payload = JSON.parse(match[1]) as {
+        message?: string | string[];
+      };
+      if (Array.isArray(payload.message)) {
+        const parsed = payload.message.join(" ");
+        if (
+          parsed.toLowerCase().includes("email already") ||
+          parsed.toLowerCase().includes("duplicate")
+        ) {
+          return "This email is already in use. Try another email address.";
+        }
+        return parsed;
+      }
+      if (typeof payload.message === "string") {
+        const parsed = payload.message;
+        if (
+          parsed.toLowerCase().includes("email already") ||
+          parsed.toLowerCase().includes("duplicate")
+        ) {
+          return "This email is already in use. Try another email address.";
+        }
+        return parsed;
+      }
+      return text;
+    } catch {
+      if (lower.includes("email already") || lower.includes("duplicate")) {
+        return "This email is already in use. Try another email address.";
+      }
+      return text;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!form.name || !form.email || !form.role || !form.department) {
       setError("Name, email, role, and department are required.");
@@ -775,6 +884,8 @@ function AddUserModal({
         name: form.name,
         email: form.email,
         role: form.role,
+        department: form.department,
+        assignedApps: form.assignedApps,
       });
 
       if (inviteResult.inviteEmailSent === false) {
@@ -803,7 +914,7 @@ function AddUserModal({
           year: "numeric",
         }),
         status: "Pending",
-        apps: [],
+        apps: form.assignedApps,
         lastActive: "Never",
         processes: [],
         activity: [],
@@ -811,29 +922,9 @@ function AddUserModal({
       });
       onClose();
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to send invite. Please try again.";
-      setError(message);
+      setError(toReadableError(err));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCreateDepartment = async () => {
-    const name = newDepartment.trim();
-    if (!name) return;
-    try {
-      const created = await createDepartment({ name });
-      const option = { id: created.id, name: created.name };
-      setDepartments((prev) =>
-        [...prev, option].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setForm((prev) => ({ ...prev, department: option.name }));
-      setNewDepartment("");
-    } catch {
-      setError("Failed to create department.");
     }
   };
 
@@ -876,38 +967,20 @@ function AddUserModal({
                 {label}
               </label>
               {key === "department" ? (
-                <>
-                  <select
-                    value={form.department}
-                    onChange={(e) =>
-                      setForm({ ...form, department: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">Select department</option>
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.name}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="mt-2 flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newDepartment}
-                      onChange={(e) => setNewDepartment(e.target.value)}
-                      placeholder="Add new department"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCreateDepartment}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </>
+                <select
+                  value={form.department}
+                  onChange={(e) =>
+                    setForm({ ...form, department: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Select department</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <input
                   type={type}
@@ -935,6 +1008,42 @@ function AddUserModal({
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Assigned Applications
+            </label>
+            <div className="grid grid-cols-2 gap-2 rounded-lg border border-gray-200 p-3">
+              {ALL_APPS.map((app) => {
+                const checked = form.assignedApps.includes(app.key);
+                return (
+                  <label
+                    key={app.key}
+                    className="flex items-center gap-2 text-sm text-gray-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={app.key === "ess"}
+                      onChange={() => {
+                        if (app.key === "ess") return;
+                        setForm((prev) => ({
+                          ...prev,
+                          assignedApps: checked
+                            ? prev.assignedApps.filter((k) => k !== app.key)
+                            : [...prev.assignedApps, app.key],
+                        }));
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>{app.label}</span>
+                    {app.key === "ess" && (
+                      <span className="text-xs text-gray-400">(Default)</span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
@@ -1016,6 +1125,12 @@ export function UsersPage() {
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
           onUpdateSignature={() => {}}
+          onUpdateApps={async (id, apps) => {
+            const updated = await updateUser(id, { assignedApps: apps });
+            const next = userFromApi(updated);
+            setUsers((prev) => prev.map((u) => (u.id === id ? next : u)));
+            setSelectedUser(next);
+          }}
         />
       )}
 
@@ -1099,7 +1214,7 @@ export function UsersPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-visible">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -1237,6 +1352,29 @@ export function UsersPage() {
                         >
                           Delete user
                         </button>
+                        {user.status === "Pending" && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await resendInvite(user.id);
+                                setInviteWarning(
+                                  `Invite resent to ${user.email}.`,
+                                );
+                              } catch (err) {
+                                const message =
+                                  err instanceof Error
+                                    ? err.message
+                                    : "Failed to resend invite.";
+                                setInviteWarning(message);
+                              } finally {
+                                setOpenMenuId(null);
+                              }
+                            }}
+                            className="w-full text-left px-2.5 py-2 rounded text-sm text-indigo-700 hover:bg-indigo-50"
+                          >
+                            Resend invite
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

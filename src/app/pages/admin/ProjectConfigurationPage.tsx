@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
   Edit,
@@ -13,6 +13,16 @@ import {
   AlertCircle,
   Lock,
 } from "lucide-react";
+import {
+  getProcessCatalog,
+  createProcessCatalogItem,
+  deleteProcessCatalogItem,
+  getProcessWorkflows,
+  createProcessWorkflow,
+  updateProcessWorkflow,
+  deleteProcessWorkflow,
+  type ProcessWorkflow,
+} from "../../api/admin-extras";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ApprovalType = "single" | "group" | "tier";
@@ -23,15 +33,22 @@ interface TierLevel {
   condition: string;
 }
 
-interface ProcessWorkflow {
+interface ProcessCatalogItem {
   id: string;
-  process: string;
+  label: string;
   app: string;
-  workflowType: ApprovalType;
-  approver?: string; // for single
-  groupApprovers?: string[]; // for group
-  tierLevels?: TierLevel[]; // for tier
+  description: string;
+  requiresApproval: boolean;
 }
+const PROCESS_APP_OPTIONS = [
+  "Procurement",
+  "Finance",
+  "HR",
+  "ESS",
+  "Construction",
+  "Storefront",
+  "Admin",
+];
 
 // ── Static approval workflow types ────────────────────────────────────────────
 const APPROVAL_WORKFLOW_TYPES = [
@@ -73,20 +90,8 @@ const APPROVAL_WORKFLOW_TYPES = [
   },
 ];
 
-// ── Available processes ────────────────────────────────────────────────────────
-const AVAILABLE_PROCESSES: { id: string; label: string; app: string }[] = [];
-
 // ── Available approvers ────────────────────────────────────────────────────────
 const AVAILABLE_USERS: string[] = [];
-
-// ── Extended process catalog ─────────────────────────────────────────────────
-const PROCESS_CATALOG: {
-  id: string;
-  label: string;
-  app: string;
-  description: string;
-  requiresApproval: boolean;
-}[] = [];
 
 const CATALOG_APP_COLORS: Record<string, string> = {
   Procurement: "bg-blue-50 text-blue-700 border-blue-100",
@@ -111,20 +116,140 @@ function TypeBadge({ type }: { type: ApprovalType }) {
   );
 }
 
+function AddCatalogProcessModal({
+  onSave,
+  onClose,
+}: {
+  onSave: (item: ProcessCatalogItem) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [label, setLabel] = useState("");
+  const [app, setApp] = useState(PROCESS_APP_OPTIONS[0]);
+  const [description, setDescription] = useState("");
+  const [requiresApproval, setRequiresApproval] = useState(true);
+
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    const cleanLabel = label.trim();
+    if (!cleanLabel) return;
+
+    setSaving(true);
+    try {
+      await onSave({
+        id: `proc_${Date.now()}`,
+        label: cleanLabel,
+        app,
+        description: description.trim(),
+        requiresApproval,
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-gray-900">Add Process</h2>
+          <button
+            onClick={onClose}
+            className="p-1 text-gray-400 hover:text-gray-700 rounded"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              Process Name
+            </label>
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              Application
+            </label>
+            <select
+              value={app}
+              onChange={(e) => setApp(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {PROCESS_APP_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={requiresApproval}
+              onChange={(e) => setRequiresApproval(e.target.checked)}
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Requires approval workflow
+          </label>
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+            >
+              {saving ? "Adding..." : "Add Process"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Configure Workflow Modal ──────────────────────────────────────────────────
 function ConfigureWorkflowModal({
   existing,
+  availableProcesses,
   onSave,
   onClose,
 }: {
   existing?: ProcessWorkflow;
-  onSave: (wf: ProcessWorkflow) => void;
+  availableProcesses: { id: string; label: string; app: string }[];
+  onSave: (wf: ProcessWorkflow) => Promise<void>;
   onClose: () => void;
 }) {
+  const existingProcess = existing
+    ? availableProcesses.find((p) => p.id === existing.processId)
+    : undefined;
   const [selectedProcess, setSelectedProcess] = useState(
-    existing?.process ?? "",
+    existingProcess?.label ?? existing?.process ?? "",
   );
-  const [selectedApp, setSelectedApp] = useState(existing?.app ?? "");
+  const [selectedApp, setSelectedApp] = useState(
+    existingProcess?.app ?? existing?.app ?? "",
+  );
   const [wfType, setWfType] = useState<ApprovalType>(
     existing?.workflowType ?? "single",
   );
@@ -137,6 +262,7 @@ function ConfigureWorkflowModal({
       { level: 1, approver: "", condition: "All amounts" },
     ],
   );
+  const [saving, setSaving] = useState(false);
 
   const toggleGroup = (user: string) => {
     setGroupApprovers((prev) =>
@@ -151,17 +277,28 @@ function ConfigureWorkflowModal({
     ]);
   };
 
-  const handleSave = () => {
-    onSave({
-      id: existing?.id ?? `wf_${Date.now()}`,
-      process: selectedProcess,
-      app: selectedApp,
-      workflowType: wfType,
-      approver: wfType === "single" ? approver : undefined,
-      groupApprovers: wfType === "group" ? groupApprovers : undefined,
-      tierLevels: wfType === "tier" ? tierLevels : undefined,
-    });
-    onClose();
+  const handleSave = async () => {
+    const selectedCatalogProcess = availableProcesses.find(
+      (p) => p.label === selectedProcess && p.app === selectedApp,
+    );
+    if (!selectedCatalogProcess) return;
+
+    setSaving(true);
+    try {
+      await onSave({
+        id: existing?.id ?? `wf_${Date.now()}`,
+        processId: selectedCatalogProcess.id,
+        process: selectedProcess,
+        app: selectedApp,
+        workflowType: wfType,
+        approver: wfType === "single" ? approver : undefined,
+        groupApprovers: wfType === "group" ? groupApprovers : undefined,
+        tierLevels: wfType === "tier" ? tierLevels : undefined,
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -193,7 +330,7 @@ function ConfigureWorkflowModal({
             <select
               value={selectedProcess}
               onChange={(e) => {
-                const proc = AVAILABLE_PROCESSES.find(
+                const proc = availableProcesses.find(
                   (p) => p.label === e.target.value,
                 );
                 setSelectedProcess(e.target.value);
@@ -201,7 +338,7 @@ function ConfigureWorkflowModal({
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              {AVAILABLE_PROCESSES.map((p) => (
+              {availableProcesses.map((p) => (
                 <option key={p.id} value={p.label}>
                   [{p.app}] {p.label}
                 </option>
@@ -365,9 +502,16 @@ function ConfigureWorkflowModal({
           </button>
           <button
             onClick={handleSave}
+            disabled={saving}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
           >
-            {existing ? "Save Changes" : "Add Workflow"}
+            {saving
+              ? existing
+                ? "Saving..."
+                : "Adding..."
+              : existing
+                ? "Save Changes"
+                : "Add Workflow"}
           </button>
         </div>
       </div>
@@ -385,24 +529,62 @@ export function ProjectConfigurationPage() {
   const [editingWf, setEditingWf] = useState<ProcessWorkflow | undefined>(
     undefined,
   );
+  const [catalog, setCatalog] = useState<ProcessCatalogItem[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [workflowsLoading, setWorkflowsLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
+  const [showAddCatalogProcess, setShowAddCatalogProcess] = useState(false);
   const [expandedWfId, setExpandedWfId] = useState<string | null>(null);
   const [catalogAppFilter, setCatalogAppFilter] = useState("All");
 
+  const availableProcesses = catalog.map((p) => ({
+    id: p.id,
+    label: p.label,
+    app: p.app,
+  }));
+
   const catalogApps = [
     "All",
-    ...Array.from(new Set(PROCESS_CATALOG.map((p) => p.app))),
+    ...Array.from(new Set(catalog.map((p) => p.app))),
   ];
   const filteredCatalog =
     catalogAppFilter === "All"
-      ? PROCESS_CATALOG
-      : PROCESS_CATALOG.filter((p) => p.app === catalogAppFilter);
+      ? catalog
+      : catalog.filter((p) => p.app === catalogAppFilter);
   const catalogByApp = filteredCatalog.reduce<
-    Record<string, typeof PROCESS_CATALOG>
+    Record<string, ProcessCatalogItem[]>
   >((acc, p) => {
     if (!acc[p.app]) acc[p.app] = [];
     acc[p.app].push(p);
     return acc;
   }, {});
+
+  useEffect(() => {
+    getProcessCatalog()
+      .then((items) => {
+        setCatalog(items);
+        setCatalogError(null);
+      })
+      .catch(() => {
+        setCatalog([]);
+        setCatalogError("Unable to load process catalog. Please refresh.");
+      })
+      .finally(() => setCatalogLoading(false));
+  }, []);
+
+  useEffect(() => {
+    getProcessWorkflows()
+      .then((items) => {
+        setWorkflows(items);
+        setWorkflowError(null);
+      })
+      .catch(() => {
+        setWorkflows([]);
+        setWorkflowError("Unable to load process workflows. Please refresh.");
+      })
+      .finally(() => setWorkflowsLoading(false));
+  }, []);
 
   const TABS = [
     { key: "workflows" as const, label: "Process Workflows" },
@@ -441,25 +623,40 @@ export function ProjectConfigurationPage() {
       {/* ── PROCESS LIST TAB ── */}
       {activeTab === "process_list" && (
         <div className="space-y-4">
+          {catalogLoading && (
+            <p className="text-sm text-gray-500">Loading process catalog...</p>
+          )}
+          {catalogError && (
+            <p className="text-sm text-red-600">{catalogError}</p>
+          )}
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              {PROCESS_CATALOG.length} system processes across{" "}
-              {catalogApps.length - 1} applications
+              {catalog.length} system processes across {catalogApps.length - 1}{" "}
+              applications
             </p>
-            <div className="flex gap-1 bg-white border border-gray-200 rounded-lg p-1">
-              {catalogApps.map((app) => (
-                <button
-                  key={app}
-                  onClick={() => setCatalogAppFilter(app)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
-                    catalogAppFilter === app
-                      ? "bg-indigo-600 text-white"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  {app}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAddCatalogProcess(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Process
+              </button>
+              <div className="flex gap-1 bg-white border border-gray-200 rounded-lg p-1">
+                {catalogApps.map((app) => (
+                  <button
+                    key={app}
+                    onClick={() => setCatalogAppFilter(app)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                      catalogAppFilter === app
+                        ? "bg-indigo-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {app}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -508,11 +705,33 @@ export function ProjectConfigurationPage() {
                         </span>
                       )}
                       {/* Show linked workflow if any */}
-                      {workflows.find((w) => w.process === proc.label) && (
+                      {workflows.find((w) => w.processId === proc.id) && (
                         <span className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
                           Workflow configured
                         </span>
                       )}
+                      <button
+                        onClick={async () => {
+                          try {
+                            await deleteProcessCatalogItem(proc.id);
+                            setCatalog((prev) =>
+                              prev.filter((item) => item.id !== proc.id),
+                            );
+                            setWorkflows((prev) =>
+                              prev.filter((wf) => wf.processId !== proc.id),
+                            );
+                            setCatalogError(null);
+                          } catch {
+                            setCatalogError(
+                              "Failed to delete process. Please try again.",
+                            );
+                          }
+                        }}
+                        className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded"
+                        title="Delete process"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -590,6 +809,15 @@ export function ProjectConfigurationPage() {
               </button>
             </div>
 
+            {workflowsLoading && (
+              <p className="px-5 py-4 text-sm text-gray-500">
+                Loading process workflows...
+              </p>
+            )}
+            {workflowError && (
+              <p className="px-5 py-4 text-sm text-red-600">{workflowError}</p>
+            )}
+
             {workflows.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
                 <AlertCircle className="w-8 h-8 text-gray-300" />
@@ -659,11 +887,19 @@ export function ProjectConfigurationPage() {
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() =>
-                              setWorkflows((prev) =>
-                                prev.filter((w) => w.id !== wf.id),
-                              )
-                            }
+                            onClick={async () => {
+                              try {
+                                await deleteProcessWorkflow(wf.id);
+                                setWorkflows((prev) =>
+                                  prev.filter((w) => w.id !== wf.id),
+                                );
+                                setWorkflowError(null);
+                              } catch {
+                                setWorkflowError(
+                                  "Failed to delete workflow. Please try again.",
+                                );
+                              }
+                            }}
                             className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -741,17 +977,73 @@ export function ProjectConfigurationPage() {
       {showWfModal && (
         <ConfigureWorkflowModal
           existing={editingWf}
-          onSave={(wf) => {
-            setWorkflows((prev) =>
-              editingWf
-                ? prev.map((w) => (w.id === wf.id ? wf : w))
-                : [...prev, wf],
-            );
+          availableProcesses={availableProcesses}
+          onSave={async (wf) => {
+            if (editingWf) {
+              try {
+                const updated = await updateProcessWorkflow(wf.id, {
+                  processId: wf.processId,
+                  process: wf.process,
+                  app: wf.app,
+                  workflowType: wf.workflowType,
+                  approver: wf.approver,
+                  groupApprovers: wf.groupApprovers,
+                  tierLevels: wf.tierLevels,
+                });
+                setWorkflows((prev) =>
+                  prev.map((w) => (w.id === updated.id ? updated : w)),
+                );
+                setWorkflowError(null);
+              } catch {
+                setWorkflowError(
+                  "Failed to update workflow. Please try again.",
+                );
+                throw new Error("Failed to update workflow");
+              }
+              return;
+            }
+
+            try {
+              const created = await createProcessWorkflow({
+                processId: wf.processId,
+                process: wf.process,
+                app: wf.app,
+                workflowType: wf.workflowType,
+                approver: wf.approver,
+                groupApprovers: wf.groupApprovers,
+                tierLevels: wf.tierLevels,
+              });
+              setWorkflows((prev) => [...prev, created]);
+              setWorkflowError(null);
+            } catch {
+              setWorkflowError("Failed to create workflow. Please try again.");
+              throw new Error("Failed to create workflow");
+            }
           }}
           onClose={() => {
             setShowWfModal(false);
             setEditingWf(undefined);
           }}
+        />
+      )}
+      {showAddCatalogProcess && (
+        <AddCatalogProcessModal
+          onSave={async (item) => {
+            try {
+              const created = await createProcessCatalogItem({
+                label: item.label,
+                app: item.app,
+                description: item.description,
+                requiresApproval: item.requiresApproval,
+              });
+              setCatalog((prev) => [...prev, created]);
+              setCatalogError(null);
+            } catch {
+              setCatalogError("Failed to create process. Please try again.");
+              throw new Error("Failed to create process");
+            }
+          }}
+          onClose={() => setShowAddCatalogProcess(false)}
         />
       )}
     </div>

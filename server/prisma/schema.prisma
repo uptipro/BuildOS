@@ -406,12 +406,15 @@ model User {
   password        String
   name            String
   role            String    @default("viewer")
+  assignedApps    String[]  @default(["ess"])
   department      String?
   phone           String?
   status          String    @default("Active")
   lastLogin       DateTime?
   inviteToken     String?
   inviteExpiresAt DateTime?
+  refreshTokenHash String?
+  refreshTokenExpiresAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }

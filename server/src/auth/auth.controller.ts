@@ -30,7 +30,32 @@ export class AuthController {
     async getMe(@Headers('authorization') auth: string) {
         if (!auth?.startsWith('Bearer ')) throw new UnauthorizedException('No token provided');
         const token = auth.split(' ')[1];
-        const payload = this.jwtService.verify<{ sub: string }>(token);
+        let payload: { sub: string };
+        try {
+            payload = this.jwtService.verify<{ sub: string }>(token);
+        } catch {
+            throw new UnauthorizedException('Invalid or expired token');
+        }
         return this.authService.getMe(payload.sub);
+    }
+
+    @Post('refresh')
+    refresh(@Body() body: { refresh_token: string }) {
+        return this.authService.refresh(body.refresh_token);
+    }
+
+    @Post('logout')
+    async logout(@Headers('authorization') auth: string) {
+        if (!auth?.startsWith('Bearer ')) throw new UnauthorizedException('No token provided');
+        const token = auth.split(' ')[1];
+        let payload: { sub: string };
+        try {
+            payload = this.jwtService.verify<{ sub: string }>(token);
+        } catch {
+            throw new UnauthorizedException('Invalid or expired token');
+        }
+
+        await this.authService.clearRefreshToken(payload.sub);
+        return { success: true };
     }
 }

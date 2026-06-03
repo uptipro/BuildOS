@@ -3,6 +3,7 @@ import { apiFetch } from './client';
 export interface AppUser {
     id: string; name: string; email: string; role: string;
     department?: string; position?: string; status: string;
+    assignedApps?: string[];
     lastLogin?: string; createdAt: string;
 }
 export interface AppRole {
@@ -73,6 +74,33 @@ export interface NotificationRuleConfig {
     enabled: boolean;
 }
 
+export interface ProcessCatalogItem {
+    id: string;
+    label: string;
+    app: string;
+    description: string;
+    requiresApproval: boolean;
+}
+
+export type ApprovalType = 'single' | 'group' | 'tier';
+
+export interface ProcessWorkflowTierLevel {
+    level: number;
+    approver: string;
+    condition: string;
+}
+
+export interface ProcessWorkflow {
+    id: string;
+    processId: string;
+    process: string;
+    app: string;
+    workflowType: ApprovalType;
+    approver?: string;
+    groupApprovers?: string[];
+    tierLevels?: ProcessWorkflowTierLevel[];
+}
+
 export const getAdminSystemSummary = () =>
     apiFetch<AdminSystemSummary>('/admin/system-summary');
 export const getAdminActivityLog = () =>
@@ -84,16 +112,26 @@ export const getAuditLogs = (params?: { limit?: number; offset?: number }) => {
     const query = qs.toString() ? `?${qs}` : '';
     return apiFetch<any[]>(`/audit-logs${query}`);
 };
-export const inviteUser = (data: { email: string; name: string; role: string }) =>
+export const inviteUser = (data: { email: string; name: string; role: string; assignedApps?: string[]; department?: string }) =>
     apiFetch<{
         id: string;
         email: string;
+        status: string;
+        assignedApps: string[];
         inviteToken: string;
         activationLink: string;
         inviteEmailSent: boolean;
     }>(
         '/admin/users/invite', { method: 'POST', body: JSON.stringify(data) }
     );
+export const resendInvite = (id: string) =>
+    apiFetch<{
+        id: string;
+        email: string;
+        status: string;
+        activationLink: string;
+        inviteEmailSent: boolean;
+    }>(`/admin/users/${id}/resend-invite`, { method: 'POST' });
 
 // Users
 export const getUsers = (search?: string) =>
@@ -133,6 +171,26 @@ export const updateChangeCategory = (id: string, data: Partial<Omit<ChangeCatego
     apiFetch<ChangeCategoryConfig>(`/admin/change-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteChangeCategory = (id: string) =>
     apiFetch<{ ok: boolean }>(`/admin/change-categories/${id}`, { method: 'DELETE' });
+
+// Process Catalog
+export const getProcessCatalog = () =>
+    apiFetch<ProcessCatalogItem[]>('/admin/process-catalog');
+export const createProcessCatalogItem = (data: Omit<ProcessCatalogItem, 'id'> & { id?: string }) =>
+    apiFetch<ProcessCatalogItem>('/admin/process-catalog', { method: 'POST', body: JSON.stringify(data) });
+export const updateProcessCatalogItem = (id: string, data: Partial<Omit<ProcessCatalogItem, 'id'>>) =>
+    apiFetch<ProcessCatalogItem>(`/admin/process-catalog/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteProcessCatalogItem = (id: string) =>
+    apiFetch<{ ok: boolean }>(`/admin/process-catalog/${id}`, { method: 'DELETE' });
+
+// Process Workflows
+export const getProcessWorkflows = () =>
+    apiFetch<ProcessWorkflow[]>('/admin/process-workflows');
+export const createProcessWorkflow = (data: Omit<ProcessWorkflow, 'id'> & { id?: string }) =>
+    apiFetch<ProcessWorkflow>('/admin/process-workflows', { method: 'POST', body: JSON.stringify(data) });
+export const updateProcessWorkflow = (id: string, data: Partial<Omit<ProcessWorkflow, 'id'>>) =>
+    apiFetch<ProcessWorkflow>(`/admin/process-workflows/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteProcessWorkflow = (id: string) =>
+    apiFetch<{ ok: boolean }>(`/admin/process-workflows/${id}`, { method: 'DELETE' });
 
 // Units of Measurement
 export const getUnits = () => apiFetch<UnitOfMeasurement[]>('/admin-extras/units');

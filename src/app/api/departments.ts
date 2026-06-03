@@ -35,3 +35,25 @@ export function createDepartment(data: {
         body: JSON.stringify(data),
     });
 }
+
+export function updateDepartment(
+    id: string,
+    data: {
+        name?: string;
+        description?: string;
+        location?: string;
+        budget?: string;
+        headId?: string | null;
+    },
+) {
+    return apiFetch<any>(`/departments/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export function deleteDepartment(id: string) {
+    return apiFetch<void>(`/departments/${id}`, {
+        method: 'DELETE',
+    });
+}

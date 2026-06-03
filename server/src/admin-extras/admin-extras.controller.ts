@@ -30,7 +30,9 @@ export class AdminExtrasController {
 
     // ── Users ──
     @Post('admin/users/invite')
-    inviteUser(@Body() body: { email: string; name: string; role?: string }) { return this.svc.inviteUser(body); }
+    inviteUser(@Body() body: { email: string; name: string; role?: string; assignedApps?: string[]; department?: string }) { return this.svc.inviteUser(body); }
+    @Post('admin/users/:id/resend-invite')
+    resendInvite(@Param('id') id: string) { return this.svc.resendInvite(id); }
     @Get('users')
     getAllUsers(@Query('search') search?: string) { return this.svc.findAllUsers(search); }
     @Get('users/:id')
@@ -73,6 +75,26 @@ export class AdminExtrasController {
     updateChangeCategory(@Param('id') id: string, @Body() body: any) { return this.svc.updateChangeCategory(id, body); }
     @Delete('admin/change-categories/:id')
     deleteChangeCategory(@Param('id') id: string) { return this.svc.deleteChangeCategory(id); }
+
+    // ── Process Catalog ──
+    @Get('admin/process-catalog')
+    getProcessCatalog() { return this.svc.findProcessCatalog(); }
+    @Post('admin/process-catalog')
+    createProcessCatalogItem(@Body() body: any) { return this.svc.createProcessCatalogItem(body); }
+    @Patch('admin/process-catalog/:id')
+    updateProcessCatalogItem(@Param('id') id: string, @Body() body: any) { return this.svc.updateProcessCatalogItem(id, body); }
+    @Delete('admin/process-catalog/:id')
+    deleteProcessCatalogItem(@Param('id') id: string) { return this.svc.deleteProcessCatalogItem(id); }
+
+    // ── Process Workflows ──
+    @Get('admin/process-workflows')
+    getProcessWorkflows() { return this.svc.findProcessWorkflows(); }
+    @Post('admin/process-workflows')
+    createProcessWorkflow(@Body() body: any) { return this.svc.createProcessWorkflow(body); }
+    @Patch('admin/process-workflows/:id')
+    updateProcessWorkflow(@Param('id') id: string, @Body() body: any) { return this.svc.updateProcessWorkflow(id, body); }
+    @Delete('admin/process-workflows/:id')
+    deleteProcessWorkflow(@Param('id') id: string) { return this.svc.deleteProcessWorkflow(id); }
 
     // ── Company Profile ──
     @Get('company-profile')

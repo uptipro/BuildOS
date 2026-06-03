@@ -1,10 +1,24 @@
-import { Save, Upload, Building2, Plus } from "lucide-react";
+import {
+  Save,
+  Upload,
+  Building2,
+  Plus,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   getCompanyProfile,
   updateCompanyProfile,
 } from "../../api/admin-extras";
-import { createDepartment, fetchDepartments } from "../../api/departments";
+import {
+  createDepartment,
+  fetchDepartments,
+  updateDepartment,
+  deleteDepartment,
+} from "../../api/departments";
 
 const FALLBACK_COUNTRIES = [
   "Australia",
@@ -103,6 +117,10 @@ export function CompanyProfilePage() {
   const [departmentMessage, setDepartmentMessage] = useState<string | null>(
     null,
   );
+  const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(
+    null,
+  );
+  const [editingDepartmentName, setEditingDepartmentName] = useState("");
 
   useEffect(() => {
     fetchCountryOptions()
@@ -258,6 +276,62 @@ export function CompanyProfilePage() {
       );
     } finally {
       setCreatingDepartment(false);
+    }
+  };
+
+  const handleStartDepartmentEdit = (department: {
+    id: string;
+    name: string;
+  }) => {
+    setEditingDepartmentId(department.id);
+    setEditingDepartmentName(department.name);
+    setDepartmentMessage(null);
+  };
+
+  const handleSaveDepartmentEdit = async () => {
+    if (!editingDepartmentId) return;
+    const name = editingDepartmentName.trim();
+    if (!name) {
+      setDepartmentMessage("Department name is required.");
+      return;
+    }
+
+    try {
+      await updateDepartment(editingDepartmentId, { name });
+      setDepartments((prev) =>
+        prev
+          .map((d) => (d.id === editingDepartmentId ? { ...d, name } : d))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      setEditingDepartmentId(null);
+      setEditingDepartmentName("");
+      setDepartmentMessage("Department updated.");
+    } catch {
+      setDepartmentMessage("Failed to update department.");
+    }
+  };
+
+  const handleDeleteDepartment = async (department: {
+    id: string;
+    name: string;
+  }) => {
+    const confirmed = window.confirm(
+      `Delete department "${department.name}"? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    try {
+      await deleteDepartment(department.id);
+      setDepartments((prev) => prev.filter((d) => d.id !== department.id));
+      setDepartmentMessage("Department deleted.");
+      if (editingDepartmentId === department.id) {
+        setEditingDepartmentId(null);
+        setEditingDepartmentName("");
+      }
+    } catch {
+      setDepartmentMessage(
+        "Failed to delete department. Remove linked records first.",
+      );
     }
   };
 
@@ -543,12 +617,66 @@ export function CompanyProfilePage() {
               </p>
             ) : (
               departments.map((department) => (
-                <p
+                <div
                   key={department.id}
-                  className="px-4 py-2 text-sm text-gray-700"
+                  className="px-4 py-2 flex items-center gap-2"
                 >
-                  {department.name}
-                </p>
+                  {editingDepartmentId === department.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editingDepartmentName}
+                        onChange={(e) =>
+                          setEditingDepartmentName(e.target.value)
+                        }
+                        className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveDepartmentEdit}
+                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
+                        aria-label="Save department"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingDepartmentId(null);
+                          setEditingDepartmentName("");
+                        }}
+                        className="p-1.5 text-gray-500 hover:bg-gray-100 rounded"
+                        aria-label="Cancel edit"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="flex-1 text-sm text-gray-700">
+                        {department.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleStartDepartmentEdit(department)}
+                        className="p-1.5 text-gray-500 hover:bg-gray-100 rounded"
+                        aria-label="Edit department"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleDeleteDepartment(department);
+                        }}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                        aria-label="Delete department"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
               ))
             )}
           </div>
