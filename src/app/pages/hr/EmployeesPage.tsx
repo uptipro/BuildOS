@@ -302,9 +302,7 @@ export function EmployeesPage() {
         .toLowerCase()
         .includes(search.toLowerCase());
       const matchAdv = Object.entries(advFilters).every(([key, vals]) => {
-        const fieldVal = String(
-          e[key as keyof EmployeeRow] ?? "",
-        );
+        const fieldVal = String(e[key as keyof EmployeeRow] ?? "");
         if (
           vals.text?.trim() &&
           !fieldVal.toLowerCase().includes(vals.text.trim().toLowerCase())
