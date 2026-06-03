@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
   Search,
@@ -27,6 +27,24 @@ export function BankNamesPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState<string | null>(null);
 
+  const toBank = (raw: any): Bank => ({
+    id: raw.id,
+    name: String(raw.name ?? ""),
+    code: String(raw.code ?? ""),
+    country: String(raw.country ?? "Nigeria"),
+    swiftCode: String(raw.swiftCode ?? ""),
+    active: raw.active !== false,
+  });
+
+  useEffect(() => {
+    apiFetch<any[]>("/bank-names")
+      .then((rows) => setBanks(rows.map(toBank)))
+      .catch((err) => {
+        console.error(err);
+        setBanks([]);
+      });
+  }, []);
+
   const displayed = banks.filter(
     (b) =>
       b.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -38,13 +56,13 @@ export function BankNamesPage() {
     e.preventDefault();
     if (!form.name.trim()) return;
     if (editId) {
-      apiFetch(`/hr-extras/bank-names/${editId}`, {
+      apiFetch<any>(`/bank-names/${editId}`, {
         method: "PATCH",
         body: JSON.stringify(form),
       })
-        .then(() => {
+        .then((updated) => {
           setBanks((prev) =>
-            prev.map((b) => (b.id === editId ? { ...b, ...form } : b)),
+            prev.map((b) => (b.id === editId ? toBank(updated) : b)),
           );
           setEditId(null);
           setForm(EMPTY_FORM);
@@ -55,15 +73,12 @@ export function BankNamesPage() {
           console.error(err);
         });
     } else {
-      apiFetch("/hr-extras/bank-names", {
+      apiFetch<any>("/bank-names", {
         method: "POST",
         body: JSON.stringify(form),
       })
-        .then(() => {
-          setBanks((prev) => [
-            ...prev,
-            { id: `b${Date.now()}`, ...form, active: true },
-          ]);
+        .then((created) => {
+          setBanks((prev) => [...prev, toBank(created)]);
           setForm(EMPTY_FORM);
           setShowAdd(false);
         })
@@ -86,16 +101,25 @@ export function BankNamesPage() {
   }
 
   function toggleActive(id: string) {
-    apiFetch(`/hr-extras/bank-names/${id}/toggle`, {
+    apiFetch<any>(`/bank-names/${id}/toggle`, {
       method: "PATCH",
     })
-      .then(() => {
+      .then((updated) => {
         setBanks((prev) =>
-          prev.map((b) => (b.id === id ? { ...b, active: !b.active } : b)),
+          prev.map((b) => (b.id === id ? toBank(updated) : b)),
         );
       })
       .catch((err) => {
         alert("Failed to toggle bank status. Please try again.");
+        console.error(err);
+      });
+  }
+
+  function removeBank(id: string) {
+    apiFetch(`/bank-names/${id}`, { method: "DELETE" })
+      .then(() => setBanks((prev) => prev.filter((x) => x.id !== id)))
+      .catch((err) => {
+        alert("Failed to delete bank. Please try again.");
         console.error(err);
       });
   }
@@ -284,9 +308,7 @@ export function BankNamesPage() {
                       <Edit className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() =>
-                        setBanks((prev) => prev.filter((x) => x.id !== b.id))
-                      }
+                      onClick={() => removeBank(b.id)}
                       className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

@@ -140,9 +140,34 @@ export class FinanceExtrasService {
         return { id, enabled: true };
     }
 
-    // ── Report Templates Stub Methods ──
-    getReportTemplates() {
-        return {}; // TODO: Implement report templates
+    // ── Report Templates ──
+    async getReportTemplates() {
+        const definitions = await this.prisma.reportDefinition.findMany({
+            where: { module: { equals: 'finance', mode: 'insensitive' } },
+            orderBy: { name: 'asc' },
+            select: {
+                id: true,
+                name: true,
+                type: true,
+                description: true,
+                isScheduled: true,
+                schedule: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+
+        const byType = definitions.reduce<Record<string, any[]>>((acc, item) => {
+            const key = String(item.type || 'general').toLowerCase();
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(item);
+            return acc;
+        }, {});
+
+        return {
+            templates: definitions,
+            grouped: byType,
+        };
     }
 
     // ── Config Stub Methods ──

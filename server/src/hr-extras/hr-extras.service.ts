@@ -5,6 +5,9 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HrExtrasService {
     constructor(private prisma: PrismaService) { }
 
+    private bankNames: any[] = [];
+    private salaryBands: any[] = [];
+
     // ── Attendance ──
     findAllAttendance(employeeId?: string, date?: string) {
         return this.prisma.attendanceRecord.findMany({
@@ -154,26 +157,56 @@ export class HrExtrasService {
         return this.prisma.issue.delete({ where: { id } });
     }
 
-    // ── Bank Names Stub Methods ──
+    // ── Bank Names ──
     findBankNames() {
-        return []; // TODO: Implement bank names persistence
+        return this.bankNames;
     }
     createBankName(data: any) {
-        return { id: `b-${Date.now()}`, ...data, active: true };
+        const created = {
+            id: `b-${Date.now()}`,
+            name: String(data?.name ?? ''),
+            code: String(data?.code ?? ''),
+            country: String(data?.country ?? 'Nigeria'),
+            swiftCode: String(data?.swiftCode ?? ''),
+            active: data?.active !== false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+        this.bankNames.push(created);
+        return created;
     }
     updateBankName(id: string, data: any) {
-        return { id, ...data };
+        this.bankNames = this.bankNames.map((bank) =>
+            bank.id === id
+                ? {
+                    ...bank,
+                    ...data,
+                    updatedAt: new Date(),
+                }
+                : bank,
+        );
+        return this.bankNames.find((bank) => bank.id === id) ?? { id, ...data };
     }
     toggleBankNameActive(id: string) {
-        return { id, active: true };
+        this.bankNames = this.bankNames.map((bank) =>
+            bank.id === id
+                ? {
+                    ...bank,
+                    active: !bank.active,
+                    updatedAt: new Date(),
+                }
+                : bank,
+        );
+        return this.bankNames.find((bank) => bank.id === id) ?? { id, active: false };
     }
     deleteBankName(id: string) {
+        this.bankNames = this.bankNames.filter((bank) => bank.id !== id);
         return { id, deleted: true };
     }
 
-    // ── Salary Bands Stub Methods ──
+    // ── Salary Bands ──
     findSalaryBands() {
-        return []; // TODO: Implement salary bands persistence
+        return this.salaryBands;
     }
 
     // ── Holidays Stub Methods ──

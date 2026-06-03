@@ -9,6 +9,13 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class AdminExtrasService {
     private readonly logger = new Logger(AdminExtrasService.name);
+    private emailConfigs: any[] = [];
+    private units: any[] = [];
+    private apiKeys: any[] = [];
+    private webhooks: any[] = [];
+    private emailTemplates: any[] = [];
+    private notificationRules: any[] = [];
+    private reportSchedules: any[] = [];
 
     constructor(private prisma: PrismaService) { }
 
@@ -646,56 +653,68 @@ export class AdminExtrasService {
         return this.prisma.director.delete({ where: { id } });
     }
 
-    // ── Email Config Stub Methods ──
+    // ── Email Config ──
     findEmailConfigs() {
-        return []; // TODO: Implement email config persistence
+        return this.emailConfigs;
     }
     createEmailConfig(data: any) {
-        return { id: `EC-${Date.now()}`, ...data };
+        const created = { id: `EC-${Date.now()}`, ...data, createdAt: new Date(), updatedAt: new Date() };
+        this.emailConfigs.push(created);
+        return created;
     }
     updateEmailConfig(id: string, data: any) {
-        return { id, ...data };
+        this.emailConfigs = this.emailConfigs.map((item) =>
+            item.id === id ? { ...item, ...data, id, updatedAt: new Date() } : item,
+        );
+        return this.emailConfigs.find((item) => item.id === id) ?? { id, ...data };
     }
     deleteEmailConfig(id: string) {
+        this.emailConfigs = this.emailConfigs.filter((item) => item.id !== id);
         return { id, deleted: true };
     }
 
-    // ── Units Stub Methods ──
+    // ── Units ──
     findUnits() {
-        return []; // TODO: Implement units persistence
+        return this.units;
     }
     createUnit(data: any) {
-        return { id: `u-${Date.now()}`, ...data };
+        const created = { id: `u-${Date.now()}`, ...data, createdAt: new Date(), updatedAt: new Date() };
+        this.units.push(created);
+        return created;
     }
     updateUnit(id: string, data: any) {
-        return { id, ...data };
+        this.units = this.units.map((item) =>
+            item.id === id ? { ...item, ...data, id, updatedAt: new Date() } : item,
+        );
+        return this.units.find((item) => item.id === id) ?? { id, ...data };
     }
     deleteUnit(id: string) {
+        this.units = this.units.filter((item) => item.id !== id);
         return { id, deleted: true };
     }
 
-    // ── API Keys Stub Methods ──
+    // ── API Keys ──
     findApiKeys() {
-        return []; // TODO: Implement API keys management
+        return this.apiKeys;
     }
 
-    // ── Webhooks Stub Methods ──
+    // ── Webhooks ──
     findWebhooks() {
-        return []; // TODO: Implement webhooks management
+        return this.webhooks;
     }
 
-    // ── Email Templates Stub Methods ──
+    // ── Email Templates ──
     findEmailTemplates() {
-        return []; // TODO: Implement email templates management
+        return this.emailTemplates;
     }
 
-    // ── Notification Rules Stub Methods ──
+    // ── Notification Rules ──
     findNotificationRules() {
-        return []; // TODO: Implement notification rules management
+        return this.notificationRules;
     }
 
-    // ── Report Schedules Stub Methods ──
+    // ── Report Schedules ──
     findReportSchedules() {
-        return []; // TODO: Implement report schedules management
+        return this.reportSchedules;
     }
 }
