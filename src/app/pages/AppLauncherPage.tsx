@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import {
@@ -1176,9 +1176,11 @@ function HoverPulse({ app, isLarge }: { app: AppDef; isLarge: boolean }) {
 function BentoCard({
   app,
   onOpen,
+  revealIndex,
 }: {
   app: AppDef;
   onOpen: (a: AppDef) => void;
+  revealIndex: number;
 }) {
   const [hovered, setHovered] = useState(false);
   const variantRef = useRef<HoverVariant>("stats");
@@ -1194,6 +1196,13 @@ function BentoCard({
         border: `1.5px solid ${app.border}`,
         boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
       }}
+      initial={{ opacity: 0, y: 16, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{
+        opacity: { duration: 0.24, delay: revealIndex * 0.06 },
+        y: { duration: 0.28, delay: revealIndex * 0.06, ease: "easeOut" },
+        scale: { duration: 0.28, delay: revealIndex * 0.06, ease: "easeOut" },
+      }}
       onMouseEnter={() => {
         variantRef.current = variants[cycleRef.current % 3] as HoverVariant;
         cycleRef.current++;
@@ -1206,7 +1215,7 @@ function BentoCard({
         boxShadow: `0 8px 32px ${app.stripe}28, 0 1px 6px rgba(0,0,0,0.08)`,
       }}
       whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.2 }}
+      layout
     >
       {/* Top accent stripe */}
       <div
@@ -1561,6 +1570,15 @@ export function AppLauncherPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const { name, role, assignedApps } = useAuthUser();
+  const normalizedAssignedAppsKey = useMemo(
+    () =>
+      assignedApps
+        .map((app) => String(app).trim().toLowerCase())
+        .filter(Boolean)
+        .sort()
+        .join("|"),
+    [assignedApps],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -1573,6 +1591,9 @@ export function AppLauncherPage() {
         if (!alive) return;
 
         const isAdmin = String(role).trim().toLowerCase().includes("admin");
+        const normalizedAssignedApps = normalizedAssignedAppsKey
+          ? normalizedAssignedAppsKey.split("|")
+          : [];
         const assigned = new Set(
           (isAdmin
             ? [
@@ -1584,8 +1605,8 @@ export function AppLauncherPage() {
                 "ess",
                 "storefront",
               ]
-            : assignedApps.length > 0
-              ? assignedApps
+            : normalizedAssignedApps.length > 0
+              ? normalizedAssignedApps
               : ["ess"]
           ).map((a) => String(a).trim().toLowerCase()),
         );
@@ -1607,7 +1628,7 @@ export function AppLauncherPage() {
     return () => {
       alive = false;
     };
-  }, [name, role, assignedApps]);
+  }, [name, role, normalizedAssignedAppsKey]);
 
   const filtered = apps.filter(
     (a) =>
@@ -1625,7 +1646,11 @@ export function AppLauncherPage() {
       />
       <div className="flex-1 min-h-0 p-4">
         {loading ? (
-          <div className="h-full grid grid-cols-4 grid-rows-3 gap-3">
+          <div
+            aria-busy="true"
+            aria-label="Loading app launcher"
+            className="h-full grid grid-cols-4 grid-rows-3 gap-3"
+          >
             {Array.from({ length: 7 }).map((_, i) => (
               <div
                 key={i}
@@ -1639,8 +1664,13 @@ export function AppLauncherPage() {
           </div>
         ) : (
           <div className="h-full grid grid-cols-4 grid-rows-3 gap-3">
-            {filtered.map((app) => (
-              <BentoCard key={app.id} app={app} onOpen={setActiveApp} />
+            {filtered.map((app, index) => (
+              <BentoCard
+                key={app.id}
+                app={app}
+                onOpen={setActiveApp}
+                revealIndex={index}
+              />
             ))}
           </div>
         )}

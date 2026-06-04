@@ -16,17 +16,30 @@ async function bootstrap() {
     const allowedOrigins = [
         process.env.FRONTEND_URL || 'http://localhost:5173',
         'https://build-os-delta.vercel.app',
-    ].filter(Boolean);
+        'https://buildos-dev-suite.vercel.app',
+    ]
+        .map((origin) => String(origin).trim().replace(/\/$/, ''))
+        .filter(Boolean);
+
+    const vercelPreviewPatterns = [
+        /^https:\/\/buildos[-a-z0-9]*\.vercel\.app$/i,
+        /^https:\/\/build-os[-a-z0-9]*\.vercel\.app$/i,
+    ];
 
     app.enableCors({
         origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin)) {
+            const normalizedOrigin = String(origin || '').trim().replace(/\/$/, '');
+            const isAllowedVercelPreview = vercelPreviewPatterns.some((pattern) =>
+                pattern.test(normalizedOrigin),
+            );
+
+            if (!origin || allowedOrigins.includes(normalizedOrigin) || isAllowedVercelPreview) {
                 callback(null, true);
             } else {
                 callback(new Error(`CORS: origin ${origin} not allowed`));
             }
         },
-        methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+        methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
     });
 
