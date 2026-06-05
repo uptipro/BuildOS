@@ -92,7 +92,7 @@ export function FinanceReportsPage() {
   const [reportData, setReportData] = useState<Record<string, ReportRow[]>>({});
 
   useEffect(() => {
-    apiFetch("/finance-extras/report-templates")
+    apiFetch("/report-templates")
       .then((data) => setReportData(data || {}))
       .catch(() => setReportData({}));
   }, []);

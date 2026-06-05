@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdminExtrasController } from './admin-extras.controller';
+import { AdminPublicController } from './admin-public.controller';
 import { AdminExtrasService } from './admin-extras.service';
 import { SystemConfigController, ReportsController } from './system-config.controller';
 import { SystemConfigService } from './system-config.service';
@@ -8,7 +9,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
     imports: [PrismaModule],
-    controllers: [AdminExtrasController, SystemConfigController, ReportsController],
+    controllers: [AdminExtrasController, AdminPublicController, SystemConfigController, ReportsController],
     providers: [AdminExtrasService, SystemConfigService, ReportBuilderService],
     exports: [SystemConfigService, ReportBuilderService],
 })

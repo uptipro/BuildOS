@@ -599,7 +599,7 @@ export function ScheduledPostingPage() {
           accountOptions={accountOptions}
           onClose={() => setShowModal(false)}
           onSave={(p) => {
-            apiFetch("/finance-extras/scheduled-postings", {
+            apiFetch("/scheduled-postings", {
               method: "POST",
               body: JSON.stringify(p),
             })

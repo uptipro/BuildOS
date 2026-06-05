@@ -1213,9 +1213,45 @@ export class AdminExtrasService {
         return this.emailTemplates;
     }
 
+    createEmailTemplate(data: any) {
+        const created = { id: `et-${Date.now()}`, ...data, createdAt: new Date(), updatedAt: new Date() };
+        this.emailTemplates.unshift(created);
+        return created;
+    }
+
+    updateEmailTemplate(id: string, data: any) {
+        this.emailTemplates = this.emailTemplates.map((item) =>
+            item.id === id ? { ...item, ...data, id, updatedAt: new Date() } : item,
+        );
+        return this.emailTemplates.find((item) => item.id === id) ?? { id, ...data };
+    }
+
+    deleteEmailTemplate(id: string) {
+        this.emailTemplates = this.emailTemplates.filter((item) => item.id !== id);
+        return { id, deleted: true };
+    }
+
     // ── Notification Rules ──
     findNotificationRules() {
         return this.notificationRules;
+    }
+
+    createNotificationRule(data: any) {
+        const created = { id: `nr-${Date.now()}`, ...data, createdAt: new Date(), updatedAt: new Date() };
+        this.notificationRules.unshift(created);
+        return created;
+    }
+
+    updateNotificationRule(id: string, data: any) {
+        this.notificationRules = this.notificationRules.map((item) =>
+            item.id === id ? { ...item, ...data, id, updatedAt: new Date() } : item,
+        );
+        return this.notificationRules.find((item) => item.id === id) ?? { id, ...data };
+    }
+
+    deleteNotificationRule(id: string) {
+        this.notificationRules = this.notificationRules.filter((item) => item.id !== id);
+        return { id, deleted: true };
     }
 
     // ── Report Schedules ──

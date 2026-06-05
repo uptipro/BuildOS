@@ -179,7 +179,7 @@ export function EmailConfigPage() {
 
   function saveConfig() {
     if (editId) {
-      apiFetch(`/admin-extras/email-config/${editId}`, {
+      apiFetch(`/admin/email-config/${editId}`, {
         method: "PATCH",
         body: JSON.stringify(form),
       })
@@ -196,7 +196,7 @@ export function EmailConfigPage() {
           console.error(err);
         });
     } else {
-      apiFetch("/admin-extras/email-config", {
+      apiFetch("/admin/email-config", {
         method: "POST",
         body: JSON.stringify(form),
       })

@@ -48,13 +48,10 @@ export function NotificationsPage() {
     const trigger = window.prompt("Trigger", "On event")?.trim() ?? "On event";
     const payload = { name, subject, trigger };
     try {
-      const created = await apiFetch<EmailTemplate>(
-        "/admin-extras/email-templates",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        },
-      );
+      const created = await apiFetch<EmailTemplate>("/admin/email-templates", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       setEmailTemplates((prev) => [created, ...prev]);
     } catch {
       setEmailTemplates((prev) => [
@@ -80,7 +77,7 @@ export function NotificationsPage() {
     );
 
     try {
-      await apiFetch(`/admin-extras/email-templates/${id}`, {
+      await apiFetch(`/admin/email-templates/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ name, subject, trigger }),
       });
@@ -92,7 +89,7 @@ export function NotificationsPage() {
   const deleteTemplate = async (id: string) => {
     if (!window.confirm("Delete this template?")) return;
     try {
-      await apiFetch(`/admin-extras/email-templates/${id}`, {
+      await apiFetch(`/admin/email-templates/${id}`, {
         method: "DELETE",
       });
     } catch {
@@ -126,7 +123,7 @@ export function NotificationsPage() {
     };
     try {
       const created = await apiFetch<NotificationRule>(
-        "/admin-extras/notification-rules",
+        "/admin/notification-rules",
         {
           method: "POST",
           body: JSON.stringify(payload),
@@ -157,7 +154,7 @@ export function NotificationsPage() {
     );
 
     try {
-      await apiFetch(`/admin-extras/notification-rules/${id}`, {
+      await apiFetch(`/admin/notification-rules/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ name, event, recipients }),
       });
@@ -169,7 +166,7 @@ export function NotificationsPage() {
   const deleteRule = async (id: string) => {
     if (!window.confirm("Delete this rule?")) return;
     try {
-      await apiFetch(`/admin-extras/notification-rules/${id}`, {
+      await apiFetch(`/admin/notification-rules/${id}`, {
         method: "DELETE",
       });
     } catch {
@@ -183,7 +180,7 @@ export function NotificationsPage() {
     if (!target) return;
     const nextEnabled = !target.enabled;
     try {
-      await apiFetch(`/admin-extras/notification-rules/${id}`, {
+      await apiFetch(`/admin/notification-rules/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ enabled: nextEnabled }),
       });

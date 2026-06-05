@@ -230,9 +230,33 @@ export class AdminExtrasController {
     @Get('email-templates')
     getEmailTemplates() { return this.svc.findEmailTemplates(); }
 
+    @Post('email-templates')
+    @Roles('admin')
+    createEmailTemplate(@Body() body: any) { return this.svc.createEmailTemplate(body); }
+
+    @Patch('email-templates/:id')
+    @Roles('admin')
+    updateEmailTemplate(@Param('id') id: string, @Body() body: any) { return this.svc.updateEmailTemplate(id, body); }
+
+    @Delete('email-templates/:id')
+    @Roles('admin')
+    deleteEmailTemplate(@Param('id') id: string) { return this.svc.deleteEmailTemplate(id); }
+
     // ── Notification Rules ──
     @Get('notification-rules')
     getNotificationRules() { return this.svc.findNotificationRules(); }
+
+    @Post('notification-rules')
+    @Roles('admin')
+    createNotificationRule(@Body() body: any) { return this.svc.createNotificationRule(body); }
+
+    @Patch('notification-rules/:id')
+    @Roles('admin')
+    updateNotificationRule(@Param('id') id: string, @Body() body: any) { return this.svc.updateNotificationRule(id, body); }
+
+    @Delete('notification-rules/:id')
+    @Roles('admin')
+    deleteNotificationRule(@Param('id') id: string) { return this.svc.deleteNotificationRule(id); }
 
     // ── Report Schedules ──
     @Get('report-schedules')

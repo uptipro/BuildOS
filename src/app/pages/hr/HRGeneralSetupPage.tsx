@@ -88,7 +88,7 @@ export function HRGeneralSetupPage() {
   }
 
   function save() {
-    apiFetch("/hr-extras/setup", {
+    apiFetch("/setup", {
       method: "POST",
       body: JSON.stringify(form),
     })
