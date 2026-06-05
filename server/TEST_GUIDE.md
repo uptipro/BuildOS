@@ -23,41 +23,49 @@ server/
 ## Running Tests
 
 ### Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### Run All Tests
+
 ```bash
 npm test
 ```
 
 ### Run Tests in Watch Mode
+
 ```bash
 npm run test:watch
 ```
 
 ### Run Tests with Coverage
+
 ```bash
 npm run test:cov
 ```
 
 ### Run Integration Tests Only
+
 ```bash
 npm run test:integration
 ```
 
 ### Run Unit Tests Only
+
 ```bash
 npm run test:unit
 ```
 
 ### Run E2E Tests
+
 ```bash
 npm run test:e2e
 ```
 
 ### Debug Tests
+
 ```bash
 npm run test:debug
 ```
@@ -67,6 +75,7 @@ npm run test:debug
 ### Phase 1: Payroll System (`payroll.integration.spec.ts`)
 
 **Services Tested:**
+
 - `PayrollValidationService` - Validates payroll with 8 different validators
 - `PayrollTaxService` - Calculates income tax with Nigerian tax brackets
 - `PayrollDeductionsService` - Calculates deductions, allowances, and leave impact
@@ -74,6 +83,7 @@ npm run test:debug
 - `PayrollOrchestrationService` - Orchestrates complete payroll workflows
 
 **Test Coverage:**
+
 - ✅ Payroll validation with all validators passing
 - ✅ Detection of missing employee data
 - ✅ Income tax calculation with Nigerian brackets
@@ -88,10 +98,12 @@ npm run test:debug
 ### Phase 2: Leave Management (`leave.integration.spec.ts`)
 
 **Services Tested:**
+
 - `LeaveBalanceService` - Manages leave balances and approvals
 - `LeaveRequestsService` - Handles leave request lifecycle
 
 **Test Coverage:**
+
 - ✅ Leave balance calculation for specific types
 - ✅ All leave balances retrieval
 - ✅ Leave balance validation
@@ -107,10 +119,12 @@ npm run test:debug
 ### Phase 3: Workflow & Notifications (`workflow.integration.spec.ts`)
 
 **Services Tested:**
+
 - `WorkflowEngineService` - Manages multi-level approvals
 - `NotificationService` - Handles rules and notifications
 
 **Test Coverage:**
+
 - ✅ Workflow instance creation
 - ✅ Approval node routing
 - ✅ Pending approvals retrieval
@@ -128,6 +142,7 @@ npm run test:debug
 ### Phase 4: End-to-End Workflow (`e2e.workflow.spec.ts`)
 
 **Critical Workflows Tested:**
+
 1. **Complete Payroll Processing Workflow**
    - User authentication
    - Payroll period creation
@@ -179,13 +194,15 @@ TestAssertions.assertNotification(notification);
 ## Test Configuration
 
 ### Jest Configuration (`jest.config.json`)
+
 - **testEnvironment**: node
 - **transform**: ts-jest (TypeScript support)
 - **moduleNameMapper**: Path alias support
-- **collectCoverageFrom**: Collect coverage from src/**
+- **collectCoverageFrom**: Collect coverage from src/\*\*
 - **setupFilesAfterEnv**: Run setup.ts before tests
 
 ### Test Environment Setup (`test/setup.ts`)
+
 - Sets NODE_ENV to 'test'
 - Configures test database URL
 - Sets Jest timeout to 30 seconds for integration tests
@@ -193,12 +210,14 @@ TestAssertions.assertNotification(notification);
 ## Coverage Goals
 
 Target coverage metrics:
+
 - **Statements**: > 80%
 - **Branches**: > 75%
 - **Functions**: > 80%
 - **Lines**: > 80%
 
 Run coverage report:
+
 ```bash
 npm run test:cov
 ```
@@ -208,6 +227,7 @@ Coverage reports are generated in `coverage/` directory.
 ## Mock Data
 
 Mock users available in `test.utils.ts`:
+
 - **admin**: Full permissions
 - **hrManager**: HR-specific permissions
 - **projectManager**: Project management permissions
@@ -221,7 +241,7 @@ To integrate tests into CI/CD pipeline:
 # Example GitHub Actions workflow
 - name: Run Tests
   run: npm test
-  
+
 - name: Upload Coverage
   uses: codecov/codecov-action@v3
   with:
@@ -231,16 +251,19 @@ To integrate tests into CI/CD pipeline:
 ## Troubleshooting
 
 ### Database Connection Issues
+
 - Ensure test database is running
 - Check DATABASE_URL in test/setup.ts
 - Verify Prisma migrations are applied
 
 ### Timeout Issues
+
 - Increase Jest timeout in test/setup.ts
 - Check for unresolved promises in tests
 - Verify async/await usage
 
 ### Module Not Found
+
 - Run `npm install` to install dependencies
 - Clear node_modules and reinstall if needed
 - Check module imports and aliases
@@ -264,6 +287,7 @@ To integrate tests into CI/CD pipeline:
 ## Contact & Support
 
 For test-related issues:
+
 1. Check test output for error messages
 2. Review test documentation (this file)
 3. Check individual test file comments

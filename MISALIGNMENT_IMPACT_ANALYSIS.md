@@ -24,6 +24,7 @@ SEVERITY DISTRIBUTION:
 ## 🚨 BY FUNCTIONAL IMPACT
 
 ### SECURITY BREACHES (1)
+
 ```
 ┌─────────────────────────────────────────┐
 │ #1: RBAC Not Enforced                   │
@@ -37,6 +38,7 @@ SEVERITY DISTRIBUTION:
 ```
 
 ### FEATURE COMPLETELY BROKEN (3)
+
 ```
 ┌─────────────────────────────────────────┐
 │ #2: Tasks Not in Database               │
@@ -74,6 +76,7 @@ SEVERITY DISTRIBUTION:
 ```
 
 ### FINANCIAL/COMPLIANCE RISKS (2)
+
 ```
 ┌─────────────────────────────────────────┐
 │ #6: Payroll Validation Missing          │
@@ -283,7 +286,7 @@ LOW      |         |         |████████|
 
 ## 📋 TOP 10 QUICK WINS
 
-*Issues that can be fixed in < 1 day each*
+_Issues that can be fixed in < 1 day each_
 
 ```
 1. Department.budget type fix ........... 30 min

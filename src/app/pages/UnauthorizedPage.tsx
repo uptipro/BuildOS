@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router';
+import React from "react";
+import { useNavigate } from "react-router";
 
 export const UnauthorizedPage: React.FC = () => {
   const navigate = useNavigate();
@@ -9,13 +9,16 @@ export const UnauthorizedPage: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="text-6xl font-bold text-red-600 mb-4">403</div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h1>
           <p className="text-gray-600 mb-8">
-            You don't have permission to access this resource. Please contact your administrator if you believe this is an error.
+            You don't have permission to access this resource. Please contact
+            your administrator if you believe this is an error.
           </p>
           <div className="space-x-4">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate("/")}
               className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             >
               Go to Dashboard

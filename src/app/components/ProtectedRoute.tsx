@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { useAuth } from '../store/useAuth';
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router";
+import { useAuth } from "../store/useAuth";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -17,7 +17,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredRoles = [],
   requiredPermissions = [],
-  fallbackPath = '/login',
+  fallbackPath = "/login",
 }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, hasRole, hasPermission } = useAuth();
@@ -33,20 +33,31 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (requiredRoles.length > 0) {
       const hasRequiredRole = requiredRoles.some((role) => hasRole(role));
       if (!hasRequiredRole) {
-        navigate('/unauthorized', { replace: true });
+        navigate("/unauthorized", { replace: true });
         return;
       }
     }
 
     // Check permission requirements
     if (requiredPermissions.length > 0) {
-      const hasAllPermissions = requiredPermissions.every((perm) => hasPermission(perm));
+      const hasAllPermissions = requiredPermissions.every((perm) =>
+        hasPermission(perm),
+      );
       if (!hasAllPermissions) {
-        navigate('/unauthorized', { replace: true });
+        navigate("/unauthorized", { replace: true });
         return;
       }
     }
-  }, [user, isAuthenticated, requiredRoles, requiredPermissions, navigate, hasRole, hasPermission, fallbackPath]);
+  }, [
+    user,
+    isAuthenticated,
+    requiredRoles,
+    requiredPermissions,
+    navigate,
+    hasRole,
+    hasPermission,
+    fallbackPath,
+  ]);
 
   // Show loading state while checking auth
   if (!isAuthenticated) {
