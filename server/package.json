@@ -20,6 +20,9 @@
     "test:integration": "jest test/**/*.integration.spec.ts",
     "test:unit": "jest --testPathPattern='(?<!integration)\\.spec\\.ts$'"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "dependencies": {
     "@nestjs/cli": "^10.4.9",
     "@nestjs/common": "^10.4.15",
