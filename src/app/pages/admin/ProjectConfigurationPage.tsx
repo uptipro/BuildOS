@@ -280,8 +280,7 @@ const PROCESS_CATALOG: ProcessCatalogItem[] = [
     id: "sf-004",
     label: "Send for Procurement",
     app: "Storefront",
-    description:
-      "Trigger a procurement request for low/out-of-stock items",
+    description: "Trigger a procurement request for low/out-of-stock items",
     requiresApproval: false,
   },
 ];
