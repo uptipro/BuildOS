@@ -193,19 +193,19 @@ export const deleteProcessWorkflow = (id: string) =>
     apiFetch<{ ok: boolean }>(`/admin/process-workflows/${id}`, { method: 'DELETE' });
 
 // Units of Measurement
-export const getUnits = () => apiFetch<UnitOfMeasurement[]>('/admin-extras/units');
+export const getUnits = () => apiFetch<UnitOfMeasurement[]>('/admin/units');
 export const createUnit = (data: Omit<UnitOfMeasurement, 'id'>) =>
-    apiFetch<UnitOfMeasurement>('/admin-extras/units', { method: 'POST', body: JSON.stringify(data) });
+    apiFetch<UnitOfMeasurement>('/admin/units', { method: 'POST', body: JSON.stringify(data) });
 export const updateUnit = (id: string, data: Partial<Omit<UnitOfMeasurement, 'id'>>) =>
-    apiFetch<UnitOfMeasurement>(`/admin-extras/units/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+    apiFetch<UnitOfMeasurement>(`/admin/units/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 export const deleteUnit = (id: string) =>
-    apiFetch<{ ok: boolean }>(`/admin-extras/units/${id}`, { method: 'DELETE' });
+    apiFetch<{ ok: boolean }>(`/admin/units/${id}`, { method: 'DELETE' });
 
 // Notifications & Templates
 export const getEmailTemplates = () =>
-    apiFetch<EmailTemplateConfig[]>('/admin-extras/email-templates');
+    apiFetch<EmailTemplateConfig[]>('/admin/email-templates');
 export const getNotificationRules = () =>
-    apiFetch<NotificationRuleConfig[]>('/admin-extras/notification-rules');
+    apiFetch<NotificationRuleConfig[]>('/admin/notification-rules');
 
 // Company Profile
 export interface CompanyProfile {

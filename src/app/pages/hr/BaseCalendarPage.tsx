@@ -71,7 +71,7 @@ export function BaseCalendarPage() {
   function addHoliday(e: React.FormEvent) {
     e.preventDefault();
     if (!newHol.name.trim() || !newHol.date) return;
-    apiFetch("/hr-extras/holidays", {
+    apiFetch("/holidays", {
       method: "POST",
       body: JSON.stringify({
         name: newHol.name,

@@ -73,7 +73,7 @@ export function FinancialConfigurationPage() {
   );
 
   const saveAll = () => {
-    apiFetch("/finance-extras/config", {
+    apiFetch("/config", {
       method: "POST",
       body: JSON.stringify({ chartOfAccounts, taxSettings, paymentMethods }),
     }).catch((err) => {
@@ -198,7 +198,7 @@ export function FinancialConfigurationPage() {
   }, []);
 
   function togglePaymentMethod(id: string) {
-    apiFetch(`/finance-extras/payment-methods/${id}/toggle`, {
+    apiFetch(`/payment-methods/${id}/toggle`, {
       method: "PATCH",
     })
       .then(() => {

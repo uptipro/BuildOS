@@ -49,7 +49,7 @@ export function ReportAutomationPage() {
   const [form, setForm] = useState({ ...BLANK_FORM });
 
   useEffect(() => {
-    apiFetch("/admin-extras/report-schedules")
+    apiFetch("/admin/report-schedules")
       .then(setSchedules)
       .catch(() => setSchedules([]));
   }, []);

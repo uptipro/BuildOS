@@ -427,7 +427,7 @@ export function SalaryStructurePage() {
   const [bands, setBands] = useState<SalaryBand[]>([]);
 
   useEffect(() => {
-    apiFetch("/hr-extras/salary-bands")
+    apiFetch("/salary-bands")
       .then(setBands)
       .catch((err) => {
         console.error("Failed to load salary bands:", err);

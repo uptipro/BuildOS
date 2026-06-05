@@ -135,7 +135,7 @@ export function FinanceConfigPage() {
   const fmt = (n: number) => `$${n.toLocaleString()}`;
 
   function saveAll() {
-    apiFetch("/finance-extras/config", {
+    apiFetch("/config", {
       method: "POST",
       body: JSON.stringify({
         currency,
@@ -146,7 +146,7 @@ export function FinanceConfigPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     });
-    apiFetch("/finance-extras/bank-accounts", {
+    apiFetch("/bank-accounts", {
       method: "POST",
       body: JSON.stringify({
         accountName: bankForm.name,
@@ -255,7 +255,7 @@ export function FinanceConfigPage() {
       enabled: true,
     };
     if (taxEditId) {
-      apiFetch(`/finance-extras/tax-configs/${taxEditId}`, {
+      apiFetch(`/tax-configs/${taxEditId}`, {
         method: "PATCH",
         body: JSON.stringify(entry),
       })
@@ -270,7 +270,7 @@ export function FinanceConfigPage() {
           console.error(err);
         });
     } else {
-      apiFetch("/finance-extras/tax-configs", {
+      apiFetch("/tax-configs", {
         method: "POST",
         body: JSON.stringify(entry),
       })
