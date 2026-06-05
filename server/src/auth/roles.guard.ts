@@ -6,14 +6,11 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { JwtService } from '@nestjs/jwt';
+import { verify } from 'jsonwebtoken';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(
-    private reflector: Reflector,
-    private jwtService: JwtService,
-  ) {}
+  constructor(private reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(
@@ -27,7 +24,10 @@ export class RolesGuard implements CanActivate {
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
       try {
-        request.user = this.jwtService.verify(token) as any;
+        request.user = verify(
+          token,
+          process.env.JWT_SECRET || 'buildos_jwt_secret_change_in_production',
+        ) as any;
       } catch {
         throw new ForbiddenException('User not authenticated');
       }
