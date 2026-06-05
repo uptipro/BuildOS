@@ -16,18 +16,18 @@ export interface ApprovalItem {
 
 export function getApprovals(module?: string) {
     const query = module ? `?module=${encodeURIComponent(module)}` : "";
-    return apiFetch<ApprovalItem[]>(`/approvals${query}`);
+    return apiFetch<ApprovalItem[]>(`/admin/approvals${query}`);
 }
 
 export function approveItem(id: string, notes?: string) {
-    return apiFetch<ApprovalItem>(`/approvals/${id}`, {
+    return apiFetch<ApprovalItem>(`/admin/approvals/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'approved', notes }),
     });
 }
 
 export function rejectItem(id: string, reason?: string) {
-    return apiFetch<ApprovalItem>(`/approvals/${id}`, {
+    return apiFetch<ApprovalItem>(`/admin/approvals/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'rejected', reason }),
     });

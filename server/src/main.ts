@@ -13,6 +13,30 @@ async function bootstrap() {
 
     app.use(helmet());
 
+    // Compatibility rewrites for legacy frontend bundles using deprecated endpoint prefixes.
+    app.use((req, _res, next) => {
+        const rewritePrefix = (from: string, to: string) => {
+            if (req.url === from) {
+                req.url = to || '/';
+                return true;
+            }
+            if (req.url.startsWith(`${from}/`)) {
+                req.url = `${to}${req.url.slice(from.length)}`;
+                return true;
+            }
+            return false;
+        };
+
+        rewritePrefix('/api/admin-extras', '/api/admin') ||
+            rewritePrefix('/admin-extras', '/admin') ||
+            rewritePrefix('/api/finance-extras', '/api') ||
+            rewritePrefix('/finance-extras', '') ||
+            rewritePrefix('/api/hr-extras', '/api') ||
+            rewritePrefix('/hr-extras', '');
+
+        next();
+    });
+
     const allowedOrigins = [
         process.env.FRONTEND_URL || 'http://localhost:5173',
         'https://build-os-delta.vercel.app',
