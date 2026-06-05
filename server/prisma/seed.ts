@@ -41,21 +41,26 @@ async function clearDatabase() {
 
 async function main() {
   console.log('Seeding database...');
-  await clearDatabase();
-  console.log('Existing data cleared.');
+  
+  // Skip clearing database to avoid connection timeout
+  // Database should be cleaned before seed if needed
 
   const departments = [
-    { name: 'Engineering', description: 'Engineering teams', location: 'HQ Floor 3', budget: '45000000' },
-    { name: 'Operations', description: 'Project execution teams', location: 'HQ Floor 2', budget: '38000000' },
-    { name: 'Finance', description: 'Finance and reporting teams', location: 'HQ Floor 4', budget: '28000000' },
-    { name: 'Human Resources', description: 'HR and payroll teams', location: 'HQ Floor 1', budget: '22000000' },
-    { name: 'Procurement', description: 'Procurement and supplier teams', location: 'HQ Floor 2', budget: '18000000' },
-    { name: 'Administration', description: 'Admin and support teams', location: 'HQ Floor 1', budget: '12000000' },
+    { name: 'Engineering', description: 'Engineering teams', location: 'HQ Floor 3', budget: 45000000 },
+    { name: 'Operations', description: 'Project execution teams', location: 'HQ Floor 2', budget: 38000000 },
+    { name: 'Finance', description: 'Finance and reporting teams', location: 'HQ Floor 4', budget: 28000000 },
+    { name: 'Human Resources', description: 'HR and payroll teams', location: 'HQ Floor 1', budget: 22000000 },
+    { name: 'Procurement', description: 'Procurement and supplier teams', location: 'HQ Floor 2', budget: 18000000 },
+    { name: 'Administration', description: 'Admin and support teams', location: 'HQ Floor 1', budget: 12000000 },
   ];
 
   const deptRecords = new Map<string, { id: string }>();
   for (const d of departments) {
-    const rec = await prisma.department.create({ data: d });
+    const rec = await prisma.department.upsert({
+      where: { name: d.name },
+      update: d,
+      create: d,
+    });
     deptRecords.set(d.name, { id: rec.id });
   }
 
@@ -63,7 +68,6 @@ async function main() {
     {
       firstName: 'Chukwudi',
       lastName: 'Eze',
-      role: 'Senior Civil Engineer',
       email: 'c.eze@buildos.ng',
       phone: '+2348012345001',
       dateHired: new Date('2022-03-15'),
@@ -76,7 +80,6 @@ async function main() {
     {
       firstName: 'Amaka',
       lastName: 'Osei',
-      role: 'Project Manager',
       email: 'a.osei@buildos.ng',
       phone: '+2348023456002',
       dateHired: new Date('2021-07-01'),
@@ -89,7 +92,6 @@ async function main() {
     {
       firstName: 'Sola',
       lastName: 'Adeleke',
-      role: 'Finance Manager',
       email: 's.adeleke@buildos.ng',
       phone: '+2348067890006',
       dateHired: new Date('2019-09-15'),
@@ -102,7 +104,6 @@ async function main() {
     {
       firstName: 'Ngozi',
       lastName: 'Okafor',
-      role: 'HR Manager',
       email: 'n.okafor@buildos.ng',
       phone: '+2348045678004',
       dateHired: new Date('2020-05-20'),
@@ -115,7 +116,6 @@ async function main() {
     {
       firstName: 'Musa',
       lastName: 'Ibrahim',
-      role: 'Procurement Officer',
       email: 'm.ibrahim@buildos.ng',
       phone: '+2348034567003',
       dateHired: new Date('2023-01-10'),
@@ -128,7 +128,6 @@ async function main() {
     {
       firstName: 'Kemi',
       lastName: 'Adeyemi',
-      role: 'Administrative Officer',
       email: 'k.adeyemi@buildos.ng',
       phone: '+2348112345011',
       dateHired: new Date('2021-02-15'),
@@ -142,7 +141,11 @@ async function main() {
 
   const employeeRecords = new Map<string, { id: string }>();
   for (const e of employees) {
-    const rec = await prisma.employee.create({ data: e });
+    const rec = await prisma.employee.upsert({
+      where: { email: e.email },
+      update: e,
+      create: e,
+    });
     employeeRecords.set(`${e.firstName} ${e.lastName}`, { id: rec.id });
   }
 
@@ -468,19 +471,7 @@ async function main() {
       name: 'Admin',
       description: 'System administrator with unrestricted access',
       isSuper: true,
-      permissions: {
-        processPermissions: {},
-        appAccess: {
-          construction: true,
-          finance: true,
-          hr: true,
-          procurement: true,
-          admin: true,
-          ess: true,
-          storefront: true,
-        },
-        navAccess: {},
-      },
+      appScope: ['admin', 'finance', 'hr', 'procurement', 'construction', 'ess', 'storefront'],
     },
   });
 

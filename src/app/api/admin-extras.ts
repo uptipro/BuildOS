@@ -135,24 +135,24 @@ export const resendInvite = (id: string) =>
 
 // Users
 export const getUsers = (search?: string) =>
-    apiFetch<AppUser[]>(search ? `/users?search=${encodeURIComponent(search)}` : '/users');
-export const getUser = (id: string) => apiFetch<AppUser>(`/users/${id}`);
+    apiFetch<AppUser[]>(search ? `/admin/users?search=${encodeURIComponent(search)}` : '/admin/users');
+export const getUser = (id: string) => apiFetch<AppUser>(`/admin/users/${id}`);
 export const createUser = (data: Partial<AppUser> & { password?: string }) =>
-    apiFetch<AppUser>('/users', { method: 'POST', body: JSON.stringify(data) });
+    apiFetch<AppUser>('/admin/users', { method: 'POST', body: JSON.stringify(data) });
 export const updateUser = (id: string, data: Partial<AppUser> & { password?: string }) =>
-    apiFetch<AppUser>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    apiFetch<AppUser>(`/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteUser = (id: string) =>
-    apiFetch<void>(`/users/${id}`, { method: 'DELETE' });
+    apiFetch<void>(`/admin/users/${id}`, { method: 'DELETE' });
 
 // App Roles
-export const getAppRoles = () => apiFetch<AppRole[]>('/app-roles');
-export const getAppRole = (id: string) => apiFetch<AppRole>(`/app-roles/${id}`);
+export const getAppRoles = () => apiFetch<AppRole[]>('/admin/roles');
+export const getAppRole = (id: string) => apiFetch<AppRole>(`/admin/roles/${id}`);
 export const createAppRole = (data: Partial<AppRole>) =>
-    apiFetch<AppRole>('/app-roles', { method: 'POST', body: JSON.stringify(data) });
+    apiFetch<AppRole>('/admin/roles', { method: 'POST', body: JSON.stringify(data) });
 export const updateAppRole = (id: string, data: Partial<AppRole>) =>
-    apiFetch<AppRole>(`/app-roles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    apiFetch<AppRole>(`/admin/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteAppRole = (id: string) =>
-    apiFetch<void>(`/app-roles/${id}`, { method: 'DELETE' });
+    apiFetch<void>(`/admin/roles/${id}`, { method: 'DELETE' });
 
 // Issue Types
 export const getIssueTypes = () => apiFetch<IssueTypeConfig[]>('/admin/issue-types');
@@ -236,10 +236,10 @@ export interface Director {
     createdAt?: string;
     updatedAt?: string;
 }
-export const getDirectors = () => apiFetch<Director[]>('/directors');
+export const getDirectors = () => apiFetch<Director[]>('/admin/directors');
 export const createDirector = (data: Omit<Director, 'id' | 'createdAt' | 'updatedAt'>) =>
-    apiFetch<Director>('/directors', { method: 'POST', body: JSON.stringify(data) });
+    apiFetch<Director>('/admin/directors', { method: 'POST', body: JSON.stringify(data) });
 export const updateDirector = (id: string, data: Partial<Director>) =>
-    apiFetch<Director>(`/directors/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    apiFetch<Director>(`/admin/directors/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteDirector = (id: string) =>
-    apiFetch<void>(`/directors/${id}`, { method: 'DELETE' });
+    apiFetch<void>(`/admin/directors/${id}`, { method: 'DELETE' });
