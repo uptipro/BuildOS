@@ -18,20 +18,20 @@ export function LoginPage() {
 
   // Load remembered credentials on mount
   const loadRememberedCredentials = () => {
-    const saved = localStorage.getItem('buildos_remembered_creds');
+    const saved = localStorage.getItem("buildos_remembered_creds");
     if (saved) {
       try {
         const { email } = JSON.parse(saved);
         setFormData((prev) => ({ ...prev, email }));
         setRememberMe(true);
       } catch (e) {
-        console.error('Failed to load remembered credentials', e);
+        console.error("Failed to load remembered credentials", e);
       }
     }
   };
 
   // Initialize on component mount
-  if (!formData.email && typeof window !== 'undefined') {
+  if (!formData.email && typeof window !== "undefined") {
     setTimeout(loadRememberedCredentials, 0);
   }
 
@@ -65,11 +65,11 @@ export function LoginPage() {
       // Save credentials if remember me is checked
       if (rememberMe) {
         localStorage.setItem(
-          'buildos_remembered_creds',
-          JSON.stringify({ email: formData.email.trim().toLowerCase() })
+          "buildos_remembered_creds",
+          JSON.stringify({ email: formData.email.trim().toLowerCase() }),
         );
       } else {
-        localStorage.removeItem('buildos_remembered_creds');
+        localStorage.removeItem("buildos_remembered_creds");
       }
       navigate("/apps");
     } catch {
@@ -200,7 +200,8 @@ export function LoginPage() {
           <div className="w-full max-w-md bg-white rounded-lg shadow-xl p-8">
             <h2 className="text-2xl mb-4 text-gray-900">Reset Password</h2>
             <p className="text-gray-600 text-sm mb-4">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we'll send you a link to reset your
+              password.
             </p>
 
             {forgotSuccess ? (
@@ -210,7 +211,9 @@ export function LoginPage() {
             ) : (
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div>
-                  <label className="block text-sm mb-1 text-gray-700">Email</label>
+                  <label className="block text-sm mb-1 text-gray-700">
+                    Email
+                  </label>
                   <input
                     type="email"
                     required
