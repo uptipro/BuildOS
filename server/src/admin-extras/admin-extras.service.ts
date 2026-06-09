@@ -22,6 +22,7 @@ export class AdminExtrasService {
     private settingsFilePath = path.join(process.cwd(), 'data', 'admin-settings.json');
 
     private allApps = ['construction', 'finance', 'hr', 'procurement', 'admin', 'ess', 'storefront'];
+    private readonly rolePermissionKeys = ['view', 'create', 'edit', 'approve', 'delete'];
 
     private readonly defaultProcessCatalog = [
         { id: 'p_create_pr', label: 'Create Purchase Request', app: 'procurement', description: '', requiresApproval: false },
@@ -61,9 +62,118 @@ export class AdminExtrasService {
         };
     }
 
+    private normalizeRolePermissionState(
+        input: any,
+        fallback?: {
+            processPermissions?: Record<string, any>;
+            appAccess?: Record<string, boolean>;
+            navAccess?: Record<string, boolean>;
+        },
+    ) {
+        const source = input && typeof input === 'object' ? input : fallback ?? {};
+
+        const processPermissionsSource =
+            source?.processPermissions && typeof source.processPermissions === 'object'
+                ? source.processPermissions
+                : {};
+        const appAccessSource = source?.appAccess && typeof source.appAccess === 'object' ? source.appAccess : {};
+        const navAccessSource = source?.navAccess && typeof source.navAccess === 'object' ? source.navAccess : {};
+
+        const processPermissions: Record<string, Record<string, boolean>> = {};
+        for (const [processId, processPerms] of Object.entries(processPermissionsSource)) {
+            if (!processId) continue;
+            const normalizedPerms = Object.fromEntries(
+                this.rolePermissionKeys.map((key) => [key, Boolean((processPerms as any)?.[key])]),
+            );
+            processPermissions[processId] = normalizedPerms;
+        }
+
+        const appAccess = Object.fromEntries(
+            this.allApps.map((app) => [app, Boolean((appAccessSource as any)?.[app])]),
+        ) as Record<string, boolean>;
+
+        const navAccess: Record<string, boolean> = {};
+        for (const [navId, allowed] of Object.entries(navAccessSource)) {
+            if (!navId) continue;
+            navAccess[navId] = Boolean(allowed);
+        }
+
+        return { processPermissions, appAccess, navAccess };
+    }
+
+    private encodeRolePermissionState(state: {
+        processPermissions: Record<string, Record<string, boolean>>;
+        appAccess: Record<string, boolean>;
+        navAccess: Record<string, boolean>;
+    }) {
+        const appScope = this.allApps.filter((app) => Boolean(state.appAccess?.[app]));
+        const inheritedRoles: string[] = [];
+
+        for (const [processId, processPerms] of Object.entries(state.processPermissions ?? {})) {
+            for (const key of this.rolePermissionKeys) {
+                if ((processPerms as any)?.[key]) {
+                    inheritedRoles.push(`proc:${processId}:${key}`);
+                }
+            }
+        }
+
+        for (const [navId, allowed] of Object.entries(state.navAccess ?? {})) {
+            if (allowed) {
+                inheritedRoles.push(`nav:${navId}`);
+            }
+        }
+
+        return {
+            appScope,
+            inheritedRoles: Array.from(new Set(inheritedRoles)),
+        };
+    }
+
+    private decodeRolePermissionState(role: any) {
+        const appAccess = Object.fromEntries(this.allApps.map((app) => [app, false])) as Record<string, boolean>;
+        for (const app of Array.isArray(role?.appScope) ? role.appScope : []) {
+            const normalized = String(app || '').trim().toLowerCase();
+            if (this.allApps.includes(normalized)) {
+                appAccess[normalized] = true;
+            }
+        }
+
+        const processPermissions: Record<string, Record<string, boolean>> = {};
+        const navAccess: Record<string, boolean> = {};
+
+        for (const entry of Array.isArray(role?.inheritedRoles) ? role.inheritedRoles : []) {
+            const raw = String(entry || '');
+            if (raw.startsWith('proc:')) {
+                const [, processId, key] = raw.split(':');
+                if (!processId || !key || !this.rolePermissionKeys.includes(key)) continue;
+                const current = processPermissions[processId] || Object.fromEntries(this.rolePermissionKeys.map((k) => [k, false]));
+                current[key] = true;
+                processPermissions[processId] = current;
+            } else if (raw.startsWith('nav:')) {
+                const navId = raw.slice(4);
+                if (!navId) continue;
+                navAccess[navId] = true;
+            }
+        }
+
+        return {
+            processPermissions,
+            appAccess,
+            navAccess,
+        };
+    }
+
+    private formatRoleResponse(role: any) {
+        return {
+            ...role,
+            permissions: this.decodeRolePermissionState(role),
+        };
+    }
+
     private async ensureAdminRole() {
         const settings = await this.readAdminSettings();
         const fullPermissions = this.buildFullAdminPermissions(settings.processCatalog);
+        const encoded = this.encodeRolePermissionState(this.normalizeRolePermissionState(fullPermissions));
 
         await this.prisma.appRole.upsert({
             where: { name: 'Admin' },
@@ -71,10 +181,14 @@ export class AdminExtrasService {
                 name: 'Admin',
                 description: 'System administrator with unrestricted access',
                 isSuper: true,
+                appScope: encoded.appScope,
+                inheritedRoles: encoded.inheritedRoles,
             },
             update: {
                 description: 'System administrator with unrestricted access',
                 isSuper: true,
+                appScope: encoded.appScope,
+                inheritedRoles: encoded.inheritedRoles,
             },
         });
     }
@@ -930,11 +1044,13 @@ export class AdminExtrasService {
     // ── App Roles ──
     async findAllRoles() {
         await this.ensureAdminRole();
-        return this.prisma.appRole.findMany({ orderBy: { name: 'asc' } });
+        const roles = await this.prisma.appRole.findMany({ orderBy: { name: 'asc' } });
+        return roles.map((role) => this.formatRoleResponse(role));
     }
     async findRole(id: string) {
         await this.ensureAdminRole();
-        return this.prisma.appRole.findUniqueOrThrow({ where: { id } });
+        const role = await this.prisma.appRole.findUniqueOrThrow({ where: { id } });
+        return this.formatRoleResponse(role);
     }
     async createRole(data: any) {
         const requestedName = String(data?.name ?? '').trim();
@@ -945,7 +1061,8 @@ export class AdminExtrasService {
         const isAdminName = requestedName.toLowerCase() === 'admin';
         if (isAdminName || data?.isSuper) {
             await this.ensureAdminRole();
-            return this.prisma.appRole.findUniqueOrThrow({ where: { name: 'Admin' } });
+            const adminRole = await this.prisma.appRole.findUniqueOrThrow({ where: { name: 'Admin' } });
+            return this.formatRoleResponse(adminRole);
         }
 
         const existingRole = await this.prisma.appRole.findFirst({
@@ -960,14 +1077,20 @@ export class AdminExtrasService {
             throw new ConflictException(`Role with name '${requestedName}' already exists`);
         }
 
+        const permissionState = this.normalizeRolePermissionState(data?.permissions);
+        const encoded = this.encodeRolePermissionState(permissionState);
+
         const payload = {
             name: requestedName,
             description: String(data?.description ?? '').trim() || null,
             isSuper: Boolean(data?.isSuper),
+            appScope: encoded.appScope,
+            inheritedRoles: encoded.inheritedRoles,
         };
 
         try {
-            return await this.prisma.appRole.create({ data: payload });
+            const created = await this.prisma.appRole.create({ data: payload });
+            return this.formatRoleResponse(created);
         } catch (error: any) {
             if (error?.code === 'P2002' && error?.meta?.target?.includes('name')) {
                 throw new ConflictException(`Role with name '${requestedName}' already exists`);
@@ -992,7 +1115,8 @@ export class AdminExtrasService {
         // Allow updating admin role metadata
         if (isCurrentAdminRole) {
             await this.ensureAdminRole();
-            return this.prisma.appRole.findUniqueOrThrow({ where: { name: 'Admin' } });
+            const adminRole = await this.prisma.appRole.findUniqueOrThrow({ where: { name: 'Admin' } });
+            return this.formatRoleResponse(adminRole);
         }
 
         if (!requestedName) {
@@ -1012,6 +1136,10 @@ export class AdminExtrasService {
             throw new ConflictException(`Role with name '${requestedName}' already exists`);
         }
 
+        const decodedCurrentState = this.decodeRolePermissionState(current);
+        const nextPermissionState = this.normalizeRolePermissionState(data?.permissions, decodedCurrentState);
+        const encoded = this.encodeRolePermissionState(nextPermissionState);
+
         const payload = {
             name: requestedName,
             description:
@@ -1019,10 +1147,19 @@ export class AdminExtrasService {
                     ? data.description.trim() || null
                     : current.description,
             isSuper: Boolean(data?.isSuper),
+            appScope: encoded.appScope,
+            inheritedRoles: encoded.inheritedRoles,
         };
 
         try {
-            return await this.prisma.appRole.update({ where: { id }, data: payload });
+            const [, updatedRole] = await this.prisma.$transaction([
+                this.prisma.user.updateMany({
+                    where: { role: current.name },
+                    data: { role: requestedName },
+                }),
+                this.prisma.appRole.update({ where: { id }, data: payload }),
+            ]);
+            return this.formatRoleResponse(updatedRole);
         } catch (error: any) {
             if (error?.code === 'P2002' && error?.meta?.target?.includes('name')) {
                 throw new ConflictException(`Role with name '${requestedName}' already exists`);

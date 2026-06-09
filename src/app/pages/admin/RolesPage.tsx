@@ -23,6 +23,7 @@ import {
 import { Fragment } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { ConfirmationModal } from "../../components/ConfirmationModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type AppKey =
@@ -419,6 +420,7 @@ export function RolesPage() {
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
   const roleSaveQueueRef = useRef<Record<string, Promise<void>>>({});
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
 
   const rolePayload = (role: Role) => ({
     name: role.name,
@@ -434,63 +436,62 @@ export function RolesPage() {
   const normalizeRoleKey = (value: string) => value.trim().toLowerCase();
 
   useEffect(() => {
-    Promise.all([getAppRoles(), getUsers()]).then(([apiRoles, users]) => {
-      const counts = users.reduce<Record<string, number>>((acc, user) => {
-        const key = normalizeRoleKey(String(user.role ?? ""));
-        if (!key) return acc;
-        acc[key] = (acc[key] ?? 0) + 1;
-        return acc;
-      }, {});
+    Promise.all([getAppRoles(), getUsers()])
+      .then(([apiRoles, users]) => {
+        const counts = users.reduce<Record<string, number>>((acc, user) => {
+          const key = normalizeRoleKey(String(user.role ?? ""));
+          if (!key) return acc;
+          acc[key] = (acc[key] ?? 0) + 1;
+          return acc;
+        }, {});
 
-      setRoleUserCounts(counts);
-      setRoles((prev) =>
-        apiRoles.map((r) => {
-          const persisted =
-            r.permissions &&
-            typeof r.permissions === "object" &&
-            !Array.isArray(r.permissions)
-              ? (r.permissions as {
-                  processPermissions?: Record<string, ProcessPerm>;
-                  appAccess?: Record<AppKey, boolean>;
-                  navAccess?: Record<string, boolean>;
-                })
-              : {};
-          const existing = prev.find((p) => p.id === r.id);
-          if (existing) {
+        setRoleUserCounts(counts);
+        setRoles(
+          apiRoles.map((r) => {
+            const persisted =
+              r.permissions &&
+              typeof r.permissions === "object" &&
+              !Array.isArray(r.permissions)
+                ? (r.permissions as {
+                    processPermissions?: Record<string, ProcessPerm>;
+                    appAccess?: Record<AppKey, boolean>;
+                    navAccess?: Record<string, boolean>;
+                  })
+                : {};
+
             return {
-              ...existing,
+              id: r.id,
               name: r.name,
+              description: r.description ?? "",
               users: counts[normalizeRoleKey(r.name)] ?? 0,
-            };
-          }
-          return {
-            id: r.id,
-            name: r.name,
-            description: r.description ?? "",
-            users: counts[normalizeRoleKey(r.name)] ?? 0,
-            isSuper: Boolean(
-              r.isSuper ??
-              r.isSystem ??
-              String(r.name ?? "")
-                .trim()
-                .toLowerCase() === "admin",
-            ),
-            permissions: persisted.processPermissions ?? {},
-            appAccess: {
-              construction: false,
-              finance: false,
-              hr: false,
-              procurement: false,
-              storefront: false,
-              admin: Boolean(r.isSuper ?? r.isSystem),
-              ess: false,
-              ...(persisted.appAccess ?? {}),
-            },
-            navAccess: persisted.navAccess ?? {},
-          } as Role;
-        }),
-      );
-    });
+              isSuper: Boolean(
+                r.isSuper ??
+                  r.isSystem ??
+                  String(r.name ?? "")
+                    .trim()
+                    .toLowerCase() === "admin",
+              ),
+              permissions: persisted.processPermissions ?? {},
+              appAccess: {
+                construction: false,
+                finance: false,
+                hr: false,
+                procurement: false,
+                storefront: false,
+                admin: Boolean(r.isSuper ?? r.isSystem),
+                ess: false,
+                ...(persisted.appAccess ?? {}),
+              },
+              navAccess: persisted.navAccess ?? {},
+            } as Role;
+          }),
+        );
+      })
+      .catch((err) => {
+        const message =
+          err instanceof Error ? err.message : "Failed to load roles.";
+        toast.error(message);
+      });
   }, []);
   const [processes, setProcesses] = useState<ProcessDef[]>(DEFAULT_PROCESSES);
   const [processesLoading, setProcessesLoading] = useState(true);
@@ -655,6 +656,16 @@ export function RolesPage() {
         return next;
       });
     }
+  };
+
+  const requestDeleteRole = (role: Role) => {
+    setRoleToDelete(role);
+  };
+
+  const confirmDeleteRole = async () => {
+    if (!roleToDelete) return;
+    await deleteRole(roleToDelete.id);
+    setRoleToDelete(null);
   };
 
   const saveRoleMeta = async (
@@ -892,7 +903,7 @@ export function RolesPage() {
                           </button>
                           {!role.isSuper && (
                             <button
-                              onClick={() => void deleteRole(role.id)}
+                              onClick={() => requestDeleteRole(role)}
                               disabled={actionLoading.has(`delete-${role.id}`)}
                               className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Delete"
@@ -1033,7 +1044,7 @@ export function RolesPage() {
                         {(expandedRoleTab[role.id] ?? "app") === "nav" && (
                           <div className="grid grid-cols-3 gap-4">
                             {(Object.keys(NAV_ITEMS) as AppKey[])
-                              .filter((app) => role.appAccess[app])
+                              .filter((app) => role.isSuper || role.appAccess[app])
                               .map((app) => (
                                 <div key={app} className="space-y-1.5">
                                   <p
@@ -1077,11 +1088,11 @@ export function RolesPage() {
                                 </div>
                               ))}
                             {(Object.keys(NAV_ITEMS) as AppKey[]).filter(
-                              (app) => !role.appAccess[app],
+                              (app) => !role.isSuper && !role.appAccess[app],
                             ).length > 0 && (
                               <div className="col-span-3 text-xs text-gray-400 italic">
                                 {(Object.keys(NAV_ITEMS) as AppKey[])
-                                  .filter((app) => !role.appAccess[app])
+                                  .filter((app) => !role.isSuper && !role.appAccess[app])
                                   .map((a) => APP_LABELS[a])
                                   .join(", ")}{" "}
                                 app(s) not accessible — grant app access in
@@ -1181,6 +1192,25 @@ export function RolesPage() {
           onClose={() => setEditingRole(null)}
         />
       )}
+      <ConfirmationModal
+        isOpen={Boolean(roleToDelete)}
+        title="Delete Role?"
+        description={
+          roleToDelete
+            ? `Are you sure you want to delete "${roleToDelete.name}"? This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        isDangerous
+        isLoading={
+          roleToDelete
+            ? actionLoading.has(`delete-${roleToDelete.id}`)
+            : false
+        }
+        onConfirm={confirmDeleteRole}
+        onCancel={() => setRoleToDelete(null)}
+      />
     </div>
   );
 }
