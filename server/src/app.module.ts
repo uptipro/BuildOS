@@ -39,6 +39,19 @@ import { WorkflowsModule } from './workflows/workflows.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { ClustersModule } from './clusters/clusters.module';
 import { EquipmentModule } from './equipment/equipment.module';
+import { ConstructionIssuesModule } from './construction-issues/construction-issues.module';
+import { ChangeRequestsModule } from './change-requests/change-requests.module';
+import { DelaysModule } from './delays/delays.module';
+import { StakeholdersModule } from './stakeholders/stakeholders.module';
+import { QualityNcrsModule } from './quality-ncrs/quality-ncrs.module';
+import { HseRecordsModule } from './hse-records/hse-records.module';
+import { CommunicationsModule } from './communications/communications.module';
+import { FundingAllocationsModule } from './funding-allocations/funding-allocations.module';
+import { FundingReleasesModule } from './funding-releases/funding-releases.module';
+import { DisbursementsModule } from './disbursements/disbursements.module';
+import { DailyReportsModule } from './daily-reports/daily-reports.module';
+import { DocumentFoldersModule } from './document-folders/document-folders.module';
+import { DocumentFilesModule } from './document-files/document-files.module';
 import { RolesGuard } from './auth/roles.guard';
 
 @Module({
@@ -81,6 +94,19 @@ import { RolesGuard } from './auth/roles.guard';
         AppCatalogModule,
         ClustersModule,
         EquipmentModule,
+        ConstructionIssuesModule,
+        ChangeRequestsModule,
+        DelaysModule,
+        StakeholdersModule,
+        QualityNcrsModule,
+        HseRecordsModule,
+        CommunicationsModule,
+        FundingAllocationsModule,
+        FundingReleasesModule,
+        DisbursementsModule,
+        DailyReportsModule,
+        DocumentFoldersModule,
+        DocumentFilesModule,
         ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     ],
     providers: [

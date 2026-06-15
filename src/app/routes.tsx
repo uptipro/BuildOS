@@ -15,19 +15,43 @@ import { AppLauncherPage } from "./pages/AppLauncherPage";
 
 // Construction App
 import { ConstructionLayout } from "./pages/construction/ConstructionLayout";
-import { ConstructionDashboardPage } from "./pages/construction/ConstructionDashboardPage";
+import { PortfolioDashboardPage } from "./pages/construction/PortfolioDashboardPage";
 import { ProjectsListPage } from "./pages/construction/ProjectsListPage";
-import { ProjectDetailsPage } from "./pages/construction/ProjectDetailsPage";
-import { ApprovalsPage } from "./pages/construction/ApprovalsPage";
-import { ReportsPage } from "./pages/construction/ReportsPage";
-import { ActiveProjectsPage } from "./pages/construction/ActiveProjectsPage";
-import { CompletedProjectsPage } from "./pages/construction/CompletedProjectsPage";
-import { ResourcePlanningPage } from "./pages/construction/ResourcePlanningPage";
-import { TimelinePlanningPage } from "./pages/construction/TimelinePlanningPage";
+import { ProjectTabsLayout } from "./pages/construction/ProjectTabsLayout";
+import { ProjectOverviewPage } from "./pages/construction/ProjectOverviewPage";
+import { ScheduleOverviewPage } from "./pages/construction/ScheduleOverviewPage";
+import { SchedulePage } from "./pages/construction/SchedulePage";
+import { DailyReportsOverviewPage } from "./pages/construction/DailyReportsOverviewPage";
+import { DailyReportsPage } from "./pages/construction/DailyReportsPage";
+import { DailyReportFormPage } from "./pages/construction/DailyReportFormPage";
+import { ResourcesOverviewPage } from "./pages/construction/ResourcesOverviewPage";
+import { ProjectResourcesPage } from "./pages/construction/ProjectResourcesPage";
+import { ResourceDetailPage } from "./pages/construction/ResourceDetailPage";
+import { GlobalResourceDetailPage } from "./pages/construction/GlobalResourceDetailPage";
+import { IssuesOverviewPage } from "./pages/construction/IssuesOverviewPage";
+import { IssuesPage } from "./pages/construction/IssuesPage";
+import { ChangeRequestsOverviewPage } from "./pages/construction/ChangeRequestsOverviewPage";
+import { ChangeRequestsPage } from "./pages/construction/ChangeRequestsPage";
+import { DelaysOverviewPage } from "./pages/construction/DelaysOverviewPage";
+import { DelaysPage } from "./pages/construction/DelaysPage";
+import { QualityOverviewPage } from "./pages/construction/QualityOverviewPage";
+import { QualityPage } from "./pages/construction/QualityPage";
+import { HSEOverviewPage } from "./pages/construction/HSEOverviewPage";
+import { HSEPage } from "./pages/construction/HSEPage";
+import { DocumentsOverviewPage } from "./pages/construction/DocumentsOverviewPage";
 import { DocumentsPage } from "./pages/construction/DocumentsPage";
-import { TasksPage } from "./pages/construction/TasksPage";
-import { TimeTrackingPage } from "./pages/construction/TimeTrackingPage";
-import { ProjectConfigPage } from "./pages/construction/ProjectConfigPage";
+import { CostsOverviewPage } from "./pages/construction/CostsOverviewPage";
+import { CostsPage } from "./pages/construction/CostsPage";
+import { StakeholdersOverviewPage } from "./pages/construction/StakeholdersOverviewPage";
+import { StakeholdersPage } from "./pages/construction/StakeholdersPage";
+import { ResourceHubPage } from "./pages/construction/ResourceHubPage";
+import { ReportsPage } from "./pages/construction/ReportsPage";
+import { ProgressEarnedValuePage } from "./pages/construction/ProgressEarnedValuePage";
+import { SettingsPage } from "./pages/construction/SettingsPage";
+import { DisbursementsPage } from "./pages/construction/DisbursementsPage";
+import { CommunicationLogPage } from "./pages/construction/CommunicationLogPage";
+import { FundingPage } from "./pages/construction/FundingPage";
+import { FinancialsPage } from "./pages/construction/FinancialsPage";
 import { ProjectSetupRoute } from "./pages/construction/ProjectSetupRoute";
 
 // Finance App
@@ -187,20 +211,82 @@ export const router = createBrowserRouter([
             Component: ConstructionLayout,
             children: [
               { index: true, Component: ProjectsListPage },
-              { path: "dashboard", Component: ConstructionDashboardPage },
-              { path: "active", Component: ActiveProjectsPage },
-              { path: "completed", Component: CompletedProjectsPage },
-              { path: "projects/:id", Component: ProjectDetailsPage },
-              { path: "projects/:id/setup", Component: ProjectSetupRoute },
-              { path: "approvals", Component: ApprovalsPage },
+              { path: "dashboard", Component: PortfolioDashboardPage },
+              { path: "schedule", Component: ScheduleOverviewPage },
+              {
+                path: "tasks",
+                lazy: () =>
+                  import("./pages/construction/TasksPage").then((m) => ({
+                    Component: m.TasksPage,
+                  })),
+              },
+              {
+                path: "my-tasks",
+                lazy: () =>
+                  import("./pages/construction/MyTasksPage").then((m) => ({
+                    Component: m.MyTasksPage,
+                  })),
+              },
+              { path: "daily-reports", Component: DailyReportsOverviewPage },
+              { path: "resources", Component: ResourcesOverviewPage },
+              {
+                path: "resources/:resourceId",
+                Component: GlobalResourceDetailPage,
+              },
+              { path: "issues", Component: IssuesOverviewPage },
+              {
+                path: "change-requests",
+                Component: ChangeRequestsOverviewPage,
+              },
+              { path: "delays", Component: DelaysOverviewPage },
+              { path: "quality", Component: QualityOverviewPage },
+              { path: "hse", Component: HSEOverviewPage },
+              { path: "documents", Component: DocumentsOverviewPage },
+              { path: "costs", Component: CostsOverviewPage },
+              {
+                path: "finance",
+                lazy: () =>
+                  import("./pages/construction/FinancePage").then((m) => ({
+                    Component: m.FinancePage,
+                  })),
+              },
+              { path: "funding", Component: FundingPage },
+              { path: "stakeholders", Component: StakeholdersOverviewPage },
               { path: "reports", Component: ReportsPage },
-              { path: "resource-planning", Component: ResourcePlanningPage },
-              { path: "timeline-planning", Component: TimelinePlanningPage },
-              { path: "documents", Component: DocumentsPage },
-              { path: "tasks", Component: TasksPage },
-              { path: "my-tasks", Component: ConstructionMyTasksPage },
-              { path: "time-tracking", Component: TimeTrackingPage },
-              { path: "project-config", Component: ProjectConfigPage },
+              { path: "resource-hub", Component: ResourceHubPage },
+              { path: "settings", Component: SettingsPage },
+              { path: "disbursements", Component: DisbursementsPage },
+              { path: "communications", Component: CommunicationLogPage },
+              {
+                path: "projects/:id",
+                Component: ProjectTabsLayout,
+                children: [
+                  { index: true, Component: ProjectOverviewPage },
+                  { path: "overview", Component: ProjectOverviewPage },
+                  { path: "schedule", Component: SchedulePage },
+                  { path: "daily-reports", Component: DailyReportsPage },
+                  { path: "daily-reports/new", Component: DailyReportFormPage },
+                  {
+                    path: "daily-reports/:reportId",
+                    Component: DailyReportFormPage,
+                  },
+                  { path: "resources", Component: ProjectResourcesPage },
+                  {
+                    path: "resources/:resourceId",
+                    Component: ResourceDetailPage,
+                  },
+                  { path: "issues", Component: IssuesPage },
+                  { path: "change-requests", Component: ChangeRequestsPage },
+                  { path: "delays", Component: DelaysPage },
+                  { path: "quality", Component: QualityPage },
+                  { path: "hse", Component: HSEPage },
+                  { path: "documents", Component: DocumentsPage },
+                  { path: "financials", Component: FinancialsPage },
+                  { path: "stakeholders", Component: StakeholdersPage },
+                  { path: "progress", Component: ProgressEarnedValuePage },
+                  { path: "setup", Component: ProjectSetupRoute },
+                ],
+              },
             ],
           },
           {

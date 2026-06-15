@@ -2,6 +2,9 @@ import { Outlet } from "react-router";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { HRConfigProvider } from "../stores/hrConfigStore";
+import { ResourceProvider } from "../contexts/ResourceContext";
+import { TaskProvider } from "../contexts/TaskContext";
+import { RolesProvider } from "../contexts/RolesContext";
 import {
   ensureValidAccessToken,
   hasValidAuthSession,
@@ -57,9 +60,15 @@ export function AppLayout() {
 
   return (
     <HRConfigProvider>
-      <div className="min-h-screen bg-gray-50">
-        <Outlet />
-      </div>
+      <ResourceProvider>
+        <TaskProvider>
+          <RolesProvider>
+            <div className="min-h-screen bg-gray-50">
+              <Outlet />
+            </div>
+          </RolesProvider>
+        </TaskProvider>
+      </ResourceProvider>
     </HRConfigProvider>
   );
 }
