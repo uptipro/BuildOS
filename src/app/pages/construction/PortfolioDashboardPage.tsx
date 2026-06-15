@@ -1,14 +1,15 @@
 import { useNavigate } from "react-router";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   LayoutDashboard, FolderKanban, MapPin, Calendar, Users,
   DollarSign, Search, Filter, ChevronRight, TrendingUp,
   AlertTriangle, CheckCircle, PieChart, BarChart3, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 import {
-  projects, fmtCurrency, fmtDate, ragColor, ragLabel,
+  projects as mockProjects, fmtCurrency, fmtDate, ragColor, ragLabel,
   ragBg, ragText, clusters,
 } from "./mockData";
+import { fetchConstructionProjects } from "../../api/projects";
 import type { RAGStatus } from "./types";
 
 const RAG_HEX: Record<RAGStatus, string> = {
@@ -41,10 +42,17 @@ export function PortfolioDashboardPage() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [projects, setProjects] = useState(mockProjects);
+
+  useEffect(() => {
+    fetchConstructionProjects()
+      .then(data => { if (data.length > 0) setProjects(data as typeof mockProjects); })
+      .catch(() => {});
+  }, []);
 
   const activeProjects = useMemo(
     () => projects.filter(p => p.status === "Active"),
-    []
+    [projects]
   );
 
   const stats = useMemo(() => {

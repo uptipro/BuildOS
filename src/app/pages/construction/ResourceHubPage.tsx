@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
 import { Users, HardHat, Wrench, Truck, BookOpen, ArrowRight, Building, MapPin, Calendar } from "lucide-react";
-import { projects, staffList, vendors } from "./mockData";
+import { projects as mockProjects, staffList, vendors } from "./mockData";
+import { fetchConstructionProjects } from "../../api/projects";
 
 const vendorActivity = [
   { vendor: "Alhaji Masonry Services", action: "Daily report submitted", project: "Lekki Tower A", time: "2 hours ago" },
@@ -12,6 +14,14 @@ const vendorActivity = [
 
 export function ResourceHubPage() {
   const navigate = useNavigate();
+  const [projects, setProjects] = useState(mockProjects);
+
+  useEffect(() => {
+    fetchConstructionProjects()
+      .then(data => { if (data.length > 0) setProjects(data as typeof mockProjects); })
+      .catch(() => {});
+  }, []);
+
   const activeProjects = projects.filter(p => p.status === "Active");
 
   const stats = [

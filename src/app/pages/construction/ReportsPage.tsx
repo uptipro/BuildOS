@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BarChart3, FileText, Download, Calendar, TrendingUp, PieChart, CheckCircle, ChevronRight, Eye, Users } from "lucide-react";
-import { projects, fmtCurrency } from "./mockData";
+import { projects as mockProjects, fmtCurrency } from "./mockData";
+import { fetchConstructionProjects } from "../../api/projects";
 
 interface ReportTemplate {
   id: string;
@@ -29,7 +30,7 @@ const reportTemplates: ReportTemplate[] = [
 const RAG_LABELS: Record<string, string> = { "on-track": "On Track", "at-risk": "At Risk", "delayed": "Delayed" };
 const RAG_COLORS: Record<string, string> = { "on-track": "#27AE60", "at-risk": "#F4A623", "delayed": "#E74C3C" };
 
-function generatePreview(type: string): PreviewData {
+function generatePreview(type: string, projects: typeof mockProjects): PreviewData {
   switch (type) {
     case "portfolio":
       return {
@@ -79,6 +80,13 @@ export function ReportsPage() {
   const [generatedIds, setGeneratedIds] = useState<Set<string>>(new Set());
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [projects, setProjects] = useState(mockProjects);
+
+  useEffect(() => {
+    fetchConstructionProjects()
+      .then(data => { if (data.length > 0) setProjects(data as typeof mockProjects); })
+      .catch(() => {});
+  }, []);
 
   function showToast(msg: string) {
     setToastMsg(msg);
@@ -90,7 +98,7 @@ export function ReportsPage() {
     setTimeout(() => showToast("Report generated"), 1000);
   }
 
-  const previewData = previewId ? generatePreview(previewId) : null;
+  const previewData = previewId ? generatePreview(previewId, projects) : null;
 
   const totalBudget = projects.reduce((s, p) => s + p.budget, 0);
   const totalSpent = projects.reduce((s, p) => s + p.spent, 0);

@@ -1,12 +1,20 @@
 import { useNavigate } from "react-router";
 import { Calendar, ChevronRight, Clock, CheckSquare, AlertTriangle, Search, Download } from "lucide-react";
-import { useState } from "react";
-import { projects, tasks, fmtDate, ragColor, ragLabel } from "./mockData";
+import { useEffect, useState } from "react";
+import { projects as mockProjects, tasks, fmtDate, ragColor, ragLabel } from "./mockData";
+import { fetchConstructionProjects } from "../../api/projects";
 import { exportCSV } from "../../utils/exportCSV";
 
 export function ScheduleOverviewPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [projects, setProjects] = useState(mockProjects);
+
+  useEffect(() => {
+    fetchConstructionProjects()
+      .then(data => { if (data.length > 0) setProjects(data as typeof mockProjects); })
+      .catch(() => {});
+  }, []);
 
   const taskCountsByProject = projects.map(p => {
     const pt = tasks.filter(t => t.projectId === p.id && t.level === 4);

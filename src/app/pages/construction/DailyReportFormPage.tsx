@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router";
 import { useState, useEffect, useMemo } from "react";
 import { Save, Send, ArrowLeft, Plus, Trash2, Sun, Cloud, CloudDrizzle, CloudRain, AlertTriangle, DollarSign, MessageSquare, Phone, Mail, Shield } from "lucide-react";
 import { getProjectById, getTasksByProject, getVendorsByProject, getReportsByProject, fmtDate, staffList } from "./mockData";
+import { createDailyReport } from "../../api/daily-reports";
 import type { DailyReport, DailyManpower, DailyEquipment, DailyMaterial, DailyScope, DailyExpense, CommunicationLogEntry, Weather, ProjectRole } from "./types";
 import { useRoles } from "../../contexts/RolesContext";
 
@@ -338,6 +339,9 @@ export function DailyReportFormPage() {
       );
       setTimeout(() => navigate(".."), 1200);
     }, 600);
+
+    const { id: _omitId, ...payload } = report;
+    createDailyReport(payload as unknown as Parameters<typeof createDailyReport>[0]).catch(() => {});
   }
 
   const progressPct = ((step + 1) / ALL_STEPS.length) * 100;

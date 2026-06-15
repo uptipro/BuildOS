@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router";
 import { Truck, Award, Users, DollarSign, ChevronRight, Search, ArrowUpDown, Download, Plus, X, Edit3, Package, Building2, UserCheck, UserCog, ExternalLink, Save } from "lucide-react";
-import { useMemo, useState } from "react";
-import { projects, fmtCurrency, hrEmployees, stubMaterials, stubEquipment, tradeTypes } from "./mockData";
+import { useEffect, useMemo, useState } from "react";
+import { projects as mockProjects, fmtCurrency, hrEmployees, stubMaterials, stubEquipment, tradeTypes } from "./mockData";
+import { fetchConstructionProjects } from "../../api/projects";
 import { exportCSV } from "../../utils/exportCSV";
 import { useResources, type IndividualContractor } from "../../contexts/ResourceContext";
 import type { Vendor } from "./types";
@@ -23,6 +24,14 @@ const contractTypes = ["Labor-only", "Supply & Install", "Nominated Subcontracto
 export function ResourcesOverviewPage() {
   const navigate = useNavigate();
   const { contractors, vendors, addContractor, updateContractor, removeContractor, addVendor, updateVendor, removeVendor } = useResources();
+
+  const [projects, setProjects] = useState(mockProjects);
+
+  useEffect(() => {
+    fetchConstructionProjects()
+      .then(data => { if (data.length > 0) setProjects(data as typeof mockProjects); })
+      .catch(() => {});
+  }, []);
 
   const [tab, setTab] = useState<ResourceTab>("human");
   const [humanSubTab, setHumanSubTab] = useState<HumanSubTab>("vendors");
@@ -65,7 +74,7 @@ export function ResourcesOverviewPage() {
       });
     }
     return list;
-  }, [vendors, search, sortField, sortDir]);
+  }, [vendors, search, sortField, sortDir, projects]);
 
   const filteredContractors = contractors.filter(c =>
     !search || c.name.toLowerCase().includes(search.toLowerCase()) ||

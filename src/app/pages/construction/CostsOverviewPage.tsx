@@ -1,12 +1,20 @@
 import { useNavigate } from "react-router";
 import { DollarSign, TrendingUp, TrendingDown, BarChart3, ChevronRight, FileSpreadsheet, Search, Download } from "lucide-react";
-import { useState } from "react";
-import { projects, fmtCurrency } from "./mockData";
+import { useEffect, useState } from "react";
+import { projects as mockProjects, fmtCurrency } from "./mockData";
+import { fetchConstructionProjects } from "../../api/projects";
 import { exportCSV } from "../../utils/exportCSV";
 
 export function CostsOverviewPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [projects, setProjects] = useState(mockProjects);
+
+  useEffect(() => {
+    fetchConstructionProjects()
+      .then(data => { if (data.length > 0) setProjects(data as typeof mockProjects); })
+      .catch(() => {});
+  }, []);
 
   const totalBudget = projects.reduce((s, p) => s + p.budget, 0);
   const totalSpent = projects.reduce((s, p) => s + p.spent, 0);
