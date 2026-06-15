@@ -588,7 +588,9 @@ export function ProjectSetupPage() {
           projectManager: prev.projectManager || (p.manager ?? ""),
           plannedStartDate:
             prev.plannedStartDate ||
-            (p.startDate ? new Date(p.startDate).toISOString().split("T")[0] : ""),
+            (p.startDate
+              ? new Date(p.startDate).toISOString().split("T")[0]
+              : ""),
           plannedEndDate:
             prev.plannedEndDate ||
             (p.endDate ? new Date(p.endDate).toISOString().split("T")[0] : ""),
@@ -680,8 +682,8 @@ export function ProjectSetupPage() {
           id: s.id,
           name: s.name,
           trade: Array.isArray(s.category)
-            ? s.category[0] ?? ""
-            : s.category ?? "",
+            ? (s.category[0] ?? "")
+            : (s.category ?? ""),
           contractType: "Labor-only",
           isNominated: false,
           contractSum: 0,
