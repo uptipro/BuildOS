@@ -22,12 +22,15 @@ import { useEffect, useMemo, useState } from "react";
 import {
   projects as mockProjects,
   fmtCurrency,
-  hrEmployees,
-  stubMaterials,
-  stubEquipment,
+  hrEmployees as mockHrEmployees,
+  stubMaterials as mockStubMaterials,
+  stubEquipment as mockStubEquipment,
   tradeTypes,
 } from "./mockData";
 import { fetchConstructionProjects } from "../../api/projects";
+import { fetchEmployees } from "../../api/employees";
+import { listMaterialResources } from "../../api/material-resources";
+import { listEquipmentResources } from "../../api/equipment-resources";
 import { exportCSV } from "../../utils/exportCSV";
 import {
   useResources,
@@ -78,6 +81,22 @@ export function ResourcesOverviewPage() {
       .then((data) => {
         if (data.length > 0) setProjects(data as typeof mockProjects);
       })
+      .catch(() => {});
+  }, []);
+
+  const [hrEmployees, setHrEmployees] = useState(mockHrEmployees);
+  const [stubMaterials, setStubMaterials] = useState(mockStubMaterials);
+  const [stubEquipment, setStubEquipment] = useState(mockStubEquipment);
+
+  useEffect(() => {
+    fetchEmployees()
+      .then((d) => { if (d.length > 0) setHrEmployees(d as unknown as typeof mockHrEmployees); })
+      .catch(() => {});
+    listMaterialResources()
+      .then((d) => { if (d.length > 0) setStubMaterials(d as typeof mockStubMaterials); })
+      .catch(() => {});
+    listEquipmentResources()
+      .then((d) => { if (d.length > 0) setStubEquipment(d as typeof mockStubEquipment); })
       .catch(() => {});
   }, []);
 

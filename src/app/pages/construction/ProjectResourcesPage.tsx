@@ -1,7 +1,10 @@
 import { useParams, useNavigate } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Users, Package, Truck, Plus, Search, X, Eye, Award, DollarSign, Briefcase, Download, Edit, ExternalLink, Building2, UserCheck, UserCog } from "lucide-react";
-import { getProjectById, getTasksByProject, fmtCurrency, hrEmployees, stubMaterials, stubEquipment, tradeTypes } from "./mockData";
+import { getProjectById, getTasksByProject, fmtCurrency, hrEmployees as mockHrEmployees, stubMaterials as mockStubMaterials, stubEquipment as mockStubEquipment, tradeTypes } from "./mockData";
+import { fetchEmployees } from "../../api/employees";
+import { listMaterialResources } from "../../api/material-resources";
+import { listEquipmentResources } from "../../api/equipment-resources";
 import type { Task } from "./types";
 import { exportCSV } from "../../utils/exportCSV";
 import { useResources } from "../../contexts/ResourceContext";
@@ -44,6 +47,16 @@ export function ProjectResourcesPage() {
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [showAddContractor, setShowAddContractor] = useState(false);
   const [contractorForm, setContractorForm] = useState({ name: "", trade: "", payRate: 0, payRateUnit: "daily", skilledCount: 0, unskilledCount: 0, mandaysEstimate: 0, status: "Awarded" });
+
+  const [hrEmployees, setHrEmployees] = useState(mockHrEmployees);
+  const [stubMaterials, setStubMaterials] = useState(mockStubMaterials);
+  const [stubEquipment, setStubEquipment] = useState(mockStubEquipment);
+
+  useEffect(() => {
+    fetchEmployees().then(d => { if (d.length > 0) setHrEmployees(d as unknown as typeof mockHrEmployees); }).catch(() => {});
+    listMaterialResources(projectId).then(d => { if (d.length > 0) setStubMaterials(d as typeof mockStubMaterials); }).catch(() => {});
+    listEquipmentResources(projectId).then(d => { if (d.length > 0) setStubEquipment(d as typeof mockStubEquipment); }).catch(() => {});
+  }, [projectId]);
 
   const projectContractors = allContractors;
 
