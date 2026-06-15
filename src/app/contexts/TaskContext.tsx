@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  type ReactNode,
+} from "react";
 import {
   listAppTasks,
   createAppTask,
@@ -8,7 +15,14 @@ import {
 
 export type TaskPriority = "Low" | "Medium" | "High";
 export type TaskCategory = "process" | "general";
-export type TaskStatus = "Pending" | "In Progress" | "Completed" | "To Do" | "Awaiting Approval" | "Approved" | "Declined";
+export type TaskStatus =
+  | "Pending"
+  | "In Progress"
+  | "Completed"
+  | "To Do"
+  | "Awaiting Approval"
+  | "Approved"
+  | "Declined";
 
 export interface AppTask {
   id: string;
@@ -63,13 +77,17 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     setTasks((prev) => [...prev, optimistic]);
     createAppTask(task as Record<string, any>)
       .then((saved) => {
-        setTasks((prev) => prev.map((t) => (t.id === tempId ? (saved as AppTask) : t)));
+        setTasks((prev) =>
+          prev.map((t) => (t.id === tempId ? (saved as AppTask) : t)),
+        );
       })
       .catch(() => {});
   }, []);
 
   const updateTask = useCallback((id: string, updates: Partial<AppTask>) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+    );
     updateAppTask(id, updates as Record<string, any>).catch(() => {});
   }, []);
 
@@ -80,16 +98,25 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   const getTasksByApp = useCallback(
     (app: string) => tasks.filter((t) => t.app === app),
-    [tasks]
+    [tasks],
   );
 
   const getTasksByAssignee = useCallback(
     (assignee: string) => tasks.filter((t) => t.assignedTo === assignee),
-    [tasks]
+    [tasks],
   );
 
   return (
-    <TaskContext.Provider value={{ tasks, addTask, updateTask, deleteTask, getTasksByApp, getTasksByAssignee }}>
+    <TaskContext.Provider
+      value={{
+        tasks,
+        addTask,
+        updateTask,
+        deleteTask,
+        getTasksByApp,
+        getTasksByAssignee,
+      }}
+    >
       {children}
     </TaskContext.Provider>
   );

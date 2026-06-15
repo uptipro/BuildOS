@@ -70,7 +70,9 @@ export function ResourceProvider({ children }: { children: ReactNode }) {
     apiCreateContractor(c as Record<string, any>)
       .then((saved) => {
         setContractors((prev) =>
-          prev.map((x) => (x.id === tempId ? (saved as IndividualContractor) : x)),
+          prev.map((x) =>
+            x.id === tempId ? (saved as IndividualContractor) : x,
+          ),
         );
       })
       .catch(() => {});

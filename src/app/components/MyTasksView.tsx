@@ -177,7 +177,9 @@ export function MyTasksView({
       .catch(() => {});
     fetchEmployees()
       .then((emps) => {
-        const names = emps.map((e) => `${e.firstName} ${e.lastName}`.trim()).filter(Boolean);
+        const names = emps
+          .map((e) => `${e.firstName} ${e.lastName}`.trim())
+          .filter(Boolean);
         if (names.length > 0) setEmployeeNames(names);
       })
       .catch(() => {});
@@ -185,7 +187,10 @@ export function MyTasksView({
 
   // Dropdown options: real employees merged with assignees already on tasks.
   const users = Array.from(
-    new Set([...employeeNames, ...tasks.map((t) => t.assignedTo).filter(Boolean)])
+    new Set([
+      ...employeeNames,
+      ...tasks.map((t) => t.assignedTo).filter(Boolean),
+    ]),
   );
 
   useEffect(() => {
@@ -196,7 +201,9 @@ export function MyTasksView({
 
   function applyUpdate(id: string, updates: Partial<MyTask>) {
     setLoadingTaskId(id);
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+    );
     updateAppTask(id, updates as Record<string, any>)
       .catch(() => {})
       .finally(() => setLoadingTaskId(null));
