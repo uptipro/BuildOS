@@ -28,6 +28,7 @@ import { DocumentsPage } from "./pages/construction/DocumentsPage";
 import { TasksPage } from "./pages/construction/TasksPage";
 import { TimeTrackingPage } from "./pages/construction/TimeTrackingPage";
 import { ProjectConfigPage } from "./pages/construction/ProjectConfigPage";
+import { ProjectSetupRoute } from "./pages/construction/ProjectSetupRoute";
 
 // Finance App
 import { FinanceApprovalsPage } from "./pages/finance/FinanceApprovalsPage";
@@ -190,6 +191,7 @@ export const router = createBrowserRouter([
               { path: "active", Component: ActiveProjectsPage },
               { path: "completed", Component: CompletedProjectsPage },
               { path: "projects/:id", Component: ProjectDetailsPage },
+              { path: "projects/:id/setup", Component: ProjectSetupRoute },
               { path: "approvals", Component: ApprovalsPage },
               { path: "reports", Component: ReportsPage },
               { path: "resource-planning", Component: ResourcePlanningPage },

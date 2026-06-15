@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
+import { ProjectSetupModule } from './project-setup/project-setup.module';
 import { EmployeesModule } from './employees/employees.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
@@ -36,6 +37,8 @@ import { AuditLogModule } from './audit-log/audit-log.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { ClustersModule } from './clusters/clusters.module';
+import { EquipmentModule } from './equipment/equipment.module';
 import { RolesGuard } from './auth/roles.guard';
 
 @Module({
@@ -48,6 +51,7 @@ import { RolesGuard } from './auth/roles.guard';
         WorkflowsModule,
         IntegrationsModule,
         ProjectsModule,
+        ProjectSetupModule,
         EmployeesModule,
         DepartmentsModule,
         HealthModule,
@@ -75,6 +79,8 @@ import { RolesGuard } from './auth/roles.guard';
         ResourcePlanningModule,
         ComplianceDocumentsModule,
         AppCatalogModule,
+        ClustersModule,
+        EquipmentModule,
         ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     ],
     providers: [

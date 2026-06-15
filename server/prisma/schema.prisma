@@ -1413,3 +1413,48 @@ model NotificationTemplate {
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 }
+
+// ─────────────── CONSTRUCTION PROJECT SETUP WIZARD ───────────────
+// Persists the multi-step "Project Setup" wizard payload for a construction
+// project. Each step's data is stored as a JSON column to avoid coupling the
+// wizard's evolving shape to a wide relational schema.
+
+model ProjectSetup {
+  id             String   @id @default(cuid())
+  projectId      String   @unique
+  // Step payloads
+  basicInfo      Json?    // name, client, projectManager, dates, contractType, contractingModel, location, siteAddress, description, clusterId
+  projectType    Json?    // sector, category, descriptor, structureEntries[]
+  humanResources Json?    // staff[], contractors[], vendors[] (+ representatives), humanResourceRoles[]
+  dailyReporting Json?    // contributorMode, contributorEmployeeIds[], contributorRepIds[], recurringReportTasks[]
+  materials      Json?    // projectMaterials[]
+  equipment      Json?    // projectEquipment[]
+  calendar       Json?    // workingDays, hours, holidays[], shutdowns[]
+  schedule       Json?    // tasks[], resourceAssignments[]
+  // Baseline lock / audit
+  setupComplete  Boolean  @default(false)
+  setupLocked    Boolean  @default(false)
+  currentStep    Int      @default(0)
+  completedSteps Int[]    @default([])
+  auditLog       Json?    // [{ action, performedBy, performedAt, reason }]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Cluster {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Equipment {
+  id                     String   @id @default(cuid())
+  name                   String
+  category               String
+  defaultInternalCostPerDay Float @default(0)
+  status                 String   @default("Available")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}

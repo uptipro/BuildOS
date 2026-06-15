@@ -406,6 +406,29 @@ async function main() {
     },
   });
 
+  await prisma.cluster.createMany({
+    data: [
+      { name: 'Lagos Cluster', description: 'Projects in Lagos region' },
+      { name: 'Abuja Cluster', description: 'Projects in Abuja / FCT region' },
+      { name: 'Port Harcourt Cluster', description: 'Projects in Rivers region' },
+      { name: 'Kano Cluster', description: 'Projects in Kano region' },
+    ],
+    skipDuplicates: true,
+  });
+
+  await prisma.equipment.createMany({
+    data: [
+      { name: 'Excavator (20 ton)', category: 'Earthwork', defaultInternalCostPerDay: 120000, status: 'Available' },
+      { name: 'Bulldozer D6', category: 'Earthwork', defaultInternalCostPerDay: 180000, status: 'Assigned' },
+      { name: 'Concrete Mixer (1m³)', category: 'Concreting', defaultInternalCostPerDay: 45000, status: 'Available' },
+      { name: 'Concrete Pump', category: 'Concreting', defaultInternalCostPerDay: 95000, status: 'Available' },
+      { name: 'Tower Crane (50m)', category: 'Lifting', defaultInternalCostPerDay: 250000, status: 'Assigned' },
+      { name: 'Mobile Crane (25 ton)', category: 'Lifting', defaultInternalCostPerDay: 180000, status: 'Available' },
+      { name: 'Generator (100 KVA)', category: 'Generators / Power', defaultInternalCostPerDay: 35000, status: 'Available' },
+      { name: 'Dump Truck (20 ton)', category: 'Transport', defaultInternalCostPerDay: 75000, status: 'Available' },
+    ],
+  });
+
   await prisma.materialRequest.create({
     data: {
       reference: 'MR-2026-0039',
