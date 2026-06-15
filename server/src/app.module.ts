@@ -60,6 +60,8 @@ import { ConstructionTasksModule } from './construction-tasks/construction-tasks
 import { HumanResourcesModule } from './human-resources/human-resources.module';
 import { MaterialResourcesModule } from './material-resources/material-resources.module';
 import { EquipmentResourcesModule } from './equipment-resources/equipment-resources.module';
+import { ContractorsModule } from './contractors/contractors.module';
+import { VendorsModule } from './vendors/vendors.module';
 import { RolesGuard } from './auth/roles.guard';
 
 @Module({
@@ -123,6 +125,8 @@ import { RolesGuard } from './auth/roles.guard';
         HumanResourcesModule,
         MaterialResourcesModule,
         EquipmentResourcesModule,
+        ContractorsModule,
+        VendorsModule,
         ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     ],
     providers: [

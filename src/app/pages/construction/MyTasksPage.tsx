@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import {
   CalendarDays, User, PlayCircle, Send, ThumbsUp, ThumbsDown,
@@ -8,10 +8,9 @@ import { useTasks } from "../../contexts/TaskContext";
 import type { AppTask, TaskPriority } from "../../contexts/TaskContext";
 import { ApprovalPipeline } from "../../components/ApprovalPipeline";
 import type { PipelineStep } from "../../components/ApprovalPipeline";
+import { fetchEmployees } from "../../api/employees";
 
 type KanbanStatus = "To Do" | "In Progress" | "Awaiting Approval" | "Approved" | "Declined";
-
-const users = ["Chukwudi Eze", "Amara Lawson", "Femi Bode", "Ngozi Okafor"];
 
 const PRIORITY_BADGE: Record<TaskPriority, string> = {
   Low:    "px-1.5 py-0.5 text-xs rounded font-semibold bg-gray-100 text-gray-500",
@@ -52,8 +51,28 @@ const TODAY = "2026-04-14";
 
 export function MyTasksPage() {
   const { tasks, updateTask } = useTasks();
-  const [currentUser, setCurrentUser] = useState(users[0]);
+  const [employeeNames, setEmployeeNames] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchEmployees()
+      .then((emps) => {
+        const names = emps.map((e) => `${e.firstName} ${e.lastName}`.trim()).filter(Boolean);
+        if (names.length > 0) setEmployeeNames(names);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Dropdown options: real employees from the API, merged with any assignees
+  // already present on tasks so the board never loses its current data.
+  const users = Array.from(
+    new Set([...employeeNames, ...tasks.map((t) => t.assignedTo).filter(Boolean)])
+  );
+
+  useEffect(() => {
+    if (!currentUser && users.length > 0) setCurrentUser(users[0]);
+  }, [currentUser, users]);
 
   const myTasks = tasks.filter(
     (t) => t.assignedTo === currentUser && (t.status as string) !== "Pending" && (t.status as string) !== "Completed"

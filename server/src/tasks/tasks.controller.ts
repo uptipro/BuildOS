@@ -20,7 +20,7 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
-  @Roles('admin', 'project-manager', 'team-lead')
+  @Roles('admin', 'project-manager', 'team-lead', 'employee')
   async getAll(
     @Query('status') status?: string,
     @Query('projectId') projectId?: string,
@@ -67,14 +67,14 @@ export class TasksController {
   }
 
   @Post()
-  @Roles('admin', 'project-manager', 'team-lead')
+  @Roles('admin', 'project-manager', 'team-lead', 'employee')
   async create(@Body() createTaskDto: any) {
     const task = await this.tasksService.create(createTaskDto);
     return { success: true, data: task, message: 'Task created successfully' };
   }
 
   @Put(':id')
-  @Roles('admin', 'project-manager', 'team-lead')
+  @Roles('admin', 'project-manager', 'team-lead', 'employee')
   async update(@Param('id') id: string, @Body() updateTaskDto: any) {
     const task = await this.tasksService.update(id, updateTaskDto);
     return { success: true, data: task, message: 'Task updated successfully' };
@@ -91,7 +91,7 @@ export class TasksController {
   }
 
   @Delete(':id')
-  @Roles('admin', 'project-manager')
+  @Roles('admin', 'project-manager', 'team-lead', 'employee')
   async remove(@Param('id') id: string) {
     const task = await this.tasksService.remove(id);
     return { success: true, data: task, message: 'Task deleted successfully' };

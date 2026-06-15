@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Plus, Search, CheckCircle2, Clock, Circle, Trash2, Edit, X, CalendarDays, User } from "lucide-react";
 import { useTasks } from "../../contexts/TaskContext";
 import type { TaskPriority, TaskCategory } from "../../contexts/TaskContext";
+import { fetchEmployees } from "../../api/employees";
 
 type TaskStatus = "Pending" | "In Progress" | "Completed";
 
@@ -29,20 +30,37 @@ const STATUS_NEXT: Record<TaskStatus, TaskStatus> = {
 
 const app = "projects";
 
-const users = ["Chukwudi Eze", "Amara Lawson", "Femi Bode", "Ngozi Okafor"];
-
 export function TasksPage() {
   const { tasks, addTask, updateTask, deleteTask } = useTasks();
   const today = new Date().toISOString().slice(0, 10);
 
   const appTasks = tasks.filter((t) => t.app === app && (t.status === "Pending" || t.status === "In Progress" || t.status === "Completed")) as (typeof tasks[number] & { status: TaskStatus })[];
 
-  const [currentUser, setCurrentUser] = useState(users[0]);
+  const [employeeNames, setEmployeeNames] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "All">("All");
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", assignedTo: users[0], dueDate: today, priority: "Medium" as TaskPriority, category: "process" as TaskCategory });
+  const [form, setForm] = useState({ name: "", description: "", assignedTo: "", dueDate: today, priority: "Medium" as TaskPriority, category: "process" as TaskCategory });
+
+  // Dropdown options: real employees merged with any assignees already on tasks.
+  const users = Array.from(
+    new Set([...employeeNames, ...tasks.map((t) => t.assignedTo).filter(Boolean)])
+  );
+
+  useEffect(() => {
+    fetchEmployees()
+      .then((emps) => {
+        const names = emps.map((e) => `${e.firstName} ${e.lastName}`.trim()).filter(Boolean);
+        if (names.length > 0) setEmployeeNames(names);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser && users.length > 0) setCurrentUser(users[0]);
+  }, [currentUser, users]);
 
   const filtered = appTasks.filter((t) => {
     if (statusFilter !== "All" && t.status !== statusFilter) return false;
@@ -58,7 +76,7 @@ export function TasksPage() {
 
   function openCreate() {
     setEditId(null);
-    setForm({ name: "", description: "", assignedTo: users[0], dueDate: today, priority: "Medium", category: "process" });
+    setForm({ name: "", description: "", assignedTo: users[0] ?? "", dueDate: today, priority: "Medium", category: "process" });
     setShowModal(true);
   }
 

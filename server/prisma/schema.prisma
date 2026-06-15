@@ -1044,8 +1044,59 @@ model Task {
   estimatedHours Float?
   actualHours    Float?
   dependencies   String[]  @default([])
+  // App workflow fields (My Tasks / Tasks board)
+  app            String?
+  category       String?
+  assignedBy     String?
+  startedAt      String?
+  submittedAt    String?
+  resolvedAt     String?
+  declineReason  String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+model Contractor {
+  id             String   @id @default(cuid())
+  name           String
+  trade          String
+  payRate        Float    @default(0)
+  payRateUnit    String   @default("daily") // daily, weekly, monthly, lump-sum
+  skilledCount   Int      @default(0)
+  unskilledCount Int      @default(0)
+  manDays        Int      @default(0)
+  status         String   @default("Active") // Active, Completed, Terminated
+  mobile         String?
+  email          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Vendor {
+  id                   String   @id @default(cuid())
+  projectId            String?
+  name                 String
+  trade                String
+  contractType         String   @default("Labor-only") // Labor-only, Supply & Install, Nominated Subcontractor
+  isNominated          Boolean  @default(false)
+  contractSum          Float    @default(0)
+  assignedWorkPackages String[] @default([])
+  blockAssignment      String   @default("")
+  skilledCount         Int      @default(0)
+  unskilledCount       Int      @default(0)
+  mandaysEstimate      Int      @default(0)
+  status               String   @default("Awarded") // Awarded, Active, Completed, Terminated
+  skilledDays          Int?
+  skilledRate          Float?
+  unskilledDays        Int?
+  unskilledRate        Float?
+  vendorMargin         Float?
+  isMainContractor     Boolean?
+  subcontractorIds     String[] @default([])
+  parentContractorId   String?
+  representatives      Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model JobRole {

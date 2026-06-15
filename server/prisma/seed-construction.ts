@@ -15,6 +15,33 @@ export async function seedConstruction(
   const cProjectId = projectRecords.get('Lekki Tower A')!.id;
   const cProjectId2 = projectRecords.get('Riverside Residential')!.id;
 
+  // Idempotency: clear the tables this seed owns so it can be re-run safely.
+  // Order respects FK dependencies (children before parents).
+  await prisma.task.deleteMany();
+  await prisma.vendor.deleteMany();
+  await prisma.contractor.deleteMany();
+  await prisma.equipmentResource.deleteMany();
+  await prisma.materialResource.deleteMany();
+  await prisma.humanResource.deleteMany();
+  await prisma.constructionTask.deleteMany();
+  await prisma.constructionSetting.deleteMany();
+  await prisma.constructionCalendar.deleteMany();
+  await prisma.constructionBaseline.deleteMany();
+  await prisma.earnedValueRecord.deleteMany();
+  await prisma.documentFile.deleteMany();
+  await prisma.documentFolder.deleteMany();
+  await prisma.dailyReport.deleteMany();
+  await prisma.disbursement.deleteMany();
+  await prisma.fundingRelease.deleteMany();
+  await prisma.fundingAllocation.deleteMany();
+  await prisma.communicationLog.deleteMany();
+  await prisma.hseRecord.deleteMany();
+  await prisma.qualityNcr.deleteMany();
+  await prisma.stakeholder.deleteMany();
+  await prisma.projectDelay.deleteMany();
+  await prisma.changeRequest.deleteMany();
+  await prisma.constructionIssue.deleteMany();
+
   await prisma.constructionIssue.createMany({
     data: [
       {
@@ -279,5 +306,74 @@ export async function seedConstruction(
     ],
   });
 
+  // ─────────────── INDIVIDUAL CONTRACTORS (ResourceContext) ───────────────
+  await prisma.contractor.createMany({
+    data: [
+      { id: 'IC-001', name: 'Babatunde Welder', trade: 'Welding', payRate: 25_000, payRateUnit: 'daily', skilledCount: 3, unskilledCount: 5, manDays: 120, status: 'Active', mobile: '08023456789' },
+      { id: 'IC-002', name: 'Femi Scaffolder', trade: 'Scaffolding', payRate: 18_000, payRateUnit: 'daily', skilledCount: 2, unskilledCount: 4, manDays: 90, status: 'Active', mobile: '08034567890' },
+      { id: 'IC-003', name: 'Segun Mason', trade: 'Masonry', payRate: 20_000, payRateUnit: 'daily', skilledCount: 4, unskilledCount: 6, manDays: 180, status: 'Active', mobile: '08045678901' },
+      { id: 'IC-004', name: 'Kunle Electrician', trade: 'Electrical', payRate: 30_000, payRateUnit: 'daily', skilledCount: 2, unskilledCount: 3, manDays: 60, status: 'Completed', mobile: '08056789012' },
+    ],
+  });
+
+  // ─────────────── VENDORS / SUBCONTRACTORS (ResourceContext) ───────────────
+  await prisma.vendor.createMany({
+    data: [
+      {
+        id: 'V-001', projectId: cProjectId, name: 'Alhaji Masonry Services', trade: 'Masonry', contractType: 'Labor-only', isNominated: false, contractSum: 45_000_000,
+        assignedWorkPackages: ['WP-001', 'WP-002'], blockAssignment: 'Tower A', skilledCount: 12, unskilledCount: 24, mandaysEstimate: 540, status: 'Active',
+        skilledDays: 180, skilledRate: 12_000, unskilledDays: 360, unskilledRate: 7_000, vendorMargin: 30, isMainContractor: true,
+        representatives: [
+          { id: 'VR-001', vendorId: 'V-001', fullName: 'Alhaji Musa', email: 'musa@alhajimasonry.com', phone: '+234-802-111-0001', position: 'Site Manager', isActive: true },
+          { id: 'VR-002', vendorId: 'V-001', fullName: 'Ibrahim Danjuma', email: 'ibrahim@alhajimasonry.com', phone: '+234-802-111-0002', position: 'Foreman', isActive: true },
+        ],
+      },
+      {
+        id: 'V-002', projectId: cProjectId, name: 'Chike Tiling Experts', trade: 'Tiling', contractType: 'Labor-only', isNominated: false, contractSum: 28_000_000,
+        assignedWorkPackages: ['WP-005'], blockAssignment: 'Tower A', skilledCount: 8, unskilledCount: 12, mandaysEstimate: 300, status: 'Active',
+        skilledDays: 120, skilledRate: 15_000, unskilledDays: 180, unskilledRate: 7_000, vendorMargin: 25, subcontractorIds: ['V-003'],
+        representatives: [
+          { id: 'VR-003', vendorId: 'V-002', fullName: 'Chike Okafor', email: 'chike@chiketiling.com', phone: '+234-802-111-0003', position: 'Managing Director', isActive: true },
+        ],
+      },
+      {
+        id: 'V-003', projectId: cProjectId, name: 'Steel Fixers United', trade: 'Iron benders / steel fixers', contractType: 'Nominated Subcontractor', isNominated: true, contractSum: 62_000_000,
+        assignedWorkPackages: ['WP-003'], blockAssignment: 'Tower A', skilledCount: 15, unskilledCount: 30, mandaysEstimate: 675, status: 'Active',
+        skilledDays: 225, skilledRate: 14_000, unskilledDays: 450, unskilledRate: 7_000, vendorMargin: 30, parentContractorId: 'V-002',
+        representatives: [
+          { id: 'VR-004', vendorId: 'V-003', fullName: 'Musa Bello', email: 'musa@steelfixers.com', phone: '+234-802-111-0004', position: 'Project Coordinator', isActive: true },
+          { id: 'VR-005', vendorId: 'V-003', fullName: 'Ahmed Lawal', email: 'ahmed@steelfixers.com', phone: '+234-802-111-0005', position: 'Quality Supervisor', isActive: true },
+        ],
+      },
+      {
+        id: 'V-004', projectId: cProjectId2, name: 'De Renaissance Painters', trade: 'Painting', contractType: 'Supply & Install', isNominated: false, contractSum: 18_500_000,
+        assignedWorkPackages: ['WP-010'], blockAssignment: 'Blocks 1-4', skilledCount: 6, unskilledCount: 8, mandaysEstimate: 210, status: 'Awarded', vendorMargin: 25,
+      },
+      {
+        id: 'V-005', projectId: cProjectId2, name: 'Ade Plumbing Services', trade: 'Plumbing', contractType: 'Labor-only', isNominated: false, contractSum: 32_000_000,
+        assignedWorkPackages: ['WP-008'], blockAssignment: 'All blocks', skilledCount: 10, unskilledCount: 15, mandaysEstimate: 375, status: 'Active',
+        skilledDays: 150, skilledRate: 13_000, unskilledDays: 225, unskilledRate: 7_000, vendorMargin: 30,
+      },
+    ],
+  });
+
+  // ─────────────── APP TASKS (My Tasks / Tasks board via TaskContext) ───────────────
+  const taskCreatedAt = new Date();
+  await prisma.task.createMany({
+    data: [
+      { title: 'Foundation Works Inspection', description: 'Inspect Level B1-B2 foundation pours and report compliance.', assignedTo: 'Chukwudi Eze', assignedBy: 'Project Manager', dueDate: new Date('2026-04-15'), priority: 'High', category: 'process', status: 'In Progress', app: 'projects', projectName: 'Downtown Office Complex', createdAt: taskCreatedAt },
+      { title: 'Safety Audit — Block B', description: 'Conduct full HSE compliance walkthrough on Block B.', assignedTo: 'Amara Lawson', assignedBy: 'Project Manager', dueDate: new Date('2026-04-18'), priority: 'High', category: 'process', status: 'To Do', app: 'projects', projectName: 'Downtown Office Complex', createdAt: taskCreatedAt },
+      { title: 'Concrete Pour Schedule Review', description: "Review timing for next week's pours.", assignedTo: 'Femi Bode', assignedBy: 'Project Manager', dueDate: new Date('2026-04-20'), priority: 'Medium', category: 'process', status: 'To Do', app: 'projects', projectName: 'Riverside Residential', createdAt: taskCreatedAt },
+      { title: 'Soil Compaction Test Review', description: 'Awaiting lab report from geotechnical engineer.', assignedTo: 'Ngozi Okafor', assignedBy: 'Project Manager', dueDate: new Date('2026-04-14'), priority: 'High', category: 'process', status: 'Declined', app: 'projects', projectName: 'Riverside Residential', startedAt: '2026-04-10', submittedAt: '2026-04-13', resolvedAt: '2026-04-14', declineReason: 'Missing compaction test results. Please resubmit with complete data.', createdAt: taskCreatedAt },
+      { title: 'Site Photo Documentation', description: 'Document all active work areas for weekly report.', assignedTo: 'Chukwudi Eze', assignedBy: 'Project Manager', dueDate: new Date('2026-04-08'), priority: 'Low', category: 'general', status: 'Approved', app: 'projects', projectName: 'Downtown Office Complex', startedAt: '2026-04-06', submittedAt: '2026-04-07', resolvedAt: '2026-04-08', createdAt: taskCreatedAt },
+      { title: 'Rebar Installation QC Check', description: 'Verify rebar placement against structural drawings.', assignedTo: 'Amara Lawson', assignedBy: 'Project Manager', dueDate: new Date('2026-04-22'), priority: 'Medium', category: 'process', status: 'To Do', app: 'projects', projectName: 'Downtown Office Complex', createdAt: taskCreatedAt },
+      { title: 'Review Q1 expense reports', description: 'Validate all Q1 submissions before audit.', assignedTo: 'Amara Lawson', assignedBy: 'Finance Manager', dueDate: new Date('2026-04-18'), priority: 'High', category: 'process', status: 'In Progress', app: 'finance', createdAt: taskCreatedAt },
+      { title: 'Process new hire onboarding', description: 'Complete documentation for 3 new hires.', assignedTo: 'Ngozi Okafor', assignedBy: 'HR Manager', dueDate: new Date('2026-04-20'), priority: 'High', category: 'process', status: 'To Do', app: 'hr', createdAt: taskCreatedAt },
+      { title: 'Approve pending purchase requests', description: 'Review 5 open PRs awaiting approval.', assignedTo: 'Kene Obi', assignedBy: 'Procurement Manager', dueDate: new Date('2026-04-16'), priority: 'High', category: 'process', status: 'In Progress', app: 'procurement', createdAt: taskCreatedAt },
+      { title: 'Monthly stock count', description: 'Physical count of all general store items.', assignedTo: 'Ike Eze', assignedBy: 'Store Manager', dueDate: new Date('2026-04-18'), priority: 'High', category: 'process', status: 'To Do', app: 'storefront', createdAt: taskCreatedAt },
+    ],
+  });
+
   console.log('Construction module seeded.');
 }
+

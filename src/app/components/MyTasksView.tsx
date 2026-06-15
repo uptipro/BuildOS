@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import {
   CalendarDays,
@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { ApprovalPipeline } from "./ApprovalPipeline";
 import type { PipelineStep } from "./ApprovalPipeline";
+import { fetchEmployees } from "../api/employees";
+import { listAppTasks, updateAppTask } from "../api/app-tasks";
 
 type TaskStatus =
   | "To Do"
@@ -49,8 +51,6 @@ export interface MyTasksViewProps {
   accentClass?: string;
   accentTextClass?: string;
 }
-
-const DEPT_USERS: Record<string, string[]> = {};
 
 const PRIORITY_BADGE: Record<TaskPriority, string> = {
   Low: "px-1.5 py-0.5 text-xs rounded font-semibold bg-gray-100 text-gray-500",
@@ -146,70 +146,80 @@ export function MyTasksView({
   accentClass = "bg-indigo-600 border-indigo-600",
   accentTextClass = "text-indigo-700",
 }: MyTasksViewProps) {
-  const users = DEPT_USERS[app] ?? ["Team Member"];
   const [tasks, setTasks] = useState<MyTask[]>([]);
-  const [currentUser, setCurrentUser] = useState(users[0]);
+  const [employeeNames, setEmployeeNames] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
 
+  useEffect(() => {
+    listAppTasks()
+      .then((rows) => {
+        const forApp = rows
+          .filter((t) => t.app === app)
+          .map((t) => ({
+            id: t.id,
+            name: t.name,
+            description: t.description,
+            assignedTo: t.assignedTo,
+            assignedBy: t.assignedBy,
+            dueDate: t.dueDate,
+            priority: (t.priority as TaskPriority) ?? "Medium",
+            category: (t.category as MyTask["category"]) ?? "general",
+            status: (t.status as TaskStatus) ?? "To Do",
+            startedAt: t.startedAt,
+            submittedAt: t.submittedAt,
+            resolvedAt: t.resolvedAt,
+            declineReason: t.declineReason,
+          }));
+        if (forApp.length > 0) setTasks(forApp);
+      })
+      .catch(() => {});
+    fetchEmployees()
+      .then((emps) => {
+        const names = emps.map((e) => `${e.firstName} ${e.lastName}`.trim()).filter(Boolean);
+        if (names.length > 0) setEmployeeNames(names);
+      })
+      .catch(() => {});
+  }, [app]);
+
+  // Dropdown options: real employees merged with assignees already on tasks.
+  const users = Array.from(
+    new Set([...employeeNames, ...tasks.map((t) => t.assignedTo).filter(Boolean)])
+  );
+
+  useEffect(() => {
+    if (!currentUser && users.length > 0) setCurrentUser(users[0]);
+  }, [currentUser, users]);
+
   const myTasks = tasks.filter((t) => t.assignedTo === currentUser);
 
-  function startTask(id: string) {
+  function applyUpdate(id: string, updates: Partial<MyTask>) {
     setLoadingTaskId(id);
-    setTimeout(() => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id ? { ...t, status: "In Progress", startedAt: TODAY } : t,
-        ),
-      );
-      setLoadingTaskId(null);
-    }, 0);
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+    updateAppTask(id, updates as Record<string, any>)
+      .catch(() => {})
+      .finally(() => setLoadingTaskId(null));
+  }
+
+  function startTask(id: string) {
+    applyUpdate(id, { status: "In Progress", startedAt: TODAY });
   }
 
   function submitTask(id: string) {
-    setLoadingTaskId(id);
-    setTimeout(() => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? { ...t, status: "Awaiting Approval", submittedAt: TODAY }
-            : t,
-        ),
-      );
-      setLoadingTaskId(null);
-    }, 0);
+    applyUpdate(id, { status: "Awaiting Approval", submittedAt: TODAY });
   }
 
   function approveTask(id: string) {
-    setLoadingTaskId(id);
-    setTimeout(() => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id ? { ...t, status: "Approved", resolvedAt: TODAY } : t,
-        ),
-      );
-      setLoadingTaskId(null);
-    }, 0);
+    applyUpdate(id, { status: "Approved", resolvedAt: TODAY });
   }
 
   function declineTask(id: string) {
-    setLoadingTaskId(id);
-    setTimeout(() => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? {
-                ...t,
-                status: "Declined",
-                resolvedAt: TODAY,
-                declineReason:
-                  "Declined by manager. Please review and resubmit.",
-              }
-            : t,
-        ),
-      );
-      setLoadingTaskId(null);
-    }, 0);
+    applyUpdate(id, {
+      status: "Declined",
+      resolvedAt: TODAY,
+      declineReason: "Declined by manager. Please review and resubmit.",
+    });
   }
 
   return (
