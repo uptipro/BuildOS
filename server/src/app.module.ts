@@ -52,6 +52,14 @@ import { DisbursementsModule } from './disbursements/disbursements.module';
 import { DailyReportsModule } from './daily-reports/daily-reports.module';
 import { DocumentFoldersModule } from './document-folders/document-folders.module';
 import { DocumentFilesModule } from './document-files/document-files.module';
+import { EarnedValueRecordsModule } from './earned-value-records/earned-value-records.module';
+import { ConstructionBaselinesModule } from './construction-baselines/construction-baselines.module';
+import { ConstructionCalendarsModule } from './construction-calendars/construction-calendars.module';
+import { ConstructionSettingsModule } from './construction-settings/construction-settings.module';
+import { ConstructionTasksModule } from './construction-tasks/construction-tasks.module';
+import { HumanResourcesModule } from './human-resources/human-resources.module';
+import { MaterialResourcesModule } from './material-resources/material-resources.module';
+import { EquipmentResourcesModule } from './equipment-resources/equipment-resources.module';
 import { RolesGuard } from './auth/roles.guard';
 
 @Module({
@@ -107,6 +115,14 @@ import { RolesGuard } from './auth/roles.guard';
         DailyReportsModule,
         DocumentFoldersModule,
         DocumentFilesModule,
+        EarnedValueRecordsModule,
+        ConstructionBaselinesModule,
+        ConstructionCalendarsModule,
+        ConstructionSettingsModule,
+        ConstructionTasksModule,
+        HumanResourcesModule,
+        MaterialResourcesModule,
+        EquipmentResourcesModule,
         ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     ],
     providers: [

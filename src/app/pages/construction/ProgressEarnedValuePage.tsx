@@ -1,13 +1,21 @@
 import { useParams } from "react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, Target, Clock } from "lucide-react";
-import { getProjectById, getTasksByProject, fmtCurrency, fmtDate, earnedValueHistory } from "./mockData";
+import { getProjectById, getTasksByProject, fmtCurrency, fmtDate, earnedValueHistory as mockEvHistory } from "./mockData";
+import { listEarnedValueRecords } from "../../api/earned-value-records";
 import { calcEarnedValue } from "./types";
 
 export function ProgressEarnedValuePage() {
   const { id } = useParams<{ id: string }>();
   const project = getProjectById(id ?? "");
   const projectTasks = useMemo(() => getTasksByProject(id ?? ""), [id]);
+  const [earnedValueHistory, setEarnedValueHistory] = useState(mockEvHistory);
+
+  useEffect(() => {
+    listEarnedValueRecords(id ?? undefined)
+      .then(data => { if (data.length > 0) setEarnedValueHistory(data as typeof mockEvHistory); })
+      .catch(() => {});
+  }, [id]);
 
   const ev = useMemo(() => {
     if (!project || projectTasks.length === 0) return null;
@@ -51,7 +59,7 @@ export function ProgressEarnedValuePage() {
       ...earnedValueHistory.flatMap(h => [h.plannedValue, h.earnedValue, h.actualCost]),
       1
     );
-  }, []);
+  }, [earnedValueHistory]);
 
   const projectedCompletion = useMemo(() => {
     if (!project || !ev) return null;

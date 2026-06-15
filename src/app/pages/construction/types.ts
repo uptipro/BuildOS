@@ -964,6 +964,15 @@ export interface WeatherConfig {
   enabled: boolean;
 }
 
+// ── Construction Settings (persisted) ───────────────────────
+export interface ConstructionSetting {
+  id?: string;
+  scope?: string;
+  scheduleLevels: ScheduleLevelConfig[];
+  weatherConfig: WeatherConfig[];
+  projectTypes: { sector: string; categories: string[] }[];
+}
+
 // ── Daily Expense ───────────────────────────────────────────
 export interface DailyExpense {
   id: string;

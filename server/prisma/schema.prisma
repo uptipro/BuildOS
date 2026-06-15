@@ -1695,3 +1695,152 @@ model DocumentFile {
   @@index([projectId])
   @@index([folderId])
 }
+
+model EarnedValueRecord {
+  id           String   @id @default(cuid())
+  projectId    String
+  period       String
+  plannedValue Float    @default(0)
+  earnedValue  Float    @default(0)
+  actualCost   Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model ConstructionBaseline {
+  id            String   @id @default(cuid())
+  projectId     String
+  version       Int      @default(1)
+  label         String   @default("")
+  lockedAt      String   @default("")
+  lockedBy      String   @default("")
+  taskSnapshots Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model ConstructionCalendar {
+  id                String   @id @default(cuid())
+  projectId         String
+  workingDays       Int[]    @default([])
+  workingHoursStart String   @default("08:00")
+  workingHoursEnd   String   @default("17:00")
+  holidays          Json     @default("[]")
+  shutdowns         Json     @default("[]")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model ConstructionSetting {
+  id             String   @id @default(cuid())
+  scope          String   @unique @default("global")
+  scheduleLevels Json     @default("[]")
+  weatherConfig  Json     @default("[]")
+  projectTypes   Json     @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ConstructionTask {
+  id                   String   @id @default(cuid())
+  projectId            String
+  parentTaskId         String?
+  level                Int      @default(1)
+  wbsLevelId           String?
+  name                 String
+  plannedStart         String   @default("")
+  plannedEnd           String   @default("")
+  actualStart          String?
+  actualEnd            String?
+  plannedDuration      Int      @default(0)
+  actualDuration       Int?
+  percentComplete      Int      @default(0)
+  predecessorId        String?
+  dependencyType       String?
+  lagDays              Int      @default(0)
+  vendorId             String?
+  subVendorIds         String[] @default([])
+  structureEntryId     String?
+  ragStatus            String   @default("on-track")
+  ragOverride          Boolean  @default(false)
+  notes                String   @default("")
+  isMilestone          Boolean  @default(false)
+  wbsNumber            String?
+  totalFloat           Int?
+  freeFloat            Int?
+  isCritical           Boolean  @default(false)
+  baselinePlannedStart String?
+  baselinePlannedEnd   String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model HumanResource {
+  id                   String   @id @default(cuid())
+  projectId            String
+  source               String   @default("vendor")
+  name                 String
+  trade                String   @default("")
+  contractType         String?
+  isNominated          Boolean?
+  contractSum          Float?
+  payRate              Float?
+  payRateUnit          String?
+  skilledCount         Int?
+  unskilledCount       Int?
+  vendorId             String?
+  vendorMargin         Float?
+  employeeId           String?
+  dailyRate            Float?
+  status               String   @default("Active")
+  assignedWorkPackages String[] @default([])
+  blockAssignment      String   @default("")
+  mandaysEstimate      Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model MaterialResource {
+  id                 String   @id @default(cuid())
+  projectId          String
+  name               String
+  category           String   @default("")
+  unit               String   @default("")
+  estimatedQty       Float    @default(0)
+  estimatedUnitCost  Float    @default(0)
+  totalEstimatedCost Float    @default(0)
+  procurementSource  String   @default("purchase")
+  supplierId         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model EquipmentResource {
+  id                 String   @id @default(cuid())
+  projectId          String
+  name               String
+  category           String   @default("")
+  ownership          String   @default("company-owned")
+  internalCostPerDay Float?
+  rentalCostPerDay   Float?
+  rentalSupplier     String?
+  estimatedDays      Int      @default(0)
+  totalEstimatedCost Float    @default(0)
+  status             String   @default("Available")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([projectId])
+}

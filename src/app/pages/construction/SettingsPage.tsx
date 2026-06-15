@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Settings, Save, Plus, ToggleLeft, ToggleRight, X, Check, Tags, Layers, Sun, Truck, Building2, Users, Package, UserCog, ArrowRight, ChevronDown, ChevronRight, Shield, Edit3, Trash2 } from "lucide-react";
 import type { Sector, ScheduleLevelConfig, WeatherConfig, ProjectRole } from "./types";
 import { ALL_PERMISSIONS } from "./types";
 import { defaultScheduleLevels, defaultWeatherConfig, defaultProjectTypes } from "./mockData";
+import { listConstructionSettings, createConstructionSetting, updateConstructionSetting } from "../../api/construction-settings";
 import { useRoles } from "../../contexts/RolesContext";
 
 const defaultTradeTypes = [
@@ -48,6 +49,20 @@ export function SettingsPage() {
   const [newSector, setNewSector] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [newDescriptor, setNewDescriptor] = useState("");
+  const [settingsId, setSettingsId] = useState<string | null>(null);
+
+  useEffect(() => {
+    listConstructionSettings()
+      .then(rows => {
+        const s = rows[0];
+        if (!s) return;
+        setSettingsId(s.id ?? null);
+        if (s.scheduleLevels?.length) setScheduleLevels(s.scheduleLevels);
+        if (s.weatherConfig?.length) setWeatherConfig(s.weatherConfig);
+        if (s.projectTypes?.length) setProjectTypes(s.projectTypes as typeof defaultProjectTypes);
+      })
+      .catch(() => {});
+  }, []);
 
   function toggleCollapse(id: SectionId) {
     setCollapsed(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
@@ -76,7 +91,13 @@ export function SettingsPage() {
 
   function handleSave() {
     setIsSaving(true);
-    setTimeout(() => { setIsSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000); }, 800);
+    const payload = { scheduleLevels, weatherConfig, projectTypes };
+    const request = settingsId
+      ? updateConstructionSetting(settingsId, payload)
+      : createConstructionSetting(payload).then(saved => { if (saved?.id) setSettingsId(saved.id); return saved; });
+    request
+      .catch(() => {})
+      .finally(() => { setIsSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000); });
   }
 
   function toggleReportSetting(id: string) {

@@ -1,9 +1,12 @@
 import { useParams } from "react-router";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Calendar, ChevronRight, ChevronDown, Plus, Edit, Filter, List, BarChart3, GitBranch, X, Save, ArrowLeft, ArrowRight, AlertTriangle, Diamond, CalendarDays, Clock, Sun, Users, GripVertical } from "lucide-react";
 import type { Task, ResourceAllocation, Vendor, ProjectCalendar } from "./types";
 import { calcFloat, generateWBS } from "./types";
-import { getTasksByProject, getProjectById, getVendorsByProject, fmtDate, fmtCurrency, ragColor, ragLabel, pctCompleteColor, tasks as allTasks, baselines, calendars, resourceAllocations, vendors } from "./mockData";
+import { getTasksByProject, getProjectById, getVendorsByProject, fmtDate, fmtCurrency, ragColor, ragLabel, pctCompleteColor, tasks as allTasks, baselines as mockBaselines, calendars as mockCalendars, resourceAllocations, vendors } from "./mockData";
+import { listConstructionTasks } from "../../api/construction-tasks";
+import { listConstructionBaselines } from "../../api/construction-baselines";
+import { listConstructionCalendars } from "../../api/construction-calendars";
 
 type ViewMode = "list" | "gantt" | "baseline" | "resource";
 
@@ -79,6 +82,20 @@ export function SchedulePage() {
 
   const rawTasks = useMemo(() => getTasksByProject(projectId!), [projectId]);
   const [tasks, setTasks] = useState<Task[]>(() => calcFloat(rawTasks));
+  const [baselines, setBaselines] = useState(mockBaselines);
+  const [calendars, setCalendars] = useState(mockCalendars);
+
+  useEffect(() => {
+    listConstructionTasks(projectId)
+      .then(data => { if (data.length > 0) setTasks(calcFloat(data as Task[])); })
+      .catch(() => {});
+    listConstructionBaselines(projectId)
+      .then(data => { if (data.length > 0) setBaselines(data as typeof mockBaselines); })
+      .catch(() => {});
+    listConstructionCalendars(projectId)
+      .then(data => { if (data.length > 0) setCalendars(data as typeof mockCalendars); })
+      .catch(() => {});
+  }, [projectId]);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [expanded, setExpanded] = useState<Set<string>>(new Set(tasks.filter(t => t.level <= 1).map(t => t.id)));
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -94,8 +111,8 @@ export function SchedulePage() {
   const [editingValues, setEditingValues] = useState<Partial<Task>>({});
 
   const wbsMap = useMemo(() => buildWbsMap(tasks), [tasks]);
-  const projectBaseline = useMemo(() => baselines.find(b => b.projectId === projectId), [projectId]);
-  const projectCalendar = useMemo(() => calendars.find(c => c.projectId === projectId), [projectId]);
+  const projectBaseline = useMemo(() => baselines.find(b => b.projectId === projectId), [projectId, baselines]);
+  const projectCalendar = useMemo(() => calendars.find(c => c.projectId === projectId), [projectId, calendars]);
 
   const rootTasks = useMemo(() => tasks.filter(t => t.level === 1).sort((a, b) => a.plannedStart.localeCompare(b.plannedStart)), [tasks]);
 
