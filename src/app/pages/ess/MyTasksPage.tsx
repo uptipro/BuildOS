@@ -62,7 +62,8 @@ function mapStatus(status: string): TaskStatus {
   const s = status.toLowerCase();
   if (s === "done" || s === "completed" || s === "approved") return "done";
   if (s === "in_progress" || s === "in-progress") return "in-progress";
-  if (s === "blocked" || s === "declined" || s === "cancelled") return "blocked";
+  if (s === "blocked" || s === "declined" || s === "cancelled")
+    return "blocked";
   return "todo";
 }
 
