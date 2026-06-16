@@ -383,13 +383,35 @@ export class AuthService {
     async getMe(userId: string) {
         const user = await this.prisma.user.findUniqueOrThrow({
             where: { id: userId },
-            select: { id: true, name: true, email: true, role: true, department: true, phone: true },
+            select: { id: true, name: true, email: true, role: true, department: true, phone: true, signature: true },
         });
         const employee = await this.prisma.employee.findUnique({
             where: { email: user.email },
             include: { department: true },
         });
         return { user, employee };
+    }
+
+    async updateProfile(userId: string, data: { phone?: string | null; signature?: string | null }) {
+        const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+        const userData: { phone?: string | null; signature?: string | null } = {};
+        if (data.phone !== undefined) userData.phone = data.phone;
+        if (data.signature !== undefined) userData.signature = data.signature;
+
+        if (Object.keys(userData).length > 0) {
+            await this.prisma.user.update({ where: { id: userId }, data: userData });
+        }
+
+        // Keep the employee record's phone in sync when provided.
+        if (data.phone !== undefined) {
+            const employee = await this.prisma.employee.findUnique({ where: { email: user.email } });
+            if (employee && data.phone) {
+                await this.prisma.employee.update({ where: { id: employee.id }, data: { phone: data.phone } });
+            }
+        }
+
+        return this.getMe(userId);
     }
 
     async activateInvite(token: string, password: string) {

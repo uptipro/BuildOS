@@ -9,6 +9,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { getApprovals, approveItem, rejectItem } from "../../api/approvals";
+import { createActivityRecord } from "../../api/activity-history";
+import { useAuthUser } from "../../utils/useAuthUser";
+import { toast } from "sonner";
 
 type ESSApprovalType = string;
 type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -60,6 +63,7 @@ function fmt(n: number) {
 }
 
 export function ESSApprovalsPage() {
+  const { id: authUserId, name: authName } = useAuthUser();
   const [approvals, setApprovals] = useState<ESSApproval[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ApprovalStatus | "all">(
@@ -82,26 +86,44 @@ export function ESSApprovalsPage() {
     return approvalStates[a.id] ?? a.status;
   }
   function approve(id: string) {
+    const item = approvals.find((a) => a.id === id);
     approveItem(id)
       .then(() => {
+        toast.success("Request approved.");
+        void createActivityRecord({
+          userId: authUserId || undefined,
+          userName: authName || "ESS User",
+          action: "Approved request",
+          module: "ess",
+          description: item ? `${item.type} · ${item.title}` : `Approval ${id}`,
+        }).catch(() => {});
         getApprovals("ess")
           .then((items) => setApprovals(items as ESSApproval[]))
           .catch(() => setApprovals([]));
       })
       .catch((err) => {
-        alert("Failed to approve. Please try again.");
+        toast.error("Failed to approve. Please try again.");
         console.error(err);
       });
   }
   function reject(id: string) {
+    const item = approvals.find((a) => a.id === id);
     rejectItem(id)
       .then(() => {
+        toast.success("Request rejected.");
+        void createActivityRecord({
+          userId: authUserId || undefined,
+          userName: authName || "ESS User",
+          action: "Rejected request",
+          module: "ess",
+          description: item ? `${item.type} · ${item.title}` : `Approval ${id}`,
+        }).catch(() => {});
         getApprovals("ess")
           .then((items) => setApprovals(items as ESSApproval[]))
           .catch(() => setApprovals([]));
       })
       .catch((err) => {
-        alert("Failed to reject. Please try again.");
+        toast.error("Failed to reject. Please try again.");
         console.error(err);
       });
   }

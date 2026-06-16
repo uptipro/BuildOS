@@ -11,6 +11,7 @@ import {
 import { useState, useEffect } from "react";
 import { exportCSV } from "../../utils/exportCSV";
 import { getActivityHistory } from "../../api/activity-history";
+import { useAuthUser } from "../../utils/useAuthUser";
 
 type ActivityType =
   | "submitted"
@@ -89,12 +90,13 @@ function formatDate(d: string) {
 }
 
 export function ActivityHistoryPage() {
+  const { id: authUserId } = useAuthUser();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [filter, setFilter] = useState<ActivityType | "all">("all");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    getActivityHistory()
+    getActivityHistory(undefined, authUserId || undefined)
       .then((records) =>
         setActivities(
           records.map((r) => ({
@@ -108,7 +110,7 @@ export function ActivityHistoryPage() {
         ),
       )
       .catch(() => {});
-  }, []);
+  }, [authUserId]);
 
   const filtered = activities.filter((a) => {
     const matchFilter = filter === "all" || a.type === filter;

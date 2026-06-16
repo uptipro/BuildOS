@@ -12,6 +12,10 @@ import {
   PenLine,
 } from "lucide-react";
 import { apiFetch } from "../../api/client";
+import { toast } from "sonner";
+import { updateMyProfile } from "../../api/profile";
+import { createActivityRecord } from "../../api/activity-history";
+import { useAuthUser } from "../../utils/useAuthUser";
 
 interface ProfileField {
   label: string;
@@ -28,6 +32,7 @@ interface MeResponse {
     role: string;
     department: string | null;
     phone: string | null;
+    signature?: string | null;
   };
   employee: {
     id: string;
@@ -75,16 +80,17 @@ function formatJoinDate(iso: string): string {
 }
 
 export function MyProfilePage() {
+  const { id: authUserId, name: authName } = useAuthUser();
   const [profile, setProfile] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [phone, setPhone] = useState("");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
 
   // Signature state
   const [sigPreview, setSigPreview] = useState<string | null>(null);
-  const [sigSaved, setSigSaved] = useState(false);
+  const [savingSig, setSavingSig] = useState(false);
   const sigFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -94,6 +100,7 @@ export function MyProfilePage() {
         const ph = data.employee?.phone ?? data.user.phone ?? "";
         setPhone(ph);
         setDraft(ph);
+        if (data.user.signature) setSigPreview(data.user.signature);
       })
       .catch(() => {
         try {
@@ -110,25 +117,77 @@ export function MyProfilePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function handleSave() {
-    setPhone(draft);
-    setEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  function logActivity(action: string, description: string) {
+    void createActivityRecord({
+      userId: authUserId || undefined,
+      userName: authName || "ESS User",
+      action,
+      module: "ess",
+      description,
+    }).catch(() => {
+      /* non-blocking */
+    });
+  }
+
+  async function handleSave() {
+    const next = draft.trim();
+    setSavingPhone(true);
+    try {
+      await updateMyProfile({ phone: next });
+      setPhone(next);
+      setEditing(false);
+      toast.success("Phone number updated.");
+      logActivity("Updated profile", `Phone number changed to ${next || "—"}`);
+    } catch {
+      toast.error("Failed to update phone number. Please try again.");
+    } finally {
+      setSavingPhone(false);
+    }
   }
 
   function handleSigUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    const url = URL.createObjectURL(f);
-    setSigPreview(url);
-    setSigSaved(true);
-    setTimeout(() => setSigSaved(false), 2500);
+    if (f.size > 2 * 1024 * 1024) {
+      toast.error("Signature image must be under 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : null;
+      if (!dataUrl) {
+        toast.error("Could not read the selected image.");
+        return;
+      }
+      setSavingSig(true);
+      try {
+        await updateMyProfile({ signature: dataUrl });
+        setSigPreview(dataUrl);
+        toast.success("Signature saved.");
+        logActivity("Updated signature", "Uploaded a new signature");
+      } catch {
+        toast.error("Failed to save signature. Please try again.");
+      } finally {
+        setSavingSig(false);
+      }
+    };
+    reader.onerror = () => toast.error("Could not read the selected image.");
+    reader.readAsDataURL(f);
   }
 
-  function clearSignature() {
-    setSigPreview(null);
-    if (sigFileRef.current) sigFileRef.current.value = "";
+  async function clearSignature() {
+    setSavingSig(true);
+    try {
+      await updateMyProfile({ signature: null });
+      setSigPreview(null);
+      if (sigFileRef.current) sigFileRef.current.value = "";
+      toast.success("Signature cleared.");
+      logActivity("Updated signature", "Removed signature");
+    } catch {
+      toast.error("Failed to clear signature. Please try again.");
+    } finally {
+      setSavingSig(false);
+    }
   }
 
   const name = profile?.user.name ?? "—";
@@ -217,7 +276,7 @@ export function MyProfilePage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-4xl">
+      <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">My Profile</h1>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -232,7 +291,7 @@ export function MyProfilePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">My Profile</h1>
@@ -240,14 +299,6 @@ export function MyProfilePage() {
           Your personal and employment details
         </p>
       </div>
-
-      {/* Save toast */}
-      {saved && (
-        <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-2.5 rounded-lg">
-          <span className="w-2 h-2 bg-green-500 rounded-full" /> Phone number
-          updated.
-        </div>
-      )}
 
       {/* Avatar + Name banner */}
       <div className="bg-linear-to-r from-teal-600 to-teal-700 rounded-xl p-6 flex items-center gap-5">
@@ -296,9 +347,10 @@ export function MyProfilePage() {
                     />
                     <button
                       onClick={handleSave}
-                      className="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-md hover:bg-teal-700"
+                      disabled={savingPhone}
+                      className="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-md hover:bg-teal-700 disabled:opacity-60"
                     >
-                      Save
+                      {savingPhone ? "Saving…" : "Save"}
                     </button>
                     <button
                       onClick={() => setEditing(false)}
@@ -360,19 +412,13 @@ export function MyProfilePage() {
           {sigPreview && (
             <button
               onClick={clearSignature}
-              className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 border border-red-200 px-3 py-1 rounded-md"
+              disabled={savingSig}
+              className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 border border-red-200 px-3 py-1 rounded-md disabled:opacity-60"
             >
               <X className="w-3 h-3" /> Clear
             </button>
           )}
         </div>
-
-        {sigSaved && (
-          <div className="mx-5 mt-4 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-2.5 rounded-lg">
-            <span className="w-2 h-2 bg-green-500 rounded-full" /> Signature
-            saved.
-          </div>
-        )}
 
         <div className="px-5 py-4 space-y-4">
           <p className="text-xs text-gray-500 leading-relaxed">
@@ -410,10 +456,15 @@ export function MyProfilePage() {
           />
           <button
             onClick={() => sigFileRef.current?.click()}
-            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-sm px-4 py-2 rounded-md transition-colors"
+            disabled={savingSig}
+            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-sm px-4 py-2 rounded-md transition-colors disabled:opacity-60"
           >
             <Upload className="w-4 h-4" />
-            {sigPreview ? "Replace Signature" : "Upload Signature"}
+            {savingSig
+              ? "Saving…"
+              : sigPreview
+                ? "Replace Signature"
+                : "Upload Signature"}
           </button>
           <p className="text-xs text-gray-400">
             Accepted formats: PNG, JPG, SVG. Use a transparent or white

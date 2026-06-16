@@ -496,6 +496,7 @@ model User {
   password String
   name     String
   phone    String?
+  signature String?
   status   String  @default("Active")
 
   // Multi-role support

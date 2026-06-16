@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Patch, Post, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 
@@ -39,7 +39,21 @@ export class AuthController {
         return this.authService.getMe(payload.sub);
     }
 
-    @Post('refresh')
+    @Patch('me')
+    async updateMe(
+        @Headers('authorization') auth: string,
+        @Body() body: { phone?: string | null; signature?: string | null },
+    ) {
+        if (!auth?.startsWith('Bearer ')) throw new UnauthorizedException('No token provided');
+        const token = auth.split(' ')[1];
+        let payload: { sub: string };
+        try {
+            payload = this.jwtService.verify<{ sub: string }>(token);
+        } catch {
+            throw new UnauthorizedException('Invalid or expired token');
+        }
+        return this.authService.updateProfile(payload.sub, body);
+    }
     refresh(@Body() body: { refresh_token: string }) {
         return this.authService.refresh(body.refresh_token);
     }

@@ -3,6 +3,7 @@
  * Returns name, email, role, and derived initials.
  */
 export function useAuthUser() {
+  let id = "";
   let name = "";
   let email = "";
   let role = "";
@@ -12,6 +13,7 @@ export function useAuthUser() {
     const raw = localStorage.getItem("auth_user");
     if (raw) {
       const parsed = JSON.parse(raw);
+      id = parsed.id ?? "";
       name = parsed.name ?? "";
       email = parsed.email ?? "";
       role = parsed.role ?? "";
@@ -30,5 +32,5 @@ export function useAuthUser() {
     .slice(0, 2)
     .join("");
 
-  return { name, email, role, initials, assignedApps };
+  return { id, name, email, role, initials, assignedApps };
 }

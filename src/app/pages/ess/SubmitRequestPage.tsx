@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { fetchProjects } from "../../api/projects";
 import { createPurchaseRequest } from "../../api/procurement-requests";
+import { createActivityRecord } from "../../api/activity-history";
 import { useAuthUser } from "../../utils/useAuthUser";
 import { useHRConfig } from "../../stores/hrConfigStore";
 
@@ -21,6 +22,24 @@ async function persistRequest(
       ...payload,
     });
     toast.success(successMsg);
+    let authId: string | undefined;
+    let authName = payload.requestedBy;
+    try {
+      const u = JSON.parse(localStorage.getItem("auth_user") || "{}");
+      authId = u?.id || undefined;
+      authName = u?.name || authName;
+    } catch {
+      /* ignore */
+    }
+    void createActivityRecord({
+      userId: authId,
+      userName: authName || "ESS User",
+      action: "Submitted request",
+      module: "ess",
+      description: `${payload.title}${payload.projectName ? ` · ${payload.projectName}` : ""}`,
+    }).catch(() => {
+      /* non-blocking */
+    });
     onSuccess(created.prRef || created.id);
   } catch {
     toast.error("Failed to submit request. Please try again.");
