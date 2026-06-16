@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException, ConflictException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -56,6 +56,19 @@ export class AuthService {
 
     private isValidEmail(email: string): boolean {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    private assertStrongPassword(password: string): void {
+        const value = String(password ?? '');
+        const hasMinLength = value.length >= 8;
+        const hasLetter = /[A-Za-z]/.test(value);
+        const hasNumber = /[0-9]/.test(value);
+        const hasSymbol = /[^A-Za-z0-9]/.test(value);
+        if (!hasMinLength || !hasLetter || !hasNumber || !hasSymbol) {
+            throw new BadRequestException(
+                'Password must be at least 8 characters and include letters, numbers, and symbols.',
+            );
+        }
     }
 
     private escapeHtml(value: string): string {
@@ -298,6 +311,20 @@ export class AuthService {
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) throw new UnauthorizedException('Invalid credentials');
 
+        // Block access for accounts that are not active. Use 403 (not 401) so the
+        // client surfaces the specific reason instead of a generic auth failure.
+        const normalizedStatus = String(user.status ?? '').trim().toLowerCase();
+        if (normalizedStatus !== 'active') {
+            const isPendingInvite = ['pending', 'pending_invite', 'invited', 'pending invite'].includes(
+                normalizedStatus,
+            );
+            throw new ForbiddenException(
+                isPendingInvite
+                    ? 'Your account has not been activated yet. Please use your invitation email to set up your account.'
+                    : 'Your account has been deactivated. Please reach out to your system administrator.',
+            );
+        }
+
         // Update lastLogin timestamp so "Last Active" reflects real activity
         await this.prisma.user.update({
             where: { id: user.id },
@@ -367,7 +394,7 @@ export class AuthService {
 
     async activateInvite(token: string, password: string) {
         if (!token) throw new BadRequestException('Invite token is required');
-        if (!password || password.length < 8) throw new BadRequestException('Password must be at least 8 characters');
+        this.assertStrongPassword(password);
 
         const user = await this.prisma.user.findFirst({ where: { inviteToken: token } });
         if (!user) throw new BadRequestException('Invalid or expired invite token');
@@ -476,9 +503,7 @@ export class AuthService {
         if (!token) {
             throw new BadRequestException('Reset token is required');
         }
-        if (!password || password.length < 8) {
-            throw new BadRequestException('Password must be at least 8 characters');
-        }
+        this.assertStrongPassword(password);
 
         let payload: { sub: string; email: string; type?: string };
         try {

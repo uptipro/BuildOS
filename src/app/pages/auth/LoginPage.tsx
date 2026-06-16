@@ -42,7 +42,44 @@ export function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await apiFetch<{
+      const baseUrl = (
+        import.meta.env.VITE_API_URL || "http://localhost:3001/api"
+      ).replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password,
+        }),
+      });
+
+      if (!response.ok) {
+        let serverMessage = "";
+        try {
+          const parsed = await response.json();
+          const apiMessage = parsed?.message;
+          serverMessage = Array.isArray(apiMessage)
+            ? apiMessage.join(", ")
+            : typeof apiMessage === "string"
+              ? apiMessage
+              : "";
+        } catch {
+          serverMessage = "";
+        }
+
+        // Deactivated / forbidden accounts get the server-provided explanation.
+        // Bad credentials stay generic to avoid leaking account existence.
+        const message =
+          response.status === 403 && serverMessage
+            ? serverMessage
+            : response.status === 401
+              ? "Invalid email or password."
+              : serverMessage || "Unable to log in. Please try again.";
+        throw new Error(message);
+      }
+
+      const res = (await response.json()) as {
         access_token: string;
         refresh_token: string;
         user: {
@@ -52,13 +89,7 @@ export function LoginPage() {
           role: string;
           assignedApps?: string[];
         };
-      }>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({
-          email: formData.email.trim().toLowerCase(),
-          password: formData.password,
-        }),
-      });
+      };
       saveAuthSession({
         accessToken: res.access_token,
         refreshToken: res.refresh_token,
@@ -73,9 +104,19 @@ export function LoginPage() {
       } else {
         localStorage.removeItem("buildos_remembered_creds");
       }
+      toast.success(
+        res.user?.name
+          ? `Welcome back, ${res.user.name}!`
+          : "Logged in successfully.",
+      );
       navigate("/apps");
-    } catch {
-      setError("Invalid email or password.");
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "Invalid email or password.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }

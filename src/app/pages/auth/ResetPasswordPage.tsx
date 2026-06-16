@@ -30,8 +30,14 @@ export function ResetPasswordPage() {
       return;
     }
 
-    if (password.length < 8) {
-      const message = "Password must be at least 8 characters.";
+    if (
+      password.length < 8 ||
+      !/[A-Za-z]/.test(password) ||
+      !/[0-9]/.test(password) ||
+      !/[^A-Za-z0-9]/.test(password)
+    ) {
+      const message =
+        "Password must be at least 8 characters and include letters, numbers, and symbols.";
       setError(message);
       toast.error(message);
       return;
@@ -131,6 +137,9 @@ export function ResetPasswordPage() {
                 )}
               </button>
             </div>
+            <p className="mt-1 text-xs text-gray-500">
+              At least 8 characters, including letters, numbers, and symbols.
+            </p>
           </div>
 
           <div>

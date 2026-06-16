@@ -176,7 +176,7 @@ function userFromApi(u: AppUser): UserRecord {
     userId: String(u.userId || "").trim() || deriveFallbackUserId(u),
     name: u.name,
     email: u.email,
-    phone: "",
+    phone: u.phone ?? "",
     location: "",
     role: u.role,
     department: u.department ?? "",
@@ -255,7 +255,13 @@ function UserDetailPanel({
   onUpdateApps: (id: string, apps: AppKey[]) => Promise<void>;
   onEditUser: (
     id: string,
-    payload: { name: string; role: string; department: string },
+    payload: {
+      name: string;
+      email: string;
+      phone: string;
+      role: string;
+      department: string;
+    },
   ) => Promise<void>;
   onResetPassword: (email: string) => Promise<void>;
   onDeactivateUser: (id: string) => Promise<void>;
@@ -279,6 +285,7 @@ function UserDetailPanel({
   );
   const [savingApps, setSavingApps] = useState(false);
   const [ctaBusy, setCtaBusy] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const tabs = [
     { key: "info", label: "Basic Info" },
@@ -785,20 +792,7 @@ function UserDetailPanel({
         {/* Footer actions */}
         <div className="px-6 py-3 border-t border-gray-100 flex items-center gap-2 shrink-0 bg-gray-50">
           <button
-            onClick={async () => {
-              const nextName = window.prompt("Update full name", user.name);
-              if (!nextName || nextName.trim() === user.name.trim()) return;
-              setCtaBusy(true);
-              try {
-                await onEditUser(user.id, {
-                  name: nextName.trim(),
-                  role: user.role,
-                  department: user.department,
-                });
-              } finally {
-                setCtaBusy(false);
-              }
-            }}
+            onClick={() => setShowEditModal(true)}
             disabled={ctaBusy}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-white transition-colors disabled:opacity-60"
           >
@@ -834,7 +828,7 @@ function UserDetailPanel({
               disabled={ctaBusy}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-red-200 rounded-lg text-red-600 hover:bg-red-50 transition-colors disabled:opacity-60"
             >
-              <Trash2 className="w-4 h-4" />
+              <XCircle className="w-4 h-4" />
               Deactivate User
             </button>
           )}
@@ -855,6 +849,212 @@ function UserDetailPanel({
               Activate User
             </button>
           )}
+        </div>
+      </div>
+
+      {showEditModal && (
+        <EditUserModal
+          user={user}
+          onClose={() => setShowEditModal(false)}
+          onSave={async (payload) => {
+            await onEditUser(user.id, payload);
+            setShowEditModal(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Edit User Modal ───────────────────────────────────────────────────────────
+function EditUserModal({
+  user,
+  onClose,
+  onSave,
+}: {
+  user: UserRecord;
+  onClose: () => void;
+  onSave: (payload: {
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    department: string;
+  }) => Promise<void>;
+}) {
+  const [form, setForm] = useState({
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    department: user.department,
+  });
+  const [departments, setDepartments] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [roleOptions, setRoleOptions] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    Promise.all([
+      import("../../api/admin-extras").then(({ getAppRoles }) => getAppRoles()),
+      getReferenceData(),
+    ])
+      .then(([roles, referenceData]) => {
+        setRoleOptions(roles.map((r) => ({ id: r.id, name: r.name })));
+        setDepartments(referenceData.departments);
+      })
+      .catch(() => {
+        setError("Failed to load role and department options.");
+      });
+  }, []);
+
+  const handleSubmit = async () => {
+    const name = form.name.trim();
+    const email = form.email.trim().toLowerCase();
+    const role = form.role.trim();
+    const department = form.department.trim();
+
+    if (!name || !email || !role || !department) {
+      setError("Name, email, role, and department are required.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      await onSave({
+        name,
+        email,
+        phone: form.phone.trim(),
+        role,
+        department,
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to update user profile.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-gray-900">Edit User</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone
+            </label>
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="+234 800 000 0000"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Department <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={form.department}
+              onChange={(e) => setForm({ ...form, department: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Select department</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.name}>
+                  {d.name}
+                </option>
+              ))}
+              {form.department &&
+                !departments.some((d) => d.name === form.department) && (
+                  <option value={form.department}>{form.department}</option>
+                )}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Role <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Select role</option>
+              {roleOptions.map((r) => (
+                <option key={r.id} value={r.name}>
+                  {r.name}
+                </option>
+              ))}
+              {form.role && !roleOptions.some((r) => r.name === form.role) && (
+                <option value={form.role}>{form.role}</option>
+              )}
+            </select>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {loading && (
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            )}
+            {loading ? "Saving…" : "Save Changes"}
+          </button>
         </div>
       </div>
     </div>
@@ -1317,7 +1517,13 @@ export function UsersPage() {
           }}
           onEditUser={async (id, payload) => {
             try {
-              const updated = await updateUser(id, payload);
+              // Pass the user's existing app assignments so the backend does
+              // not reset them when a role is included in the update.
+              const current = users.find((u) => u.id === id);
+              const updated = await updateUser(id, {
+                ...payload,
+                assignedApps: current?.apps,
+              });
               const next = userFromApi(updated);
               setUsers((prev) => prev.map((u) => (u.id === id ? next : u)));
               setSelectedUser(next);
@@ -1328,6 +1534,7 @@ export function UsersPage() {
                   ? error.message
                   : "Failed to update user profile.";
               toast.error(message);
+              throw error instanceof Error ? error : new Error(message);
             }
           }}
           onResetPassword={async (email) => {
