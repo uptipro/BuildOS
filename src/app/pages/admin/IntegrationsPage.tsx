@@ -36,9 +36,10 @@ export function IntegrationsPage() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookEvents, setWebhookEvents] = useState("");
   const [saving, setSaving] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<
-    { type: "key" | "webhook"; id: string } | null
-  >(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "key" | "webhook";
+    id: string;
+  } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -146,7 +147,8 @@ export function IntegrationsPage() {
     if (!deleteTarget) return;
     const { type, id } = deleteTarget;
     setDeleting(true);
-    const path = type === "key" ? `/admin/api-keys/${id}` : `/admin/webhooks/${id}`;
+    const path =
+      type === "key" ? `/admin/api-keys/${id}` : `/admin/webhooks/${id}`;
     apiFetch(path, { method: "DELETE" })
       .then(() => {
         if (type === "key") {
@@ -255,7 +257,9 @@ export function IntegrationsPage() {
                 </div>
 
                 <button
-                  onClick={() => setDeleteTarget({ type: "key", id: apiKey.id })}
+                  onClick={() =>
+                    setDeleteTarget({ type: "key", id: apiKey.id })
+                  }
                   className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors ml-4"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -333,7 +337,9 @@ export function IntegrationsPage() {
                 </div>
 
                 <button
-                  onClick={() => setDeleteTarget({ type: "webhook", id: webhook.id })}
+                  onClick={() =>
+                    setDeleteTarget({ type: "webhook", id: webhook.id })
+                  }
                   className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors ml-4"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -494,7 +500,9 @@ export function IntegrationsPage() {
 
       <ConfirmationModal
         isOpen={deleteTarget !== null}
-        title={deleteTarget?.type === "key" ? "Delete API Key?" : "Delete Webhook?"}
+        title={
+          deleteTarget?.type === "key" ? "Delete API Key?" : "Delete Webhook?"
+        }
         description="This action cannot be undone."
         confirmLabel="Delete"
         isDangerous

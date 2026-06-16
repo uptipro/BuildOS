@@ -86,9 +86,7 @@ export function ESSDashboardPage() {
   }, []);
 
   const recentRequests = allRequests.slice(0, 5);
-  const pendingCount = allRequests.filter(
-    (r) => r.status === "pending",
-  ).length;
+  const pendingCount = allRequests.filter((r) => r.status === "pending").length;
   const approvedCount = allRequests.filter(
     (r) => r.status === "approved",
   ).length;

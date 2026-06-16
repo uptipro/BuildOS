@@ -40,7 +40,9 @@ export function AuditLogsPage() {
         setLogs(
           auditLogs.map((log: any) => ({
             id: String(log.id),
-            timestamp: new Date(log.createdAt || log.timestamp).toLocaleString(),
+            timestamp: new Date(
+              log.createdAt || log.timestamp,
+            ).toLocaleString(),
             createdAt: String(log.createdAt || log.timestamp || ""),
             user:
               typeof log.user === "string"
@@ -175,17 +177,23 @@ export function AuditLogsPage() {
 
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-600">Today</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-1">{todayCount}</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">
+            {todayCount}
+          </p>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-600">Active Users</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-1">{activeUsers}</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">
+            {activeUsers}
+          </p>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-600">Failed Logins</p>
-          <p className="text-2xl font-semibold text-red-600 mt-1">{failedLogins}</p>
+          <p className="text-2xl font-semibold text-red-600 mt-1">
+            {failedLogins}
+          </p>
         </div>
       </div>
 
