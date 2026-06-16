@@ -91,7 +91,7 @@ export function MyProjectsPage() {
   const [myTasks, setMyTasks] = useState<MyTask[]>([]);
   void setMyTasks; // no tasks endpoint yet
   useEffect(() => {
-    fetchProjects({ status: "active" })
+    fetchProjects({ status: "Active" })
       .then((ps) =>
         setMyProjects(
           ps.map((p) => ({

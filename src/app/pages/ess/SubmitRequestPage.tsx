@@ -1,7 +1,31 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { fetchProjects } from "../../api/projects";
+import { createPurchaseRequest } from "../../api/procurement-requests";
+import { useAuthUser } from "../../utils/useAuthUser";
 import { useHRConfig } from "../../stores/hrConfigStore";
+
+/**
+ * Persists an ESS request to the backend as a purchase request so it survives
+ * page refreshes, then surfaces a toast and forwards the server reference id.
+ */
+async function persistRequest(
+  payload: Parameters<typeof createPurchaseRequest>[0],
+  onSuccess: (id: string) => void,
+  successMsg: string,
+) {
+  try {
+    const created = await createPurchaseRequest({
+      status: "pending",
+      ...payload,
+    });
+    toast.success(successMsg);
+    onSuccess(created.prRef || created.id);
+  } catch {
+    toast.error("Failed to submit request. Please try again.");
+  }
+}
 import {
   Package,
   DollarSign,
@@ -286,6 +310,7 @@ function MaterialCreationForm({
 }: {
   onSuccess: (id: string) => void;
 }) {
+  const { name } = useAuthUser();
   const [formState, setFormState] = useState({
     materialName: "",
     description: "",
@@ -311,7 +336,24 @@ function MaterialCreationForm({
       setErrors(errs);
       return;
     }
-    onSuccess("MCR-" + String(Math.floor(1000 + Math.random() * 8999)));
+    void persistRequest(
+      {
+        title: `Material Creation — ${formState.materialName}`,
+        priority: "Normal",
+        requestedBy: name || "ESS User",
+        items: [
+          {
+            name: formState.materialName,
+            quantity: Number(formState.estimatedQty) || undefined,
+            unit: formState.unit,
+            description: formState.description,
+          },
+        ],
+        notes: formState.notes,
+      },
+      onSuccess,
+      "Material creation request submitted",
+    );
   }
 
   function field(name: keyof typeof formState, value: string) {
@@ -478,6 +520,7 @@ function MaterialForm({
   onSuccess: (id: string) => void;
   projects: string[];
 }) {
+  const { name } = useAuthUser();
   const [requestKind, setRequestKind] = useState<"material" | "service">(
     "material",
   );
@@ -523,8 +566,40 @@ function MaterialForm({
       setErrors(errs);
       return;
     }
-    const id = "REQ-" + String(Math.floor(1000 + Math.random() * 8999));
-    onSuccess(id);
+    void persistRequest(
+      {
+        title:
+          requestKind === "material"
+            ? `Material Request — ${formState.material}`
+            : `Service Request — ${formState.serviceType}`,
+        projectName: formState.project,
+        priority:
+          formState.priority.charAt(0).toUpperCase() +
+          formState.priority.slice(1),
+        requestedBy: name || "ESS User",
+        items:
+          requestKind === "material"
+            ? [
+                {
+                  name: formState.material,
+                  quantity: Number(formState.quantity) || undefined,
+                  unit: formState.unit,
+                  neededDate: formState.neededDate,
+                },
+              ]
+            : [
+                {
+                  name: formState.serviceType,
+                  provider: formState.serviceProvider,
+                  estimatedCost: formState.estimatedCost,
+                  serviceDate: formState.serviceDate,
+                },
+              ],
+        notes: formState.comments,
+      },
+      onSuccess,
+      "Request submitted successfully",
+    );
   }
 
   function field(name: keyof typeof formState, value: string) {
@@ -941,6 +1016,7 @@ function ExpenseForm({
   onSuccess: (id: string) => void;
   projects: string[];
 }) {
+  const { name } = useAuthUser();
   const [formState, setFormState] = useState({
     project: "",
     amount: "",
@@ -966,8 +1042,18 @@ function ExpenseForm({
       setErrors(errs);
       return;
     }
-    const id = "REQ-" + String(Math.floor(1000 + Math.random() * 8999));
-    onSuccess(id);
+    void persistRequest(
+      {
+        title: `Expense Request — ${formState.description}`,
+        projectName: formState.project,
+        priority: "Normal",
+        requestedBy: name || "ESS User",
+        items: [{ name: formState.description, amount: formState.amount }],
+        notes: formState.description,
+      },
+      onSuccess,
+      "Expense request submitted",
+    );
   }
 
   function field(name: keyof typeof formState, value: string) {
@@ -1123,6 +1209,7 @@ function countWorkingDays(start: string, end: string): number {
 }
 
 function LeaveForm({ onSuccess }: { onSuccess: (id: string) => void }) {
+  const { name } = useAuthUser();
   const { leaveTypes } = useHRConfig();
   const [leaveType, setLeaveType] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -1144,7 +1231,24 @@ function LeaveForm({ onSuccess }: { onSuccess: (id: string) => void }) {
       setErrors(errs);
       return;
     }
-    onSuccess("REQ-" + String(Math.floor(1000 + Math.random() * 8999)));
+    void persistRequest(
+      {
+        title: `Leave Request — ${leaveType || "Leave"}`,
+        priority: "Normal",
+        requestedBy: name || "ESS User",
+        items: [
+          {
+            name: leaveType || "Leave",
+            startDate,
+            endDate,
+            days: workingDays,
+          },
+        ],
+        notes,
+      },
+      onSuccess,
+      "Leave request submitted",
+    );
   }
 
   return (
@@ -1270,6 +1374,7 @@ const changeCategoryOptions = [
 ];
 
 function IssueForm({ onSuccess }: { onSuccess: (id: string) => void }) {
+  const { name } = useAuthUser();
   const [form, setForm] = useState({
     type: "",
     title: "",
@@ -1295,7 +1400,18 @@ function IssueForm({ onSuccess }: { onSuccess: (id: string) => void }) {
       setErrors(errs);
       return;
     }
-    onSuccess("ISS-" + Math.random().toString(36).slice(2, 8).toUpperCase());
+    void persistRequest(
+      {
+        title: form.title,
+        priority:
+          form.priority.charAt(0).toUpperCase() + form.priority.slice(1),
+        requestedBy: form.anonymous ? "Anonymous" : name || "ESS User",
+        items: [{ name: form.type }],
+        notes: form.description,
+      },
+      onSuccess,
+      "Issue reported successfully",
+    );
   }
 
   return (
@@ -1416,6 +1532,7 @@ function IssueForm({ onSuccess }: { onSuccess: (id: string) => void }) {
 }
 
 function ChangeRequestForm({ onSuccess }: { onSuccess: (id: string) => void }) {
+  const { name } = useAuthUser();
   const [form, setForm] = useState({
     category: "",
     currentValue: "",
@@ -1440,7 +1557,23 @@ function ChangeRequestForm({ onSuccess }: { onSuccess: (id: string) => void }) {
       setErrors(errs);
       return;
     }
-    onSuccess("CHG-" + Math.random().toString(36).slice(2, 8).toUpperCase());
+    void persistRequest(
+      {
+        title: `Change Request — ${form.category}`,
+        priority: "Normal",
+        requestedBy: name || "ESS User",
+        items: [
+          {
+            name: form.category,
+            currentValue: form.currentValue,
+            requestedChange: form.requestedChange,
+          },
+        ],
+        notes: form.notes,
+      },
+      onSuccess,
+      "Change request submitted",
+    );
   }
 
   return (

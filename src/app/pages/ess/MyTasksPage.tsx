@@ -5,14 +5,14 @@ import {
   Calendar,
   Filter,
   Briefcase,
-  Plus,
-  X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { fetchProjects } from "../../api/projects";
-import { getTasks, createTask } from "../../api/tasks";
+import { getTasks } from "../../api/tasks";
+import { fetchEmployees } from "../../api/employees";
+import { useAuthUser } from "../../utils/useAuthUser";
 
 type TaskStatus = "done" | "in-progress" | "todo" | "blocked";
+type TaskPriority = "low" | "medium" | "high";
 
 interface Task {
   id: string;
@@ -20,7 +20,9 @@ interface Task {
   project: string;
   status: TaskStatus;
   due: string;
-  priority: "low" | "medium" | "high";
+  priority: TaskPriority;
+  assignedTo: string;
+  assignedBy?: string;
   description?: string;
 }
 
@@ -50,23 +52,46 @@ const statusConfig: Record<
   },
 };
 
-const priorityConfig = {
+const priorityConfig: Record<TaskPriority, { dot: string; label: string }> = {
   low: { dot: "bg-green-400", label: "Low" },
   medium: { dot: "bg-yellow-400", label: "Medium" },
   high: { dot: "bg-red-400", label: "High" },
 };
 
-// allProjects loaded from API — see component state below
+function mapStatus(status: string): TaskStatus {
+  const s = status.toLowerCase();
+  if (s === "done" || s === "completed" || s === "approved") return "done";
+  if (s === "in_progress" || s === "in-progress") return "in-progress";
+  if (s === "blocked" || s === "declined" || s === "cancelled") return "blocked";
+  return "todo";
+}
+
+function mapPriority(priority: string): TaskPriority {
+  const p = priority.toLowerCase();
+  if (p === "high" || p === "critical" || p === "urgent") return "high";
+  if (p === "low") return "low";
+  return "medium";
+}
 
 export function MyTasksPage() {
-  const today = new Date().toISOString().slice(0, 10);
+  const { name: authName } = useAuthUser();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [employees, setEmployees] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
-  const [showModal, setShowModal] = useState(false);
-  const [allProjects, setAllProjects] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState("");
   useEffect(() => {
-    fetchProjects()
-      .then((ps) => setAllProjects(ps.map((p) => p.name)))
+    fetchEmployees()
+      .then((emps) => {
+        const names = emps
+          .map((e) => `${e.firstName ?? ""} ${e.lastName ?? ""}`.trim())
+          .filter(Boolean);
+        setEmployees(names);
+        setCurrentUser((prev) => {
+          if (prev) return prev;
+          if (authName && names.includes(authName)) return authName;
+          return names[0] ?? "";
+        });
+      })
       .catch(() => {});
     getTasks()
       .then((ts) =>
@@ -75,70 +100,35 @@ export function MyTasksPage() {
             id: t.id,
             name: t.title,
             project: t.projectName ?? "",
-            status: t.status as TaskStatus,
+            status: mapStatus(t.status),
             due: t.dueDate?.slice(0, 10) ?? "",
-            priority: t.priority as Task["priority"],
+            priority: mapPriority(t.priority),
+            assignedTo: t.assignedTo ?? "",
+            assignedBy: (t as { assignedBy?: string }).assignedBy,
             description: t.description,
           })),
         ),
       )
       .catch(() => {});
-  }, []);
-  const [form, setForm] = useState({
-    name: "",
-    project: "",
-    due: today,
-    priority: "medium" as Task["priority"],
-    description: "",
-  });
+  }, [authName]);
+
+  const displayTasks = currentUser
+    ? tasks.filter((t) => t.assignedTo === currentUser)
+    : tasks;
 
   const filtered =
     statusFilter === "all"
-      ? tasks
-      : tasks.filter((t) => t.status === statusFilter);
+      ? displayTasks
+      : displayTasks.filter((t) => t.status === statusFilter);
 
   const counts = {
-    all: tasks.length,
-    "in-progress": tasks.filter((t) => t.status === "in-progress").length,
-    todo: tasks.filter((t) => t.status === "todo").length,
-    blocked: tasks.filter((t) => t.status === "blocked").length,
-    done: tasks.filter((t) => t.status === "done").length,
+    all: displayTasks.length,
+    "in-progress": displayTasks.filter((t) => t.status === "in-progress")
+      .length,
+    todo: displayTasks.filter((t) => t.status === "todo").length,
+    blocked: displayTasks.filter((t) => t.status === "blocked").length,
+    done: displayTasks.filter((t) => t.status === "done").length,
   };
-
-  function saveTask() {
-    if (!form.name.trim()) return;
-    createTask({
-      title: form.name,
-      projectName: form.project,
-      dueDate: form.due || undefined,
-      priority: form.priority,
-      status: "todo",
-      description: form.description,
-    })
-      .then((t) =>
-        setTasks((prev) => [
-          ...prev,
-          {
-            id: t.id,
-            name: t.title,
-            project: t.projectName ?? "",
-            status: t.status as TaskStatus,
-            due: t.dueDate?.slice(0, 10) ?? "",
-            priority: t.priority as Task["priority"],
-            description: t.description,
-          },
-        ]),
-      )
-      .catch(() => {});
-    setForm({
-      name: "",
-      project: allProjects[0] || "",
-      due: today,
-      priority: "medium",
-      description: "",
-    });
-    setShowModal(false);
-  }
 
   return (
     <div className="space-y-5">
@@ -150,12 +140,21 @@ export function MyTasksPage() {
             Tasks assigned to you across all active projects
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700"
-        >
-          <Plus className="w-4 h-4" /> New Task
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Viewing as:</span>
+          <select
+            value={currentUser}
+            onChange={(e) => setCurrentUser(e.target.value)}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+          >
+            {employees.length === 0 && <option value="">No employees</option>}
+            {employees.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Status tabs */}
@@ -221,6 +220,11 @@ export function MyTasksPage() {
                       <Calendar className="w-3 h-3" />
                       Due {t.due}
                     </span>
+                    {t.assignedBy && (
+                      <span className="flex items-center gap-1">
+                        Assigned by: {t.assignedBy}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
@@ -248,113 +252,6 @@ export function MyTasksPage() {
           </div>
         )}
       </div>
-
-      {/* New Task Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-900">New Task</h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Task Name *
-                </label>
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g. Review site drawings"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Description
-                </label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
-                  }
-                  rows={2}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Project
-                  </label>
-                  <select
-                    value={form.project}
-                    onChange={(e) =>
-                      setForm({ ...form, project: e.target.value })
-                    }
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  >
-                    {allProjects.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Priority
-                  </label>
-                  <select
-                    value={form.priority}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        priority: e.target.value as Task["priority"],
-                      })
-                    }
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  value={form.due}
-                  onChange={(e) => setForm({ ...form, due: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveTask}
-                className="px-4 py-2 text-sm text-white bg-teal-600 rounded-lg hover:bg-teal-700"
-              >
-                Save Task
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
