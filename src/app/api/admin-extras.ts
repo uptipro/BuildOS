@@ -56,8 +56,15 @@ export interface UnitOfMeasurement {
     name: string;
     abbreviation: string;
     category: string;
-    baseUnit: string;
-    conversionFactor: number;
+    baseUnit?: string;
+    conversionFactor?: number;
+}
+
+export interface MaterialCategoryRecord {
+    id: string;
+    name: string;
+    description: string;
+    color: string;
 }
 
 export interface EmailTemplateConfig {
@@ -232,6 +239,37 @@ export const updateAdminGeneralSettings = (data: AdminGeneralSettingsPayload) =>
         body: JSON.stringify(data),
     });
 
+// Store Levels
+export interface StoreLevelConfigRecord {
+    level: 1 | 2 | 3;
+    name: string;
+    description: string;
+    color: string;
+    maxCount?: number | null;
+}
+export const getStoreLevels = () => apiFetch<StoreLevelConfigRecord[]>('/admin/store-levels');
+export const updateStoreLevels = (storeLevels: StoreLevelConfigRecord[]) =>
+    apiFetch<StoreLevelConfigRecord[]>('/admin/store-levels', {
+        method: 'PUT',
+        body: JSON.stringify({ storeLevels }),
+    });
+
+// Store Thresholds
+export interface StoreThresholdRecord {
+    id: string;
+    storeName: string;
+    storeType: 'General' | 'Project';
+    lowStockQty: number;
+    outOfStockQty: number;
+    unit: string;
+}
+export const getStoreThresholds = () => apiFetch<StoreThresholdRecord[]>('/admin/store-thresholds');
+export const updateStoreThresholds = (storeThresholds: StoreThresholdRecord[]) =>
+    apiFetch<StoreThresholdRecord[]>('/admin/store-thresholds', {
+        method: 'PUT',
+        body: JSON.stringify({ storeThresholds }),
+    });
+
 // Units of Measurement
 export const getUnits = () => apiFetch<UnitOfMeasurement[]>('/admin/units');
 export const createUnit = (data: Omit<UnitOfMeasurement, 'id'>) =>
@@ -240,6 +278,16 @@ export const updateUnit = (id: string, data: Partial<Omit<UnitOfMeasurement, 'id
     apiFetch<UnitOfMeasurement>(`/admin/units/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 export const deleteUnit = (id: string) =>
     apiFetch<{ ok: boolean }>(`/admin/units/${id}`, { method: 'DELETE' });
+
+// Material Categories
+export const getMaterialCategories = () =>
+    apiFetch<MaterialCategoryRecord[]>('/admin/material-categories');
+export const createMaterialCategory = (data: Omit<MaterialCategoryRecord, 'id'>) =>
+    apiFetch<MaterialCategoryRecord>('/admin/material-categories', { method: 'POST', body: JSON.stringify(data) });
+export const updateMaterialCategory = (id: string, data: Partial<Omit<MaterialCategoryRecord, 'id'>>) =>
+    apiFetch<MaterialCategoryRecord>(`/admin/material-categories/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteMaterialCategory = (id: string) =>
+    apiFetch<{ ok: boolean }>(`/admin/material-categories/${id}`, { method: 'DELETE' });
 
 // Notifications & Templates
 export const getEmailTemplates = () =>

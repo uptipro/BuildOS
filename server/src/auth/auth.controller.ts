@@ -54,6 +54,8 @@ export class AuthController {
         }
         return this.authService.updateProfile(payload.sub, body);
     }
+
+    @Post('refresh')
     refresh(@Body() body: { refresh_token: string }) {
         return this.authService.refresh(body.refresh_token);
     }

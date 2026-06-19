@@ -10,7 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AdminExtrasService {
     private readonly logger = new Logger(AdminExtrasService.name);
     private emailConfigs: any[] = [];
-    private units: any[] = [];
+
     private apiKeys: any[] = [];
     private webhooks: any[] = [];
     private emailTemplates: any[] = [];
@@ -51,6 +51,12 @@ export class AdminExtrasService {
         fiscalYearStart: '01',
         language: 'en',
     };
+
+    private readonly defaultStoreLevels = [
+        { level: 1, name: 'Central Store', description: 'Primary warehouse — controls inventory distribution company-wide', color: 'teal', maxCount: 2 },
+        { level: 2, name: 'Regional Hub', description: 'Non-project stores serving multiple projects (regions, zones, departments)', color: 'blue', maxCount: 5 },
+        { level: 3, name: 'Project Store', description: 'Assigned to a specific project, receives materials from Level 1 or 2', color: 'purple', maxCount: null },
+    ];
 
     private readonly defaultCurrencyOptions = [
         { label: 'US Dollar', value: 'USD', meta: '$' },
@@ -326,6 +332,12 @@ export class AdminExtrasService {
                         }))
                         .filter((item: any) => item.label && item.value)
                     : [...this.defaultCurrencyOptions],
+                storeLevels: Array.isArray(parsed?.storeLevels) && parsed.storeLevels.length
+                    ? parsed.storeLevels
+                    : [...this.defaultStoreLevels],
+                storeThresholds: Array.isArray(parsed?.storeThresholds) ? parsed.storeThresholds : [],
+                units: Array.isArray(parsed?.units) ? parsed.units : [],
+                materialCategories: Array.isArray(parsed?.materialCategories) ? parsed.materialCategories : [],
             };
         } catch {
             return {
@@ -339,6 +351,10 @@ export class AdminExtrasService {
                 reportTemplates: [],
                 generalSettings: { ...this.defaultGeneralSettings },
                 currencyOptions: [...this.defaultCurrencyOptions],
+                storeLevels: [...this.defaultStoreLevels],
+                storeThresholds: [],
+                units: [],
+                materialCategories: [],
             };
         }
     }
@@ -354,9 +370,63 @@ export class AdminExtrasService {
         reportTemplates?: any[];
         generalSettings: any;
         currencyOptions: any[];
+        storeLevels?: any[];
+        storeThresholds?: any[];
+        units?: any[];
+        materialCategories?: any[];
     }) {
         await fs.mkdir(path.dirname(this.settingsFilePath), { recursive: true });
         await fs.writeFile(this.settingsFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    }
+
+    async getStoreLevels() {
+        const settings = await this.readAdminSettings();
+        return settings.storeLevels;
+    }
+
+    async updateStoreLevels(levels: any[]) {
+        if (!Array.isArray(levels)) throw new BadRequestException('Store levels must be an array');
+        const normalized = levels.map((l: any) => ({
+            level: Number(l?.level),
+            name: String(l?.name ?? '').trim(),
+            description: String(l?.description ?? '').trim(),
+            color: String(l?.color ?? 'teal').trim() || 'teal',
+            maxCount:
+                l?.maxCount === null || l?.maxCount === undefined || l?.maxCount === ''
+                    ? null
+                    : Number(l.maxCount),
+        }));
+        if (normalized.some((l) => !l.level || !l.name)) {
+            throw new BadRequestException('Each store level requires a level number and name');
+        }
+        const settings = await this.readAdminSettings();
+        settings.storeLevels = normalized;
+        await this.writeAdminSettings(settings);
+        return settings.storeLevels;
+    }
+
+    async getStoreThresholds() {
+        const settings = await this.readAdminSettings();
+        return settings.storeThresholds;
+    }
+
+    async updateStoreThresholds(thresholds: any[]) {
+        if (!Array.isArray(thresholds)) throw new BadRequestException('Store thresholds must be an array');
+        const normalized = thresholds.map((t: any) => ({
+            id: String(t?.id ?? '').trim() || crypto.randomUUID(),
+            storeName: String(t?.storeName ?? '').trim(),
+            storeType: t?.storeType === 'Project' ? 'Project' : 'General',
+            lowStockQty: Number(t?.lowStockQty ?? 0),
+            outOfStockQty: Number(t?.outOfStockQty ?? 0),
+            unit: String(t?.unit ?? '%').trim() || '%',
+        }));
+        if (normalized.some((t) => !t.storeName)) {
+            throw new BadRequestException('Each store threshold requires a store name');
+        }
+        const settings = await this.readAdminSettings();
+        settings.storeThresholds = normalized;
+        await this.writeAdminSettings(settings);
+        return settings.storeThresholds;
     }
 
     async getGeneralSettings() {
@@ -1682,22 +1752,68 @@ export class AdminExtrasService {
     }
 
     // ── Units ──
-    findUnits() {
-        return this.units;
+    async findUnits() {
+        const settings = await this.readAdminSettings();
+        return settings.units;
     }
-    createUnit(data: any) {
-        const created = { id: `u-${Date.now()}`, ...data, createdAt: new Date(), updatedAt: new Date() };
-        this.units.push(created);
+    async createUnit(data: any) {
+        const settings = await this.readAdminSettings();
+        const created = {
+            id: `u-${Date.now()}`,
+            ...data,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        settings.units = [...settings.units, created];
+        await this.writeAdminSettings(settings);
         return created;
     }
-    updateUnit(id: string, data: any) {
-        this.units = this.units.map((item) =>
-            item.id === id ? { ...item, ...data, id, updatedAt: new Date() } : item,
+    async updateUnit(id: string, data: any) {
+        const settings = await this.readAdminSettings();
+        settings.units = settings.units.map((item: any) =>
+            item.id === id ? { ...item, ...data, id, updatedAt: new Date().toISOString() } : item,
         );
-        return this.units.find((item) => item.id === id) ?? { id, ...data };
+        await this.writeAdminSettings(settings);
+        return settings.units.find((item: any) => item.id === id) ?? { id, ...data };
     }
-    deleteUnit(id: string) {
-        this.units = this.units.filter((item) => item.id !== id);
+    async deleteUnit(id: string) {
+        const settings = await this.readAdminSettings();
+        settings.units = settings.units.filter((item: any) => item.id !== id);
+        await this.writeAdminSettings(settings);
+        return { id, deleted: true };
+    }
+
+    // ── Material Categories ──
+    async findMaterialCategories() {
+        const settings = await this.readAdminSettings();
+        return settings.materialCategories;
+    }
+    async createMaterialCategory(data: any) {
+        const name = String(data?.name ?? '').trim();
+        if (!name) throw new BadRequestException('Category name is required');
+        const settings = await this.readAdminSettings();
+        const created = {
+            id: `mc-${Date.now()}`,
+            name,
+            description: String(data?.description ?? '').trim(),
+            color: String(data?.color ?? 'teal').trim() || 'teal',
+        };
+        settings.materialCategories = [...settings.materialCategories, created];
+        await this.writeAdminSettings(settings);
+        return created;
+    }
+    async updateMaterialCategory(id: string, data: any) {
+        const settings = await this.readAdminSettings();
+        settings.materialCategories = settings.materialCategories.map((item: any) =>
+            item.id === id ? { ...item, ...data, id } : item,
+        );
+        await this.writeAdminSettings(settings);
+        return settings.materialCategories.find((item: any) => item.id === id) ?? { id, ...data };
+    }
+    async deleteMaterialCategory(id: string) {
+        const settings = await this.readAdminSettings();
+        settings.materialCategories = settings.materialCategories.filter((item: any) => item.id !== id);
+        await this.writeAdminSettings(settings);
         return { id, deleted: true };
     }
 

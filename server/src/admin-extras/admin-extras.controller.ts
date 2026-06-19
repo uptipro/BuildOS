@@ -165,6 +165,24 @@ export class AdminExtrasController {
     @Roles('admin')
     updateGeneralSettings(@Body() body: any) { return this.svc.updateGeneralSettings(body); }
 
+    // ── Store Levels ──
+    @Get('store-levels')
+    getStoreLevels() { return this.svc.getStoreLevels(); }
+
+    @Put('store-levels')
+    updateStoreLevels(@Body() body: any) {
+        return this.svc.updateStoreLevels(Array.isArray(body) ? body : body?.storeLevels ?? []);
+    }
+
+    // ── Store Thresholds ──
+    @Get('store-thresholds')
+    getStoreThresholds() { return this.svc.getStoreThresholds(); }
+
+    @Put('store-thresholds')
+    updateStoreThresholds(@Body() body: any) {
+        return this.svc.updateStoreThresholds(Array.isArray(body) ? body : body?.storeThresholds ?? []);
+    }
+
     // ── Company Profile ──
     @Get('company-profile')
     @Roles('admin')
@@ -217,20 +235,29 @@ export class AdminExtrasController {
 
     // ── Units of Measurement ──
     @Get('units')
-    @Roles('admin')
     getUnits() { return this.svc.findUnits(); }
     
     @Post('units')
-    @Roles('admin')
     createUnit(@Body() body: any) { return this.svc.createUnit(body); }
     
     @Patch('units/:id')
-    @Roles('admin')
     updateUnit(@Param('id') id: string, @Body() body: any) { return this.svc.updateUnit(id, body); }
     
     @Delete('units/:id')
-    @Roles('admin')
     deleteUnit(@Param('id') id: string) { return this.svc.deleteUnit(id); }
+
+    // ── Material Categories ──
+    @Get('material-categories')
+    getMaterialCategories() { return this.svc.findMaterialCategories(); }
+
+    @Post('material-categories')
+    createMaterialCategory(@Body() body: any) { return this.svc.createMaterialCategory(body); }
+
+    @Patch('material-categories/:id')
+    updateMaterialCategory(@Param('id') id: string, @Body() body: any) { return this.svc.updateMaterialCategory(id, body); }
+
+    @Delete('material-categories/:id')
+    deleteMaterialCategory(@Param('id') id: string) { return this.svc.deleteMaterialCategory(id); }
 
     // ── API Keys ──
     @Get('api-keys')

@@ -12,7 +12,28 @@ import {
   Link2,
   FolderOpen,
 } from "lucide-react";
-import { getStores, Store as ApiStore } from "../../api/materials";
+import { toast } from "sonner";
+import {
+  getStores,
+  createStore,
+  updateStore,
+  deleteStore,
+  Store as ApiStore,
+} from "../../api/materials";
+import {
+  getStoreLevels,
+  updateStoreLevels,
+  getStoreThresholds,
+  updateStoreThresholds,
+  getUnits,
+  createUnit,
+  updateUnit,
+  deleteUnit,
+  getMaterialCategories,
+  createMaterialCategory,
+  updateMaterialCategory,
+  deleteMaterialCategory,
+} from "../../api/admin-extras";
 import { getReferenceData } from "../../api/reference-data";
 
 // ─── Store Level Configuration ────────────────────────────────────────────────
@@ -86,6 +107,25 @@ function StoreLevelsPanel() {
     null,
   );
   const [form, setForm] = useState({ name: "", description: "", maxCount: "" });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getStoreLevels()
+      .then((data) => {
+        if (Array.isArray(data) && data.length) {
+          setLevels(
+            data.map((l) => ({
+              level: l.level,
+              name: l.name,
+              description: l.description,
+              color: l.color || "teal",
+              maxCount: l.maxCount ?? undefined,
+            })),
+          );
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   function openEdit(l: StoreLevelConfig) {
     setEditingLevel(l);
@@ -95,21 +135,37 @@ function StoreLevelsPanel() {
       maxCount: l.maxCount != null ? String(l.maxCount) : "",
     });
   }
-  function save() {
+  async function save() {
     if (!form.name.trim() || !editingLevel) return;
-    setLevels((prev) =>
-      prev.map((l) =>
-        l.level === editingLevel.level
-          ? {
-              ...l,
-              name: form.name,
-              description: form.description,
-              maxCount: form.maxCount ? Number(form.maxCount) : undefined,
-            }
-          : l,
-      ),
+    const next = levels.map((l) =>
+      l.level === editingLevel.level
+        ? {
+            ...l,
+            name: form.name,
+            description: form.description,
+            maxCount: form.maxCount ? Number(form.maxCount) : undefined,
+          }
+        : l,
     );
-    setEditingLevel(null);
+    setSaving(true);
+    try {
+      await updateStoreLevels(
+        next.map((l) => ({
+          level: l.level,
+          name: l.name,
+          description: l.description,
+          color: l.color,
+          maxCount: l.maxCount ?? null,
+        })),
+      );
+      setLevels(next);
+      setEditingLevel(null);
+      toast.success(`Level ${editingLevel.level} updated`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update store level");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -246,9 +302,10 @@ function StoreLevelsPanel() {
               </button>
               <button
                 onClick={save}
-                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl"
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl disabled:opacity-60"
               >
-                Save Changes
+                {saving ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>
@@ -275,7 +332,12 @@ interface StoreRecord {
 
 
 function storeFromApi(s: ApiStore): StoreRecord {
-  const level: StoreLevel = s.type === "Project" ? 3 : 1;
+  const level: StoreLevel =
+    s.type === "Project"
+      ? 3
+      : s.type === "Regional"
+        ? 2
+        : 1;
   return {
     id: s.id,
     name: s.name,
@@ -286,6 +348,10 @@ function storeFromApi(s: ApiStore): StoreRecord {
   };
 }
 
+function levelToType(level: StoreLevel): string {
+  return level === 3 ? "Project" : level === 2 ? "Regional" : "Central";
+}
+
 function StoresPanel() {
   const [stores, setStores] = useState<StoreRecord[]>([]);
   const [projects, setProjects] = useState<string[]>([]);
@@ -294,6 +360,8 @@ function StoresPanel() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<StoreRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StoreRecord | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState<Omit<StoreRecord, "id">>({
     name: "",
     level: 1,
@@ -346,16 +414,55 @@ function StoresPanel() {
     });
     setShowModal(true);
   }
-  function save() {
+  async function save() {
     if (!form.name.trim()) return;
-    if (editing) {
-      setStores((prev) =>
-        prev.map((s) => (s.id === editing.id ? { ...s, ...form } : s)),
-      );
-    } else {
-      setStores((prev) => [...prev, { id: `s${Date.now()}`, ...form }]);
+    const payload = {
+      name: form.name.trim(),
+      type: levelToType(form.level),
+      location: form.location || undefined,
+      projectName: form.level === 3 ? form.linkedProject || undefined : undefined,
+    };
+    setSaving(true);
+    try {
+      if (editing) {
+        const updated = await updateStore(editing.id, payload);
+        setStores((prev) =>
+          prev.map((s) =>
+            s.id === editing.id
+              ? { ...s, ...form, id: updated.id, name: updated.name }
+              : s,
+          ),
+        );
+        toast.success("Store updated");
+      } else {
+        const created = await createStore(payload);
+        setStores((prev) => [
+          ...prev,
+          { ...storeFromApi(created), ...form, id: created.id },
+        ]);
+        toast.success("Store created");
+      }
+      setShowModal(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save store");
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteStore(deleteTarget.id);
+      setStores((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+      toast.success("Store deleted");
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete store");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const parentOptions = stores.filter((s) => s.level < form.level);
@@ -480,15 +587,17 @@ function StoresPanel() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                    <div className="flex items-center gap-1 transition-opacity justify-end">
                       <button
                         onClick={() => openEdit(s)}
+                        title="Edit store"
                         className="p-1.5 text-gray-400 hover:text-teal-600 rounded-lg hover:bg-teal-50"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDeleteTarget(s)}
+                        title="Delete store"
                         className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -640,9 +749,14 @@ function StoresPanel() {
               </button>
               <button
                 onClick={save}
-                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl"
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl disabled:opacity-60"
               >
-                {editing ? "Save Changes" : "Create Store"}
+                {saving
+                  ? "Saving…"
+                  : editing
+                    ? "Save Changes"
+                    : "Create Store"}
               </button>
             </div>
           </div>
@@ -667,15 +781,11 @@ function StoresPanel() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setStores((prev) =>
-                    prev.filter((s) => s.id !== deleteTarget.id),
-                  );
-                  setDeleteTarget(null);
-                }}
-                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl disabled:opacity-60"
               >
-                Delete
+                {deleting ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>
@@ -700,8 +810,10 @@ interface StoreThreshold {
 function StockThresholdsPanel() {
   const [thresholds, setThresholds] =
     useState<StoreThreshold[]>([]);
+  const [stores, setStores] = useState<ApiStore[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<StoreThreshold | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Omit<StoreThreshold, "id">>({
     storeName: "",
     storeType: "General",
@@ -709,6 +821,30 @@ function StockThresholdsPanel() {
     outOfStockQty: 0,
     unit: "%",
   });
+
+  useEffect(() => {
+    Promise.all([getStoreThresholds(), getStores()])
+      .then(([thresholdData, storeData]) => {
+        if (Array.isArray(thresholdData)) setThresholds(thresholdData);
+        setStores(storeData);
+      })
+      .catch(console.error);
+  }, []);
+
+  async function persist(next: StoreThreshold[], successMsg: string) {
+    setSaving(true);
+    try {
+      const saved = await updateStoreThresholds(next);
+      setThresholds(Array.isArray(saved) ? saved : next);
+      toast.success(successMsg);
+      return true;
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save store threshold");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function openAdd() {
     setEditing(null);
@@ -732,16 +868,24 @@ function StockThresholdsPanel() {
     });
     setShowModal(true);
   }
-  function save() {
+  async function save() {
     if (!form.storeName.trim()) return;
-    if (editing) {
-      setThresholds((prev) =>
-        prev.map((t) => (t.id === editing.id ? { ...t, ...form } : t)),
-      );
-    } else {
-      setThresholds((prev) => [...prev, { id: String(Date.now()), ...form }]);
-    }
-    setShowModal(false);
+    const next = editing
+      ? thresholds.map((t) =>
+          t.id === editing.id ? { ...t, ...form } : t,
+        )
+      : [...thresholds, { id: String(Date.now()), ...form }];
+    const ok = await persist(
+      next,
+      editing ? "Threshold updated" : "Threshold added",
+    );
+    if (ok) setShowModal(false);
+  }
+  async function remove(id: string) {
+    await persist(
+      thresholds.filter((x) => x.id !== id),
+      "Threshold deleted",
+    );
   }
 
   return (
@@ -823,19 +967,17 @@ function StockThresholdsPanel() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                  <div className="flex items-center gap-1 transition-opacity justify-end">
                     <button
                       onClick={() => openEdit(t)}
+                      title="Edit threshold"
                       className="p-1.5 text-gray-400 hover:text-teal-600 rounded-lg hover:bg-teal-50"
                     >
                       <Edit className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() =>
-                        setThresholds((prev) =>
-                          prev.filter((x) => x.id !== t.id),
-                        )
-                      }
+                      onClick={() => remove(t.id)}
+                      title="Delete threshold"
                       className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -867,14 +1009,34 @@ function StockThresholdsPanel() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">
                   Store Name<span className="text-red-500">*</span>
                 </label>
-                <input
+                <select
                   value={form.storeName}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, storeName: e.target.value }))
-                  }
-                  placeholder="e.g. Block D Project Store"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500"
-                />
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    const matched = stores.find((s) => s.name === name);
+                    setForm((p) => ({
+                      ...p,
+                      storeName: name,
+                      storeType:
+                        matched?.type === "Project" ? "Project" : p.storeType,
+                    }));
+                  }}
+                  disabled={stores.length === 0}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  {stores.length === 0 ? (
+                    <option value="">No stores available — create one first</option>
+                  ) : (
+                    <>
+                      <option value="">— Select a store —</option>
+                      {stores.map((s) => (
+                        <option key={s.id} value={s.name}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -965,9 +1127,10 @@ function StockThresholdsPanel() {
               </button>
               <button
                 onClick={save}
-                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl"
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl disabled:opacity-60"
               >
-                {editing ? "Save Changes" : "Add Store"}
+                {saving ? "Saving…" : editing ? "Save Changes" : "Add Store"}
               </button>
             </div>
           </div>
@@ -1000,6 +1163,23 @@ function UnitsOfMeasurementPanel() {
     category: "Custom",
   });
   const [deleteTarget, setDeleteTarget] = useState<Unit | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    getUnits()
+      .then((data) =>
+        setUnits(
+          (data ?? []).map((u) => ({
+            id: u.id,
+            name: u.name,
+            abbreviation: u.abbreviation,
+            category: u.category || "Custom",
+          })),
+        ),
+      )
+      .catch((err) => toast.error(err?.message || "Failed to load units"));
+  }, []);
 
   const filtered =
     catFilter === "All" ? units : units.filter((u) => u.category === catFilter);
@@ -1018,16 +1198,65 @@ function UnitsOfMeasurementPanel() {
     });
     setShowModal(true);
   }
-  function save() {
+  async function save() {
     if (!form.name.trim() || !form.abbreviation.trim()) return;
-    if (editing) {
-      setUnits((prev) =>
-        prev.map((u) => (u.id === editing.id ? { ...u, ...form } : u)),
-      );
-    } else {
-      setUnits((prev) => [...prev, { id: String(Date.now()), ...form }]);
+    setSaving(true);
+    try {
+      const payload = {
+        name: form.name.trim(),
+        abbreviation: form.abbreviation.trim(),
+        category: form.category,
+        baseUnit: form.abbreviation.trim(),
+        conversionFactor: 1,
+      };
+      if (editing) {
+        const updated = await updateUnit(editing.id, payload);
+        setUnits((prev) =>
+          prev.map((u) =>
+            u.id === editing.id
+              ? {
+                  id: updated.id,
+                  name: updated.name,
+                  abbreviation: updated.abbreviation,
+                  category: updated.category,
+                }
+              : u,
+          ),
+        );
+        toast.success("Unit updated");
+      } else {
+        const created = await createUnit(payload);
+        setUnits((prev) => [
+          ...prev,
+          {
+            id: created.id,
+            name: created.name,
+            abbreviation: created.abbreviation,
+            category: created.category,
+          },
+        ]);
+        toast.success("Unit added");
+      }
+      setShowModal(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save unit");
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
+  }
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteUnit(deleteTarget.id);
+      setUnits((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      toast.success("Unit deleted");
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete unit");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -1075,15 +1304,17 @@ function UnitsOfMeasurementPanel() {
                 </td>
                 <td className="px-4 py-3 text-gray-500">{u.category}</td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                  <div className="flex items-center gap-1 transition-opacity justify-end">
                     <button
                       onClick={() => openEdit(u)}
+                      title="Edit unit"
                       className="p-1.5 text-gray-400 hover:text-teal-600 rounded-lg hover:bg-teal-50"
                     >
                       <Edit className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => setDeleteTarget(u)}
+                      title="Delete unit"
                       className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1163,9 +1394,10 @@ function UnitsOfMeasurementPanel() {
               </button>
               <button
                 onClick={save}
-                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl"
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl disabled:opacity-60"
               >
-                {editing ? "Save Changes" : "Add Unit"}
+                {saving ? "Saving…" : editing ? "Save Changes" : "Add Unit"}
               </button>
             </div>
           </div>
@@ -1193,15 +1425,11 @@ function UnitsOfMeasurementPanel() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setUnits((prev) =>
-                    prev.filter((u) => u.id !== deleteTarget.id),
-                  );
-                  setDeleteTarget(null);
-                }}
-                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl disabled:opacity-60"
               >
-                Delete
+                {deleting ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>
@@ -1256,6 +1484,25 @@ function MaterialCategoriesPanel() {
     description: "",
     color: "teal",
   });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    getMaterialCategories()
+      .then((data) =>
+        setCategories(
+          (data ?? []).map((c) => ({
+            id: c.id,
+            name: c.name,
+            description: c.description || "",
+            color: c.color || "teal",
+          })),
+        ),
+      )
+      .catch((err) =>
+        toast.error(err?.message || "Failed to load categories"),
+      );
+  }, []);
 
   function openAdd() {
     setEditing(null);
@@ -1267,16 +1514,63 @@ function MaterialCategoriesPanel() {
     setForm({ name: c.name, description: c.description, color: c.color });
     setShowModal(true);
   }
-  function save() {
+  async function save() {
     if (!form.name.trim()) return;
-    if (editing) {
-      setCategories((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...c, ...form } : c)),
-      );
-    } else {
-      setCategories((prev) => [...prev, { id: String(Date.now()), ...form }]);
+    setSaving(true);
+    try {
+      const payload = {
+        name: form.name.trim(),
+        description: form.description.trim(),
+        color: form.color,
+      };
+      if (editing) {
+        const updated = await updateMaterialCategory(editing.id, payload);
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === editing.id
+              ? {
+                  id: updated.id,
+                  name: updated.name,
+                  description: updated.description || "",
+                  color: updated.color || "teal",
+                }
+              : c,
+          ),
+        );
+        toast.success("Category updated");
+      } else {
+        const created = await createMaterialCategory(payload);
+        setCategories((prev) => [
+          ...prev,
+          {
+            id: created.id,
+            name: created.name,
+            description: created.description || "",
+            color: created.color || "teal",
+          },
+        ]);
+        toast.success("Category added");
+      }
+      setShowModal(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save category");
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
+  }
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteMaterialCategory(deleteTarget.id);
+      setCategories((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+      toast.success("Category deleted");
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete category");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -1345,15 +1639,17 @@ function MaterialCategoriesPanel() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                    <div className="flex items-center gap-1 transition-opacity justify-end">
                       <button
                         onClick={() => openEdit(c)}
+                        title="Edit category"
                         className="p-1.5 text-gray-400 hover:text-teal-600 rounded-lg hover:bg-teal-50"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDeleteTarget(c)}
+                        title="Delete category"
                         className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1439,9 +1735,10 @@ function MaterialCategoriesPanel() {
               </button>
               <button
                 onClick={save}
-                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl"
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-teal-700 hover:bg-teal-800 text-white rounded-xl disabled:opacity-60"
               >
-                {editing ? "Save Changes" : "Add Category"}
+                {saving ? "Saving…" : editing ? "Save Changes" : "Add Category"}
               </button>
             </div>
           </div>
@@ -1466,15 +1763,11 @@ function MaterialCategoriesPanel() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setCategories((prev) =>
-                    prev.filter((c) => c.id !== deleteTarget.id),
-                  );
-                  setDeleteTarget(null);
-                }}
-                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl disabled:opacity-60"
               >
-                Delete
+                {deleting ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>
