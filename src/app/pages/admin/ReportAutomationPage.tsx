@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Clock, Mail, BarChart3, Trash2 } from "lucide-react";
 import { apiFetch } from "../../api/client";
+import { getReportTemplates } from "../../api/admin-extras";
 
 type Frequency = "Daily" | "Weekly" | "Monthly";
 type ReportModule =
@@ -11,8 +12,21 @@ type ReportModule =
   | "ESS"
   | "Storefront";
 
-// Reports available in the Report Builder
-const AVAILABLE_REPORTS: { name: string; module: ReportModule }[] = [];
+interface AvailableReport {
+  name: string;
+  module: ReportModule;
+}
+
+// Maps a Report Builder application key to an automation module bucket.
+function toReportModule(app: string): ReportModule {
+  const a = (app || "").toLowerCase();
+  if (a.includes("hr")) return "HR";
+  if (a.includes("procure")) return "Procurement";
+  if (a.includes("project") || a.includes("construction")) return "Projects";
+  if (a.includes("ess")) return "ESS";
+  if (a.includes("store")) return "Storefront";
+  return "Finance";
+}
 
 interface ReportSchedule {
   id: string;
@@ -45,6 +59,9 @@ const BLANK_FORM: Omit<ReportSchedule, "id" | "lastSent"> = {
 
 export function ReportAutomationPage() {
   const [schedules, setSchedules] = useState<ReportSchedule[]>([]);
+  const [availableReports, setAvailableReports] = useState<AvailableReport[]>(
+    [],
+  );
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ ...BLANK_FORM });
 
@@ -52,6 +69,22 @@ export function ReportAutomationPage() {
     apiFetch("/admin/report-schedules")
       .then(setSchedules)
       .catch(() => setSchedules([]));
+
+    getReportTemplates<{
+      name: string;
+      application?: string;
+      status?: string;
+    }>()
+      .then((templates) => {
+        const deployed = (templates || [])
+          .filter((t) => t.status === "deployed" && t.name)
+          .map((t) => ({
+            name: t.name,
+            module: toReportModule(t.application || ""),
+          }));
+        setAvailableReports(deployed);
+      })
+      .catch(() => setAvailableReports([]));
   }, []);
 
   function toggleEnabled(id: string) {
@@ -90,7 +123,12 @@ export function ReportAutomationPage() {
         </div>
         <button
           onClick={() => {
-            setForm({ ...BLANK_FORM });
+            const first = availableReports[0];
+            setForm({
+              ...BLANK_FORM,
+              name: first?.name ?? "",
+              module: first?.module ?? BLANK_FORM.module,
+            });
             setShowModal(true);
           }}
           className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm px-4 py-2 rounded-xl"
@@ -203,7 +241,7 @@ export function ReportAutomationPage() {
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-500"
                   value={form.name}
                   onChange={(e) => {
-                    const selected = AVAILABLE_REPORTS.find(
+                    const selected = availableReports.find(
                       (r) => r.name === e.target.value,
                     );
                     setForm({
@@ -212,12 +250,22 @@ export function ReportAutomationPage() {
                       module: selected?.module ?? form.module,
                     });
                   }}
+                  disabled={availableReports.length === 0}
                 >
-                  {AVAILABLE_REPORTS.map((r) => (
-                    <option key={r.name} value={r.name}>
-                      {r.name}
-                    </option>
-                  ))}
+                  {availableReports.length === 0 ? (
+                    <option value="">No deployed reports available</option>
+                  ) : (
+                    <>
+                      <option value="" disabled>
+                        Select a report…
+                      </option>
+                      {availableReports.map((r) => (
+                        <option key={r.name} value={r.name}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">

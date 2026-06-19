@@ -47,7 +47,11 @@ export function AuditLogsPage() {
             user:
               typeof log.user === "string"
                 ? log.user
-                : log.user?.name || log.userId || "System",
+                : log.user?.name ||
+                  log.user?.userId ||
+                  log.user?.email ||
+                  log.userId ||
+                  "System",
             action: normalizeAction(String(log.action || "Unknown")),
             module: String(
               log.module || log.resource || log.entity || "System",

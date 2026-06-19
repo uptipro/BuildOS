@@ -897,34 +897,6 @@ export function ReportBuilderPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                  Document Type
-                </label>
-                <select
-                  value={tplDocumentType}
-                  onChange={(e) =>
-                    setTplDocumentType(e.target.value as DocumentType)
-                  }
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {(
-                    [
-                      "Finance",
-                      "HR",
-                      "Procurement",
-                      "Construction",
-                      "Storefront",
-                      "ESS",
-                      "Admin",
-                    ] as DocumentType[]
-                  ).map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">
                   Description
                 </label>
                 <textarea

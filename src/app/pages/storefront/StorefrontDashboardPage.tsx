@@ -6,8 +6,35 @@ import {
   Package,
   CheckCircle2,
   Clock,
+  DollarSign,
 } from "lucide-react";
-import { getStores, getStockTransfers } from "../../api/materials";
+import {
+  getStores,
+  getStockTransfers,
+  getMaterials,
+  getMaterialRequests,
+  type Material,
+  type StockTransfer,
+  type MaterialRequest,
+} from "../../api/materials";
+
+// Compact Naira formatter to match the storefront design (e.g. ₦142.8M).
+function formatStockValue(n: number): string {
+  if (!Number.isFinite(n)) return "₦0";
+  if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `₦${(n / 1_000).toFixed(0)}K`;
+  return `₦${n.toLocaleString()}`;
+}
+
+function isThisMonth(dateStr?: string): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return false;
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+  );
+}
 
 type StoreDisplay = {
   id: string;
@@ -45,46 +72,60 @@ const STORE_COLORS = [
 export function StorefrontDashboardPage() {
   const [stores, setStores] = useState<StoreDisplay[]>([]);
   const [recentTransfers, setRecentTransfers] = useState<TransferDisplay[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [transfers, setTransfers] = useState<StockTransfer[]>([]);
+  const [requests, setRequests] = useState<MaterialRequest[]>([]);
 
   const stats = useMemo(
     () => [
       {
-        label: "Total Stores",
-        value: stores.length,
-        sub: "Active stores",
-        icon: Store,
-        color: "bg-teal-100 text-teal-700",
-      },
-      {
-        label: "Total Items",
-        value: stores.reduce((sum, s) => sum + s.items, 0),
+        label: "Total Stock Value",
+        value: formatStockValue(
+          materials.reduce(
+            (sum, m) => sum + (m.totalQty || 0) * (m.unitCost || 0),
+            0,
+          ),
+        ),
         sub: "Across all stores",
+        icon: DollarSign,
+        color: "bg-teal-50 text-teal-600",
+      },
+      {
+        label: "Available Materials",
+        value: materials.filter((m) => (m.availableQty || 0) > 0).length,
+        sub: "Unique SKUs in stock",
         icon: Package,
-        color: "bg-blue-100 text-blue-700",
+        color: "bg-blue-50 text-blue-600",
       },
       {
-        label: "Low Stock",
-        value: stores.reduce((sum, s) => sum + s.lowStock, 0),
-        sub: "Items below threshold",
-        icon: AlertTriangle,
-        color: "bg-red-100 text-red-700",
-      },
-      {
-        label: "Pending Transfers",
-        value: recentTransfers.filter((t) => t.status !== "Completed").length,
-        sub: "Awaiting approval",
+        label: "Pending Requests",
+        value: requests.filter((r) => r.status === "Pending").length,
+        sub: "Awaiting processing",
         icon: Clock,
-        color: "bg-yellow-100 text-yellow-700",
+        color: "bg-yellow-50 text-yellow-600",
       },
       {
-        label: "Completed Transfers",
-        value: recentTransfers.filter((t) => t.status === "Completed").length,
-        sub: "This period",
+        label: "Approved Transfers",
+        value: transfers.filter(
+          (t) =>
+            (t.status === "Approved" || t.status === "Completed") &&
+            isThisMonth(t.completedAt || t.requestDate),
+        ).length,
+        sub: "This month",
         icon: CheckCircle2,
-        color: "bg-green-100 text-green-700",
+        color: "bg-green-50 text-green-600",
+      },
+      {
+        label: "Low Stock Alerts",
+        value: materials.filter(
+          (m) => (m.availableQty || 0) <= (m.reorderLevel || 0),
+        ).length,
+        sub: "Below reorder level",
+        icon: AlertTriangle,
+        color: "bg-red-50 text-red-500",
       },
     ],
-    [stores, recentTransfers],
+    [materials, requests, transfers],
   );
 
   useEffect(() => {
@@ -95,7 +136,9 @@ export function StorefrontDashboardPage() {
             id: s.id,
             name: s.name,
             items: s.storeItems?.length ?? 0,
-            lowStock: 0,
+            lowStock: (s.storeItems ?? []).filter(
+              (it) => (it.qty || 0) <= (it.reorderLevel || 0),
+            ).length,
             lastActivity: "—",
             icon: STORE_ICONS[i] ?? FolderOpen,
             color: STORE_COLORS[i] ?? "bg-gray-600",
@@ -104,7 +147,8 @@ export function StorefrontDashboardPage() {
       )
       .catch(console.error);
     getStockTransfers()
-      .then((data) =>
+      .then((data) => {
+        setTransfers(data);
         setRecentTransfers(
           data.slice(0, 5).map((t) => ({
             id: t.reference,
@@ -114,8 +158,14 @@ export function StorefrontDashboardPage() {
             date: t.requestDate,
             status: t.status,
           })),
-        ),
-      )
+        );
+      })
+      .catch(console.error);
+    getMaterials()
+      .then(setMaterials)
+      .catch(console.error);
+    getMaterialRequests()
+      .then(setRequests)
       .catch(console.error);
   }, []);
 

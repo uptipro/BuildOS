@@ -7,8 +7,6 @@ export class AuditLogMiddleware implements NestMiddleware {
   constructor(private auditLogService: AuditLogService) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
-    const user = req.user as any;
-    const userId = user?.id || null;
     const ipAddress = req.ip || req.connection.remoteAddress;
     const auditLogService = this.auditLogService;
 
@@ -18,6 +16,13 @@ export class AuditLogMiddleware implements NestMiddleware {
     res.send = function (data: any) {
       // Only log non-GET requests
       if (req.method !== 'GET') {
+        // Resolve the acting user at response time: authentication guards run
+        // after this middleware is set up, so req.user is only populated by the
+        // time the response is actually sent. The JWT payload stores the user id
+        // in `sub`.
+        const user = req.user as any;
+        const userId = user?.sub || user?.id || null;
+
         // Extract entity type and action from the request path
         const pathParts = req.path.split('/').filter((p) => p);
         const entity = pathParts[pathParts.length - 1] || 'unknown';
