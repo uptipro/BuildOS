@@ -10,10 +10,8 @@ import {
   Tags,
   Layers,
   Sun,
-  Truck,
   Building2,
   Users,
-  Package,
   UserCog,
   ArrowRight,
   ChevronDown,
@@ -27,6 +25,7 @@ import type {
   ScheduleLevelConfig,
   WeatherConfig,
   ProjectRole,
+  ProjectTypeSetting,
 } from "./types";
 import { ALL_PERMISSIONS } from "./types";
 import {
@@ -114,7 +113,7 @@ type SectionId =
   | "project-roles";
 
 export function SettingsPage() {
-  const { roles, addRole, updateRole, deleteRole, isDefaultRole } = useRoles();
+  const { roles, addRole, updateRole, deleteRole } = useRoles();
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDesc, setNewRoleDesc] = useState("");
@@ -137,7 +136,8 @@ export function SettingsPage() {
   const [weatherConfig, setWeatherConfig] =
     useState<WeatherConfig[]>(defaultWeatherConfig);
   const [newWeather, setNewWeather] = useState("");
-  const [projectTypes, setProjectTypes] = useState(defaultProjectTypes);
+  const [projectTypes, setProjectTypes] =
+    useState<ProjectTypeSetting[]>(defaultProjectTypes);
   const [newSector, setNewSector] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [newDescriptor, setNewDescriptor] = useState("");
@@ -401,7 +401,7 @@ export function SettingsPage() {
   }
 
   const PERMISSION_GROUPS = ALL_PERMISSIONS.reduce<
-    Record<string, typeof ALL_PERMISSIONS>
+    Record<string, (typeof ALL_PERMISSIONS)[number][]>
   >(
     (acc, p) => {
       const g = p.group;
@@ -409,7 +409,7 @@ export function SettingsPage() {
       acc[g].push(p);
       return acc;
     },
-    {} as Record<string, typeof ALL_PERMISSIONS>,
+    {} as Record<string, (typeof ALL_PERMISSIONS)[number][]>,
   );
 
   return (

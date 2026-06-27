@@ -1,10 +1,12 @@
-import { Injectable, UnauthorizedException, ForbiddenException, ConflictException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { Resend } from 'resend';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailQueueService } from '../queue/mail-queue.service';
+import { RedisService } from '../redis/redis.service';
+import { RedisKeys } from '../redis/redis.constants';
 import type { User } from '@prisma/client';
 
 @Injectable()
@@ -16,6 +18,8 @@ export class AuthService {
         private prisma: PrismaService,
         private jwtService: JwtService,
         private config: ConfigService,
+        private mailQueue: MailQueueService,
+        private redis: RedisService,
     ) { }
 
     private parseDurationToMs(value: string): number {
@@ -52,6 +56,34 @@ export class AuthService {
 
     private getJwtSecret(): string {
         return this.config.get<string>('JWT_SECRET') || 'buildos_jwt_secret_change_in_production';
+    }
+
+    private getRevocationTtlSeconds(): number {
+        try {
+            return Math.ceil(this.parseDurationToMs(this.getRefreshTokenTtl()) / 1000);
+        } catch {
+            return 3600;
+        }
+    }
+
+    /**
+     * Mark every access token issued to a user before "now" as revoked. Backed by
+     * Redis and enforced by the auth guard; a no-op when Redis is not configured.
+     */
+    private async setRevocation(userId: string): Promise<void> {
+        if (!this.redis.isEnabled) return;
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        await this.redis.setRaw(
+            RedisKeys.userRevokedAt(userId),
+            String(nowSeconds),
+            this.getRevocationTtlSeconds(),
+        );
+    }
+
+    /** Clear any standing revocation marker so a freshly issued session is valid. */
+    private async clearRevocation(userId: string): Promise<void> {
+        if (!this.redis.isEnabled) return;
+        await this.redis.del(RedisKeys.userRevokedAt(userId));
     }
 
     private isValidEmail(email: string): boolean {
@@ -113,21 +145,12 @@ export class AuthService {
     }
 
     private async sendPasswordResetEmail(email: string, name: string, resetLink: string): Promise<void> {
-        const resendApiKey = this.config.get<string>('RESEND_API_KEY');
-        const from = this.config.get<string>('EMAIL_FROM') || this.config.get<string>('INVITE_FROM_EMAIL');
-
-        if (!resendApiKey || !from) {
-            throw new BadRequestException('Password reset email is not configured: set RESEND_API_KEY and EMAIL_FROM (or INVITE_FROM_EMAIL)');
-        }
-
-        const resend = new Resend(resendApiKey);
         const safeName = String(name || '').trim() || 'there';
         const escapedName = this.escapeHtml(safeName);
         const escapedResetLink = this.escapeHtml(resetLink);
 
-        const result = await resend.emails.send({
-            from,
-            to: [email],
+        await this.mailQueue.enqueueEmail({
+            to: email,
             subject: 'Reset your BuildOS password',
             text: `Hi ${safeName},\n\nUse this link to reset your BuildOS password: ${resetLink}\n\nThis link expires in 30 minutes. If you did not request this, you can ignore this email.`,
             html: `
@@ -162,12 +185,7 @@ export class AuthService {
             `,
         });
 
-        if ((result as { error?: unknown }).error) {
-            this.logger.error(`Password reset email failed for ${email}`);
-            throw new InternalServerErrorException('Unable to send password reset email at this time');
-        }
-
-        this.logger.log(`Password reset email accepted for delivery to ${email}`);
+        this.logger.log(`Password reset email queued for delivery to ${email}`);
     }
 
     private getPrivilegedAdminEmail(): string {
@@ -269,8 +287,21 @@ export class AuthService {
         );
     }
 
-    private async issueTokenPair(user: { id: string; email: string; role: string }) {
-        const payload = { sub: user.id, email: user.email, role: user.role };
+    private async issueTokenPair(user: { id: string; email: string; role: string; assignedApps?: string[] }) {
+        // Embed the user's assigned apps in the token so module-level access can be
+        // enforced by the auth guard without an extra DB read per request. Resolve
+        // from the database when the caller did not supply it (e.g. token refresh),
+        // which also keeps refreshed tokens in sync with the latest app assignments.
+        let assignedApps = Array.isArray(user.assignedApps) ? user.assignedApps : null;
+        if (!assignedApps) {
+            const dbUser = await this.prisma.user.findUnique({
+                where: { id: user.id },
+                select: { assignedApps: true },
+            });
+            assignedApps = dbUser?.assignedApps ?? [];
+        }
+
+        const payload = { sub: user.id, email: user.email, role: user.role, assignedApps };
         const accessTtl = this.getAccessTokenTtl();
         const refreshTtl = this.getRefreshTokenTtl();
 
@@ -294,11 +325,38 @@ export class AuthService {
             },
         });
 
+        await this.clearRevocation(user.id);
+
         return {
             access_token,
             refresh_token,
             access_expires_in: accessTtl,
             refresh_expires_in: refreshTtl,
+        };
+    }
+
+    /**
+     * Build the public user payload returned on auth responses. Includes the
+     * linked `employeeId` (resolved by email) so the frontend can submit
+     * employee-scoped records (leave, claims, expenses) without an extra call.
+     */
+    private async buildUserResponse(user: {
+        id: string;
+        email: string;
+        name: string;
+        role: string;
+        assignedApps: string[];
+    }) {
+        const employee = await this.prisma.employee
+            .findUnique({ where: { email: user.email }, select: { id: true } })
+            .catch(() => null);
+        return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            assignedApps: user.assignedApps,
+            employeeId: employee?.id ?? null,
         };
     }
 
@@ -334,13 +392,7 @@ export class AuthService {
         const tokenPair = await this.issueTokenPair({ id: user.id, email: user.email, role: user.role });
         return {
             ...tokenPair,
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                assignedApps: user.assignedApps,
-            },
+            user: await this.buildUserResponse(user),
         };
     }
 
@@ -362,13 +414,7 @@ export class AuthService {
         const tokenPair = await this.issueTokenPair({ id: user.id, email: user.email, role: user.role });
         return {
             ...tokenPair,
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                assignedApps: user.assignedApps,
-            },
+            user: await this.buildUserResponse(user),
         };
     }
 
@@ -433,13 +479,7 @@ export class AuthService {
         const tokenPair = await this.issueTokenPair({ id: updated.id, email: updated.email, role: updated.role });
         return {
             ...tokenPair,
-            user: {
-                id: updated.id,
-                email: updated.email,
-                name: updated.name,
-                role: updated.role,
-                assignedApps: updated.assignedApps,
-            },
+            user: await this.buildUserResponse(updated),
         };
     }
 
@@ -476,13 +516,7 @@ export class AuthService {
         const tokenPair = await this.issueTokenPair({ id: user.id, email: user.email, role: user.role });
         return {
             ...tokenPair,
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                assignedApps: user.assignedApps,
-            },
+            user: await this.buildUserResponse(user),
         };
     }
 
@@ -494,6 +528,9 @@ export class AuthService {
                 refreshTokenExpiresAt: null,
             },
         });
+
+        // Revoke outstanding access tokens for this user (logout / forced sign-out).
+        await this.setRevocation(userId);
     }
 
     async forgotPassword(email: string) {
@@ -569,6 +606,9 @@ export class AuthService {
         });
 
         await this.addPasswordHistoryEntry(user.id, user.password);
+
+        // Invalidate every existing session after a password reset.
+        await this.setRevocation(user.id);
 
         return { success: true, message: 'Password has been reset successfully' };
     }

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+const FINANCE_CONFIG_KEY = 'finance-config';
+const SCHEDULED_POSTINGS_KEY = 'finance-scheduled-postings';
+const PAYMENT_METHODS_KEY = 'finance-payment-methods';
+
 @Injectable()
 export class FinanceExtrasService {
     constructor(private prisma: PrismaService) { }
@@ -130,14 +134,48 @@ export class FinanceExtrasService {
         return this.prisma.taxConfig.delete({ where: { id } });
     }
 
-    // ── Scheduled Postings Stub Methods ──
-    createScheduledPosting(data: any) {
-        return { id: `sp-${Date.now()}`, ...data };
+    // ── Scheduled Postings ──
+    private async readSetting<T>(key: string, fallback: T): Promise<T> {
+        const row = await this.prisma.systemSetting.findUnique({ where: { key } });
+        return (row?.value as T) ?? fallback;
+    }
+    private async writeSetting(key: string, value: unknown): Promise<void> {
+        const clean = JSON.parse(JSON.stringify(value ?? null));
+        await this.prisma.systemSetting.upsert({
+            where: { key },
+            create: { key, value: clean },
+            update: { value: clean },
+        });
     }
 
-    // ── Payment Methods Stub Methods ──
-    togglePaymentMethod(id: string) {
-        return { id, enabled: true };
+    findScheduledPostings() {
+        return this.readSetting<any[]>(SCHEDULED_POSTINGS_KEY, []);
+    }
+    async createScheduledPosting(data: any) {
+        const postings = await this.findScheduledPostings();
+        const created = { id: `sp-${Date.now()}`, ...data };
+        postings.unshift(created);
+        await this.writeSetting(SCHEDULED_POSTINGS_KEY, postings);
+        return created;
+    }
+    async deleteScheduledPosting(id: string) {
+        const postings = await this.findScheduledPostings();
+        await this.writeSetting(
+            SCHEDULED_POSTINGS_KEY,
+            postings.filter((p: any) => p.id !== id),
+        );
+        return { id, deleted: true };
+    }
+
+    // ── Payment Methods ──
+    findPaymentMethods() {
+        return this.readSetting<Record<string, boolean>>(PAYMENT_METHODS_KEY, {});
+    }
+    async togglePaymentMethod(id: string) {
+        const methods = await this.findPaymentMethods();
+        methods[id] = !methods[id];
+        await this.writeSetting(PAYMENT_METHODS_KEY, methods);
+        return { id, enabled: methods[id] };
     }
 
     // ── Report Templates ──
@@ -170,8 +208,14 @@ export class FinanceExtrasService {
         };
     }
 
-    // ── Config Stub Methods ──
-    saveConfig(data: any) {
-        return { saved: true, ...data };
+    // ── Config ──
+    getConfig() {
+        return this.readSetting<Record<string, unknown>>(FINANCE_CONFIG_KEY, {});
+    }
+    async saveConfig(data: any) {
+        const current = await this.getConfig();
+        const merged = { ...current, ...(data ?? {}) };
+        await this.writeSetting(FINANCE_CONFIG_KEY, merged);
+        return { saved: true, ...merged };
     }
 }

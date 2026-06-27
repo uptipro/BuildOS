@@ -5,12 +5,7 @@ import {
   Search,
   MapPin,
   Calendar,
-  Users,
-  DollarSign,
   ChevronDown,
-  MoreHorizontal,
-  Eye,
-  Edit,
   Trash2,
   Filter,
   FolderKanban,
@@ -18,10 +13,8 @@ import {
   Clock,
   XCircle,
   ArrowUpDown,
-  Building2,
 } from "lucide-react";
 import {
-  projects as mockProjects,
   fmtCurrency,
   fmtDate,
   ragColor,
@@ -33,6 +26,7 @@ import {
 import type { Project, ContractType } from "./types";
 import { useResources } from "../../contexts/ResourceContext";
 import { fetchConstructionProjects } from "../../api/projects";
+import { setProjectsCache } from "./projectStore";
 
 type ProjectStatus = Project["status"];
 
@@ -104,21 +98,21 @@ export function ProjectsListPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(DEFAULT_FORM);
-  const [projectList, setProjectList] = useState<Project[]>(mockProjects);
+  const [projectList, setProjectList] = useState<Project[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  // Load projects from the backend, falling back to mock data if the API is
-  // unavailable or returns no projects.
+  // Load projects from the backend. Shows a clean empty state until the user
+  // creates projects.
   useEffect(() => {
     let active = true;
     fetchConstructionProjects()
       .then((apiProjects) => {
-        if (active && apiProjects.length > 0) {
-          setProjectList(apiProjects as Project[]);
-        }
+        if (!active) return;
+        setProjectList(apiProjects as Project[]);
+        setProjectsCache(apiProjects as Project[]);
       })
       .catch(() => {
-        /* keep mock data on failure */
+        /* leave the list empty on failure */
       });
     return () => {
       active = false;
@@ -482,6 +476,7 @@ export function ProjectsListPage() {
                   location: form.location,
                   client: form.client,
                   projectManager: form.projectManager,
+                  mainContractor: "",
                   contractType: form.contractType,
                   plannedStartDate: form.plannedStartDate,
                   plannedEndDate: form.plannedEndDate,

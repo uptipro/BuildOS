@@ -67,14 +67,22 @@ export class FinanceExtrasController {
     createTaxConfig(@Body() body: any) { return this.svc.createTaxConfig(body); }
     @Put('tax-configs/:id')
     updateTaxConfig(@Param('id') id: string, @Body() body: any) { return this.svc.updateTaxConfig(id, body); }
+    @Patch('tax-configs/:id')
+    patchTaxConfig(@Param('id') id: string, @Body() body: any) { return this.svc.updateTaxConfig(id, body); }
     @Delete('tax-configs/:id')
     deleteTaxConfig(@Param('id') id: string) { return this.svc.deleteTaxConfig(id); }
 
     // ── Scheduled Postings ──
+    @Get('scheduled-postings')
+    getScheduledPostings() { return this.svc.findScheduledPostings(); }
     @Post('scheduled-postings')
     createScheduledPosting(@Body() body: any) { return this.svc.createScheduledPosting(body); }
+    @Delete('scheduled-postings/:id')
+    deleteScheduledPosting(@Param('id') id: string) { return this.svc.deleteScheduledPosting(id); }
 
     // ── Payment Methods ──
+    @Get('payment-methods')
+    getPaymentMethods() { return this.svc.findPaymentMethods(); }
     @Patch('payment-methods/:id/toggle')
     togglePaymentMethod(@Param('id') id: string) { return this.svc.togglePaymentMethod(id); }
 
@@ -83,6 +91,8 @@ export class FinanceExtrasController {
     getReportTemplates() { return this.svc.getReportTemplates(); }
 
     // ── Config ──
+    @Get('config')
+    getConfig() { return this.svc.getConfig(); }
     @Post('config')
     saveConfig(@Body() body: any) { return this.svc.saveConfig(body); }
 }

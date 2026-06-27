@@ -1,12 +1,12 @@
-import { Outlet, useLocation } from "react-router";
+import { Outlet } from "react-router";
 import { AppHeader } from "../../components/AppHeader";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import type { SidebarSection } from "../../components/CollapsibleSidebar";
 import {
   LayoutDashboard, FolderKanban, Users, BarChart3, Settings,
   Calendar, FileText, Truck, AlertTriangle, GitCompare,
-  Clock, CheckSquare, ShieldCheck, FileSpreadsheet, Briefcase,
-  DollarSign, MessageSquare, Wallet, ClipboardList, ListTodo,
+  Clock, CheckSquare, ShieldCheck, Briefcase,
+  MessageSquare, Wallet, ClipboardList, ListTodo,
 } from "lucide-react";
 
 export function ConstructionLayout() {

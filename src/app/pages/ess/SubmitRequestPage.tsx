@@ -1,68 +1,36 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { fetchProjects } from "../../api/projects";
-import { createPurchaseRequest } from "../../api/procurement-requests";
-import { createActivityRecord } from "../../api/activity-history";
-import { getIssueTypes, getChangeCategories } from "../../api/admin-extras";
-import { useAuthUser } from "../../utils/useAuthUser";
-import { useHRConfig } from "../../stores/hrConfigStore";
-
-/**
- * Persists an ESS request to the backend as a purchase request so it survives
- * page refreshes, then surfaces a toast and forwards the server reference id.
- */
-async function persistRequest(
-  payload: Parameters<typeof createPurchaseRequest>[0],
-  onSuccess: (id: string) => void,
-  successMsg: string,
-) {
-  try {
-    const created = await createPurchaseRequest({
-      status: "pending",
-      ...payload,
-    });
-    toast.success(successMsg);
-    let authId: string | undefined;
-    let authName = payload.requestedBy;
-    try {
-      const u = JSON.parse(localStorage.getItem("auth_user") || "{}");
-      authId = u?.id || undefined;
-      authName = u?.name || authName;
-    } catch {
-      /* ignore */
-    }
-    void createActivityRecord({
-      userId: authId,
-      userName: authName || "ESS User",
-      action: "Submitted request",
-      module: "ess",
-      description: `${payload.title}${payload.projectName ? ` · ${payload.projectName}` : ""}`,
-    }).catch(() => {
-      /* non-blocking */
-    });
-    onSuccess(created.prRef || created.id);
-  } catch {
-    toast.error("Failed to submit request. Please try again.");
-  }
-}
 import {
-  Package,
-  DollarSign,
   CheckCircle,
+  AlertTriangle,
+  Send,
+  ChevronDown,
   ArrowLeft,
   Upload,
-  X,
-  ChevronDown,
-  Calendar,
   FileText,
-  AlertTriangle,
-  Edit2,
-  Wrench,
+  X,
   Search,
-  Send,
+  Package,
+  DollarSign,
+  Calendar,
   PlusCircle,
+  Wrench,
+  Edit2,
 } from "lucide-react";
+import { IssueForm } from "../../components/IssueForm";
+import { ChangeRequestForm } from "../../components/ChangeRequestForm";
+import { AttachmentsSection } from "../../components/AttachmentsSection";
+import { ApprovalPipeline } from "../../components/ApprovalPipeline";
+import {
+  getWorkflows,
+  getPipelineForRequest,
+  type PipelineStep,
+} from "../../store/workflowConfig";
+import { useHRConfig } from "../../store/hrConfig";
+import { createExpense } from "../../api/expenses";
+import { createLeaveRequest } from "../../api/leave-requests";
+import { createMaterialRequest } from "../../api/materials";
+import { useAuthUser } from "../../utils/useAuthUser";
 
 // Shared material catalogue with stock status — mirrors Storefront inventory
 type StockLevel = "in_stock" | "low_stock" | "out_of_stock";
@@ -205,76 +173,15 @@ function MaterialCombobox({
 }
 
 type Tab = "material" | "finance" | "leave" | "issue" | "change";
+
 // ─── Shared Attachments Component ────────────────────────────────────────────
-function AttachmentsSection({
-  files,
-  onChange,
-}: {
-  files: File[];
-  onChange: (f: File[]) => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
+// (moved to src/app/components/AttachmentsSection.tsx)
 
-  function handleAdd(e: React.ChangeEvent<HTMLInputElement>) {
-    const newFiles = Array.from(e.target.files ?? []);
-    if (newFiles.length) onChange([...files, ...newFiles]);
-    if (ref.current) ref.current.value = "";
-  }
-
-  function remove(i: number) {
-    onChange(files.filter((_, j) => j !== i));
-  }
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Attachments{" "}
-        <span className="text-gray-400 font-normal">(optional)</span>
-      </label>
-      <input
-        ref={ref}
-        type="file"
-        multiple
-        accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
-        className="hidden"
-        onChange={handleAdd}
-      />
-      <button
-        type="button"
-        onClick={() => ref.current?.click()}
-        className="w-full flex items-center gap-2 border border-dashed border-gray-300 rounded-md px-4 py-3 hover:bg-gray-50 transition-colors justify-center"
-      >
-        <Upload className="w-4 h-4 text-gray-400" />
-        <span className="text-sm text-gray-500">
-          Click to attach files (PDF, images, Word, Excel)
-        </span>
-      </button>
-      {files.length > 0 && (
-        <ul className="mt-2 space-y-1">
-          {files.map((f, i) => (
-            <li
-              key={i}
-              className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded px-3 py-1.5"
-            >
-              <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-              <span className="flex-1 truncate">{f.name}</span>
-              <span className="text-gray-400 flex-shrink-0">
-                {(f.size / 1024).toFixed(0)} KB
-              </span>
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
+const projects = [
+  "Downtown Office Complex",
+  "Riverside Residential",
+  "Harbour Bridge Expansion",
+];
 
 const priorities = [
   { value: "low", label: "Low", color: "text-green-700 bg-green-50" },
@@ -287,10 +194,12 @@ function SuccessCard({
   title,
   id,
   onBack,
+  pipelineSteps,
 }: {
   title: string;
   id: string;
   onBack: () => void;
+  pipelineSteps: PipelineStep[];
 }) {
   const navigate = useNavigate();
   return (
@@ -306,6 +215,15 @@ function SuccessCard({
       <p className="text-sm text-gray-500 mt-1">
         Your request has been submitted and is pending approval.
       </p>
+      {pipelineSteps.length > 0 && (
+        <div className="mt-6">
+          <ApprovalPipeline
+            steps={pipelineSteps}
+            accentClass="bg-teal-600 border-teal-600"
+            accentTextClass="text-teal-700"
+          />
+        </div>
+      )}
       <div className="flex gap-3 mt-8 justify-center">
         <button
           onClick={onBack}
@@ -330,7 +248,6 @@ function MaterialCreationForm({
 }: {
   onSuccess: (id: string) => void;
 }) {
-  const { name } = useAuthUser();
   const [formState, setFormState] = useState({
     materialName: "",
     description: "",
@@ -356,24 +273,7 @@ function MaterialCreationForm({
       setErrors(errs);
       return;
     }
-    void persistRequest(
-      {
-        title: `Material Creation — ${formState.materialName}`,
-        priority: "Normal",
-        requestedBy: name || "ESS User",
-        items: [
-          {
-            name: formState.materialName,
-            quantity: Number(formState.estimatedQty) || undefined,
-            unit: formState.unit,
-            description: formState.description,
-          },
-        ],
-        notes: formState.notes,
-      },
-      onSuccess,
-      "Material creation request submitted",
-    );
+    onSuccess("MCR-" + String(Math.floor(1000 + Math.random() * 8999)));
   }
 
   function field(name: keyof typeof formState, value: string) {
@@ -533,14 +433,8 @@ function MaterialCreationForm({
 }
 
 // ─── Material Form (Normal & Out-of-Stock path) ───────────────────────────────
-function MaterialForm({
-  onSuccess,
-  projects,
-}: {
-  onSuccess: (id: string) => void;
-  projects: string[];
-}) {
-  const { name } = useAuthUser();
+function MaterialForm({ onSuccess }: { onSuccess: (id: string) => void }) {
+  const authUser = useAuthUser();
   const [requestKind, setRequestKind] = useState<"material" | "service">(
     "material",
   );
@@ -563,6 +457,7 @@ function MaterialForm({
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   function validate() {
     const e: Record<string, string> = {};
@@ -579,47 +474,45 @@ function MaterialForm({
     return e;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
-    void persistRequest(
-      {
-        title:
-          requestKind === "material"
-            ? `Material Request — ${formState.material}`
-            : `Service Request — ${formState.serviceType}`,
+    if (requestKind === "service") {
+      // No backend target for service requests yet — keep optimistic ack.
+      onSuccess("SVC-" + String(Math.floor(1000 + Math.random() * 8999)));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const created: any = await createMaterialRequest({
+        reference: "MR-" + Date.now(),
+        materialName: formState.material,
+        unit: formState.unit,
+        qty: Number(formState.quantity),
+        storeName: "General Store",
         projectName: formState.project,
         priority:
-          formState.priority.charAt(0).toUpperCase() +
-          formState.priority.slice(1),
-        requestedBy: name || "ESS User",
-        items:
-          requestKind === "material"
-            ? [
-                {
-                  name: formState.material,
-                  quantity: Number(formState.quantity) || undefined,
-                  unit: formState.unit,
-                  neededDate: formState.neededDate,
-                },
-              ]
-            : [
-                {
-                  name: formState.serviceType,
-                  provider: formState.serviceProvider,
-                  estimatedCost: formState.estimatedCost,
-                  serviceDate: formState.serviceDate,
-                },
-              ],
-        notes: formState.comments,
-      },
-      onSuccess,
-      "Request submitted successfully",
-    );
+          formState.priority === "high"
+            ? "High"
+            : formState.priority === "low"
+              ? "Low"
+              : "Normal",
+        purpose: formState.comments,
+        requestedBy: authUser.name || authUser.email || "Employee",
+      });
+      onSuccess(created?.id ?? "MR");
+    } catch (err) {
+      alert(
+        (err as Error)?.message ||
+          "Failed to submit material request. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function field(name: keyof typeof formState, value: string) {
@@ -882,9 +775,10 @@ function MaterialForm({
 
               <button
                 type="submit"
-                className="w-full bg-teal-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
+                disabled={submitting}
+                className="w-full bg-teal-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors disabled:opacity-60"
               >
-                Submit Material Request
+                {submitting ? "Submitting…" : "Submit Material Request"}
               </button>
             </>
           )}
@@ -1029,14 +923,8 @@ function MaterialForm({
   );
 }
 
-function ExpenseForm({
-  onSuccess,
-  projects,
-}: {
-  onSuccess: (id: string) => void;
-  projects: string[];
-}) {
-  const { name } = useAuthUser();
+function ExpenseForm({ onSuccess }: { onSuccess: (id: string) => void }) {
+  const authUser = useAuthUser();
   const [formState, setFormState] = useState({
     project: "",
     amount: "",
@@ -1044,6 +932,7 @@ function ExpenseForm({
     receiptName: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function validate() {
@@ -1055,25 +944,31 @@ function ExpenseForm({
     return e;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
-    void persistRequest(
-      {
-        title: `Expense Request — ${formState.description}`,
-        projectName: formState.project,
-        priority: "Normal",
-        requestedBy: name || "ESS User",
-        items: [{ name: formState.description, amount: formState.amount }],
-        notes: formState.description,
-      },
-      onSuccess,
-      "Expense request submitted",
-    );
+    setSubmitting(true);
+    try {
+      const created: any = await createExpense({
+        category: "General",
+        amount: Number(formState.amount),
+        description: formState.description,
+        createdBy: authUser.name || authUser.email || "Employee",
+        date: new Date().toISOString(),
+      });
+      onSuccess(created?.id ?? "EXP");
+    } catch (err) {
+      alert(
+        (err as Error)?.message ||
+          "Failed to submit expense. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function field(name: keyof typeof formState, value: string) {
@@ -1203,9 +1098,10 @@ function ExpenseForm({
 
       <button
         type="submit"
-        className="w-full bg-teal-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
+        disabled={submitting}
+        className="w-full bg-teal-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors disabled:opacity-60"
       >
-        Submit Expense Request
+        {submitting ? "Submitting…" : "Submit Expense Request"}
       </button>
     </form>
   );
@@ -1229,7 +1125,7 @@ function countWorkingDays(start: string, end: string): number {
 }
 
 function LeaveForm({ onSuccess }: { onSuccess: (id: string) => void }) {
-  const { name } = useAuthUser();
+  const authUser = useAuthUser();
   const { leaveTypes } = useHRConfig();
   const [leaveType, setLeaveType] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -1237,12 +1133,14 @@ function LeaveForm({ onSuccess }: { onSuccess: (id: string) => void }) {
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const workingDays = countWorkingDays(startDate, endDate);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs: Record<string, string> = {};
+    if (!leaveType) errs.leaveType = "Required";
     if (!startDate) errs.startDate = "Required";
     if (!endDate) errs.endDate = "Required";
     if (startDate && endDate && endDate < startDate)
@@ -1251,24 +1149,37 @@ function LeaveForm({ onSuccess }: { onSuccess: (id: string) => void }) {
       setErrors(errs);
       return;
     }
-    void persistRequest(
-      {
-        title: `Leave Request — ${leaveType || "Leave"}`,
-        priority: "Normal",
-        requestedBy: name || "ESS User",
-        items: [
-          {
-            name: leaveType || "Leave",
-            startDate,
-            endDate,
-            days: workingDays,
-          },
-        ],
-        notes,
-      },
-      onSuccess,
-      "Leave request submitted",
-    );
+    const leaveTypeId = leaveTypes.find((t) => t.name === leaveType)?.id ?? "";
+    if (!leaveTypeId) {
+      setErrors({ leaveType: "Select a valid leave type" });
+      return;
+    }
+    if (!authUser.employeeId) {
+      alert(
+        "Your account isn't linked to an employee profile, so leave can't be submitted.",
+      );
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const created: any = await createLeaveRequest({
+        refId: "LR-" + Date.now(),
+        leaveTypeId,
+        employeeId: authUser.employeeId,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+        days: workingDays,
+        reason: notes,
+      });
+      onSuccess(created?.data?.id ?? created?.id ?? "LEAVE");
+    } catch (err) {
+      alert(
+        (err as Error)?.message ||
+          "Failed to submit leave request. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -1376,340 +1287,20 @@ function LeaveForm({ onSuccess }: { onSuccess: (id: string) => void }) {
 
       <button
         type="submit"
-        className="w-full bg-teal-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
+        disabled={submitting}
+        className="w-full bg-teal-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors disabled:opacity-60"
       >
-        Submit Leave Request
+        {submitting ? "Submitting…" : "Submit Leave Request"}
       </button>
     </form>
   );
 }
 
-function IssueForm({ onSuccess }: { onSuccess: (id: string) => void }) {
-  const { name } = useAuthUser();
-  const [issueTypeOptions, setIssueTypeOptions] = useState<string[]>([]);
-  const [form, setForm] = useState({
-    type: "",
-    title: "",
-    description: "",
-    priority: "medium",
-    anonymous: false,
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [attachments, setAttachments] = useState<File[]>([]);
+// ─── Change Request Form ────────────────────────────────────────────────────
+// (moved to src/app/components/ChangeRequestForm.tsx)
 
-  useEffect(() => {
-    getIssueTypes()
-      .then((types) =>
-        setIssueTypeOptions(
-          types
-            .filter((t) => t.active !== false)
-            .map((t) => t.name)
-            .filter(Boolean),
-        ),
-      )
-      .catch((err) => console.error("Failed to load issue types:", err));
-  }, []);
-
-  function validate() {
-    const e: Record<string, string> = {};
-    if (!form.type) e.type = "Select an issue type";
-    if (!form.title.trim()) e.title = "Title is required";
-    if (!form.description.trim()) e.description = "Description is required";
-    return e;
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-    void persistRequest(
-      {
-        title: form.title,
-        priority:
-          form.priority.charAt(0).toUpperCase() + form.priority.slice(1),
-        requestedBy: form.anonymous ? "Anonymous" : name || "ESS User",
-        items: [{ name: form.type }],
-        notes: form.description,
-      },
-      onSuccess,
-      "Issue reported successfully",
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Issue Type <span className="text-red-500">*</span>
-        </label>
-        <select
-          value={form.type}
-          onChange={(e) => {
-            setForm((f) => ({ ...f, type: e.target.value }));
-            if (errors.type)
-              setErrors((p) => {
-                const x = { ...p };
-                delete x.type;
-                return x;
-              });
-          }}
-          className={`w-full border rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${errors.type ? "border-red-400" : "border-gray-300"}`}
-        >
-          <option value="">Select type…</option>
-          {issueTypeOptions.length === 0 && (
-            <option value="" disabled>
-              No issue types configured
-            </option>
-          )}
-          {issueTypeOptions.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        {errors.type && (
-          <p className="text-xs text-red-500 mt-1">{errors.type}</p>
-        )}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Title <span className="text-red-500">*</span>
-        </label>
-        <input
-          value={form.title}
-          onChange={(e) => {
-            setForm((f) => ({ ...f, title: e.target.value }));
-            if (errors.title)
-              setErrors((p) => {
-                const x = { ...p };
-                delete x.title;
-                return x;
-              });
-          }}
-          placeholder="Brief title for the issue"
-          className={`w-full border rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${errors.title ? "border-red-400" : "border-gray-300"}`}
-        />
-        {errors.title && (
-          <p className="text-xs text-red-500 mt-1">{errors.title}</p>
-        )}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          value={form.description}
-          onChange={(e) => {
-            setForm((f) => ({ ...f, description: e.target.value }));
-            if (errors.description)
-              setErrors((p) => {
-                const x = { ...p };
-                delete x.description;
-                return x;
-              });
-          }}
-          rows={4}
-          placeholder="Describe the issue in detail…"
-          className={`w-full border rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none ${errors.description ? "border-red-400" : "border-gray-300"}`}
-        />
-        {errors.description && (
-          <p className="text-xs text-red-500 mt-1">{errors.description}</p>
-        )}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Priority
-        </label>
-        <div className="grid grid-cols-4 gap-2">
-          {priorities.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, priority: p.value }))}
-              className={`py-2 rounded-md text-sm font-medium border transition-colors ${form.priority === p.value ? p.color + " border-transparent" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="flex items-center gap-2.5">
-        <input
-          type="checkbox"
-          id="anonymous"
-          checked={form.anonymous}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, anonymous: e.target.checked }))
-          }
-          className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-        />
-        <label htmlFor="anonymous" className="text-sm text-gray-700">
-          Submit anonymously
-        </label>
-      </div>
-      <AttachmentsSection files={attachments} onChange={setAttachments} />
-      <button
-        type="submit"
-        className="w-full bg-teal-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
-      >
-        Report Issue
-      </button>
-    </form>
-  );
-}
-
-function ChangeRequestForm({ onSuccess }: { onSuccess: (id: string) => void }) {
-  const { name } = useAuthUser();
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
-  const [form, setForm] = useState({
-    category: "",
-    currentValue: "",
-    requestedChange: "",
-    notes: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [attachments, setAttachments] = useState<File[]>([]);
-
-  useEffect(() => {
-    getChangeCategories()
-      .then((cats) =>
-        setCategoryOptions(cats.map((c) => c.name).filter(Boolean)),
-      )
-      .catch((err) => console.error("Failed to load change categories:", err));
-  }, []);
-
-  function validate() {
-    const e: Record<string, string> = {};
-    if (!form.category) e.category = "Select a change category";
-    if (!form.requestedChange.trim())
-      e.requestedChange = "Describe the requested change";
-    return e;
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-    void persistRequest(
-      {
-        title: `Change Request — ${form.category}`,
-        priority: "Normal",
-        requestedBy: name || "ESS User",
-        items: [
-          {
-            name: form.category,
-            currentValue: form.currentValue,
-            requestedChange: form.requestedChange,
-          },
-        ],
-        notes: form.notes,
-      },
-      onSuccess,
-      "Change request submitted",
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Change Category <span className="text-red-500">*</span>
-        </label>
-        <select
-          value={form.category}
-          onChange={(e) => {
-            setForm((f) => ({ ...f, category: e.target.value }));
-            if (errors.category)
-              setErrors((p) => {
-                const x = { ...p };
-                delete x.category;
-                return x;
-              });
-          }}
-          className={`w-full border rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${errors.category ? "border-red-400" : "border-gray-300"}`}
-        >
-          <option value="">Select category…</option>
-          {categoryOptions.length === 0 && (
-            <option value="" disabled>
-              No categories configured
-            </option>
-          )}
-          {categoryOptions.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        {errors.category && (
-          <p className="text-xs text-red-500 mt-1">{errors.category}</p>
-        )}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Current Value{" "}
-          <span className="text-gray-400 font-normal">(optional)</span>
-        </label>
-        <input
-          value={form.currentValue}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, currentValue: e.target.value }))
-          }
-          placeholder="e.g. current bank account number"
-          className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Requested Change <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          value={form.requestedChange}
-          onChange={(e) => {
-            setForm((f) => ({ ...f, requestedChange: e.target.value }));
-            if (errors.requestedChange)
-              setErrors((p) => {
-                const x = { ...p };
-                delete x.requestedChange;
-                return x;
-              });
-          }}
-          rows={3}
-          placeholder="Describe the change you are requesting…"
-          className={`w-full border rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none ${errors.requestedChange ? "border-red-400" : "border-gray-300"}`}
-        />
-        {errors.requestedChange && (
-          <p className="text-xs text-red-500 mt-1">{errors.requestedChange}</p>
-        )}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Supporting Notes{" "}
-          <span className="text-gray-400 font-normal">(optional)</span>
-        </label>
-        <textarea
-          value={form.notes}
-          onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          rows={2}
-          placeholder="Any additional context for HR…"
-          className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
-        />
-      </div>
-      <AttachmentsSection files={attachments} onChange={setAttachments} />
-      <button
-        type="submit"
-        className="w-full bg-teal-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
-      >
-        Submit Change Request
-      </button>
-    </form>
-  );
-}
+// ─── Issue Form ─────────────────────────────────────────────────────────────
+// (moved to src/app/components/IssueForm.tsx)
 
 export function SubmitRequestPage() {
   const navigate = useNavigate();
@@ -1718,19 +1309,27 @@ export function SubmitRequestPage() {
     type: string;
     id: string;
   } | null>(null);
-  const [projects, setProjects] = useState<string[]>([]);
-  useEffect(() => {
-    fetchProjects()
-      .then((ps) => setProjects(ps.map((p) => p.name)))
-      .catch(() => {});
-  }, []);
 
   if (successState) {
+    const tabKey =
+      successState.type === "Material Request"
+        ? "material"
+        : successState.type === "Finance Request"
+          ? "finance"
+          : successState.type === "Leave Request"
+            ? "leave"
+            : successState.type === "Issue Reported"
+              ? "issue"
+              : successState.type === "Change Request"
+                ? "change"
+                : "material";
+    const pipelineSteps = getPipelineForRequest(tabKey, getWorkflows());
     return (
       <SuccessCard
         title={`${successState.type} Submitted`}
         id={successState.id}
         onBack={() => setSuccessState(null)}
+        pipelineSteps={pipelineSteps}
       />
     );
   }
@@ -1820,7 +1419,6 @@ export function SubmitRequestPage() {
                 onSuccess={(id) =>
                   setSuccessState({ type: "Material Request", id })
                 }
-                projects={projects}
               />
             )}
             {tab === "finance" && (
@@ -1828,7 +1426,6 @@ export function SubmitRequestPage() {
                 onSuccess={(id) =>
                   setSuccessState({ type: "Finance Request", id })
                 }
-                projects={projects}
               />
             )}
             {tab === "leave" && (
@@ -1930,12 +1527,12 @@ export function SubmitRequestPage() {
                 Change Request
               </h3>
               <p className="text-xs text-gray-700 leading-relaxed">
-                Request updates to your personal information, bank details, or
-                emergency contacts on record.
+                Submit a formal change request with full impact assessment —
+                scope, schedule, cost, quality, and stakeholder implications.
               </p>
               <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
-                <li>Changes are reviewed by HR before applying</li>
-                <li>Bank detail changes require additional verification</li>
+                <li>All change requests are reviewed before approval</li>
+                <li>Include impact assessment for faster processing</li>
                 <li>Upload supporting documents where needed</li>
               </ul>
             </div>

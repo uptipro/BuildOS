@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+const HR_SETUP_KEY = 'hr-setup';
+
 @Injectable()
 export class HrExtrasService {
     constructor(private prisma: PrismaService) { }
-
-    private bankNames: any[] = [];
-    private salaryBands: any[] = [];
 
     // ── Attendance ──
     findAllAttendance(employeeId?: string, date?: string) {
@@ -159,63 +158,108 @@ export class HrExtrasService {
 
     // ── Bank Names ──
     findBankNames() {
-        return this.bankNames;
+        return this.prisma.bankName.findMany({ orderBy: { name: 'asc' } });
     }
     createBankName(data: any) {
-        const created = {
-            id: `b-${Date.now()}`,
-            name: String(data?.name ?? ''),
-            code: String(data?.code ?? ''),
-            country: String(data?.country ?? 'Nigeria'),
-            swiftCode: String(data?.swiftCode ?? ''),
-            active: data?.active !== false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        };
-        this.bankNames.push(created);
-        return created;
+        return this.prisma.bankName.create({
+            data: {
+                name: String(data?.name ?? '').trim(),
+                code: String(data?.code ?? '').trim(),
+                country: String(data?.country ?? 'Nigeria').trim() || 'Nigeria',
+                swiftCode: String(data?.swiftCode ?? '').trim(),
+                active: data?.active !== false,
+            },
+        });
     }
     updateBankName(id: string, data: any) {
-        this.bankNames = this.bankNames.map((bank) =>
-            bank.id === id
-                ? {
-                    ...bank,
-                    ...data,
-                    updatedAt: new Date(),
-                }
-                : bank,
-        );
-        return this.bankNames.find((bank) => bank.id === id) ?? { id, ...data };
+        const patch: Record<string, unknown> = {};
+        if (data?.name !== undefined) patch.name = String(data.name).trim();
+        if (data?.code !== undefined) patch.code = String(data.code).trim();
+        if (data?.country !== undefined) patch.country = String(data.country).trim();
+        if (data?.swiftCode !== undefined) patch.swiftCode = String(data.swiftCode).trim();
+        if (data?.active !== undefined) patch.active = !!data.active;
+        return this.prisma.bankName.update({ where: { id }, data: patch });
     }
-    toggleBankNameActive(id: string) {
-        this.bankNames = this.bankNames.map((bank) =>
-            bank.id === id
-                ? {
-                    ...bank,
-                    active: !bank.active,
-                    updatedAt: new Date(),
-                }
-                : bank,
-        );
-        return this.bankNames.find((bank) => bank.id === id) ?? { id, active: false };
+    async toggleBankNameActive(id: string) {
+        const bank = await this.prisma.bankName.findUniqueOrThrow({ where: { id } });
+        return this.prisma.bankName.update({ where: { id }, data: { active: !bank.active } });
     }
-    deleteBankName(id: string) {
-        this.bankNames = this.bankNames.filter((bank) => bank.id !== id);
+    async deleteBankName(id: string) {
+        await this.prisma.bankName.delete({ where: { id } });
         return { id, deleted: true };
     }
 
     // ── Salary Bands ──
     findSalaryBands() {
-        return this.salaryBands;
+        return this.prisma.salaryBand.findMany({ orderBy: { gradeLevel: 'asc' } });
+    }
+    createSalaryBand(data: any) {
+        return this.prisma.salaryBand.create({
+            data: {
+                name: String(data?.name ?? '').trim(),
+                gradeLevel: String(data?.gradeLevel ?? '').trim(),
+                minSalary: Number(data?.minSalary ?? 0),
+                maxSalary: Number(data?.maxSalary ?? 0),
+                midSalary: data?.midSalary != null ? Number(data.midSalary) : null,
+                description: data?.description != null ? String(data.description) : null,
+            },
+        });
+    }
+    updateSalaryBand(id: string, data: any) {
+        const patch: Record<string, unknown> = {};
+        if (data?.name !== undefined) patch.name = String(data.name).trim();
+        if (data?.gradeLevel !== undefined) patch.gradeLevel = String(data.gradeLevel).trim();
+        if (data?.minSalary !== undefined) patch.minSalary = Number(data.minSalary);
+        if (data?.maxSalary !== undefined) patch.maxSalary = Number(data.maxSalary);
+        if (data?.midSalary !== undefined) patch.midSalary = data.midSalary != null ? Number(data.midSalary) : null;
+        if (data?.description !== undefined) patch.description = data.description != null ? String(data.description) : null;
+        return this.prisma.salaryBand.update({ where: { id }, data: patch });
+    }
+    async deleteSalaryBand(id: string) {
+        await this.prisma.salaryBand.delete({ where: { id } });
+        return { id, deleted: true };
     }
 
-    // ── Holidays Stub Methods ──
+    // ── Holidays ──
+    async findHolidays() {
+        const rows = await this.prisma.holiday.findMany({ orderBy: { date: 'asc' } });
+        return rows.map((h) => ({
+            id: h.id,
+            name: h.name,
+            date: h.date.toISOString().slice(0, 10),
+            recurring: h.isRecurring,
+            type: h.type,
+            affectedDepts: h.affectedDepts,
+        }));
+    }
     createHoliday(data: any) {
-        return { id: `h-${Date.now()}`, ...data };
+        return this.prisma.holiday.create({
+            data: {
+                name: String(data?.name ?? '').trim(),
+                date: new Date(data?.date),
+                type: String(data?.type ?? 'public'),
+                isRecurring: data?.isRecurring ?? data?.recurring ?? false,
+                affectedDepts: Array.isArray(data?.affectedDepts) ? data.affectedDepts : [],
+            },
+        });
+    }
+    async deleteHoliday(id: string) {
+        await this.prisma.holiday.delete({ where: { id } });
+        return { id, deleted: true };
     }
 
-    // ── HR Setup Stub Methods ──
-    saveHrSetup(data: any) {
+    // ── HR Setup ──
+    async getHrSetup() {
+        const row = await this.prisma.systemSetting.findUnique({ where: { key: HR_SETUP_KEY } });
+        return (row?.value as Record<string, unknown>) ?? {};
+    }
+    async saveHrSetup(data: any) {
+        const value = JSON.parse(JSON.stringify(data ?? {}));
+        await this.prisma.systemSetting.upsert({
+            where: { key: HR_SETUP_KEY },
+            create: { key: HR_SETUP_KEY, value },
+            update: { value },
+        });
         return { saved: true, ...data };
     }
 }

@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Param,
   Body,
@@ -95,6 +96,13 @@ export class LeaveRequestsController {
   async update(@Param('id') id: string, @Body() updateDto: any) {
     const request = await this.leaveRequestsService.update(id, updateDto);
     return { success: true, data: request, message: 'Leave request updated' };
+  }
+
+  // PATCH alias so the frontend's PATCH update reaches the same handler.
+  @Patch(':id')
+  @Roles('admin', 'employee')
+  async patch(@Param('id') id: string, @Body() updateDto: any) {
+    return this.update(id, updateDto);
   }
 
   @Delete(':id')

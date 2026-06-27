@@ -8,9 +8,6 @@ import {
   Beaker,
   XCircle,
   Plus,
-  Eye,
-  User,
-  Calendar,
 } from "lucide-react";
 import { getProjectById, qualityNCRs, fmtDate } from "./mockData";
 import type { QualityNCR } from "./types";
@@ -394,7 +391,7 @@ export function QualityPage() {
   const project = id ? getProjectById(id) : undefined;
   const [activeTab, setActiveTab] = useState<QATab>("compliance");
   const [showNCRModal, setShowNCRModal] = useState(false);
-  const [ncrVersion, setNcrVersion] = useState(0);
+  const [ncrVersion] = useState(0);
 
   const [ncrData, setNcrData] = useState<QualityNCR[]>(() =>
     qualityNCRs.filter((n) => n.projectId === id),

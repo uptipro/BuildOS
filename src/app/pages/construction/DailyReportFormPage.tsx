@@ -35,7 +35,6 @@ import type {
   DailyExpense,
   CommunicationLogEntry,
   Weather,
-  ProjectRole,
 } from "./types";
 import { useRoles } from "../../contexts/RolesContext";
 

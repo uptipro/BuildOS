@@ -17,6 +17,8 @@ export class ProcurementRequestsController {
     createPR(@Body() body: any) { return this.svc.createPR(body); }
     @Put('purchase-requests/:id')
     updatePR(@Param('id') id: string, @Body() body: any) { return this.svc.updatePR(id, body); }
+    @Patch('purchase-requests/:id')
+    patchPR(@Param('id') id: string, @Body() body: any) { return this.svc.updatePR(id, body); }
     @Delete('purchase-requests/:id')
     deletePR(@Param('id') id: string) { return this.svc.deletePR(id); }
 
@@ -29,6 +31,8 @@ export class ProcurementRequestsController {
     createInvoice(@Body() body: any) { return this.svc.createInvoice(body); }
     @Put('purchase-invoices/:id')
     updateInvoice(@Param('id') id: string, @Body() body: any) { return this.svc.updateInvoice(id, body); }
+    @Patch('purchase-invoices/:id')
+    patchInvoice(@Param('id') id: string, @Body() body: any) { return this.svc.updateInvoice(id, body); }
     @Delete('purchase-invoices/:id')
     deleteInvoice(@Param('id') id: string) { return this.svc.deleteInvoice(id); }
 

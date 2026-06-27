@@ -4,8 +4,6 @@ import {
   DollarSign,
   Plus,
   Search,
-  Filter,
-  X,
   Landmark,
   Wallet,
   Building2,

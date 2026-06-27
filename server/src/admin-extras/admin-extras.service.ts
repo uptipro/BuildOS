@@ -3,21 +3,20 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Resend } from 'resend';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailQueueService } from '../queue/mail-queue.service';
+import type { EmailPayload } from '../email/email.service';
+
+const ADMIN_SETTINGS_KEY = 'admin-settings';
 
 @Injectable()
 export class AdminExtrasService {
     private readonly logger = new Logger(AdminExtrasService.name);
-    private emailConfigs: any[] = [];
 
-    private apiKeys: any[] = [];
-    private webhooks: any[] = [];
-    private emailTemplates: any[] = [];
-    private notificationRules: any[] = [];
-    private reportSchedules: any[] = [];
-
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private mailQueue: MailQueueService,
+    ) { }
 
     private settingsFilePath = path.join(process.cwd(), 'data', 'admin-settings.json');
 
@@ -362,56 +361,71 @@ export class AdminExtrasService {
         });
     }
 
-    private async readAdminSettings() {
+    private async loadRawAdminSettings(): Promise<Record<string, any>> {
+        // Primary store: database (survives restarts/redeploys, shared across instances).
+        try {
+            const row = await this.prisma.systemSetting.findUnique({ where: { key: ADMIN_SETTINGS_KEY } });
+            if (row && row.value && typeof row.value === 'object' && !Array.isArray(row.value)) {
+                return row.value as Record<string, any>;
+            }
+        } catch (error) {
+            this.logger.warn(`Could not read admin settings from database: ${(error as Error).message}`);
+        }
+
+        // Legacy fallback: migrate the on-disk JSON file into the database once.
         try {
             const raw = await fs.readFile(this.settingsFilePath, 'utf-8');
             const parsed = JSON.parse(raw);
-            return {
-                issueTypes: Array.isArray(parsed.issueTypes) ? parsed.issueTypes : [],
-                changeCategories: Array.isArray(parsed.changeCategories) ? parsed.changeCategories : [],
-                processCatalog: Array.isArray(parsed.processCatalog) ? parsed.processCatalog : [],
-                processWorkflows: Array.isArray(parsed.processWorkflows) ? parsed.processWorkflows : [],
-                emailConfigs: Array.isArray(parsed.emailConfigs) ? parsed.emailConfigs : [],
-                apiKeys: Array.isArray(parsed.apiKeys) ? parsed.apiKeys : [],
-                webhooks: Array.isArray(parsed.webhooks) ? parsed.webhooks : [],
-                reportTemplates: Array.isArray(parsed.reportTemplates) ? parsed.reportTemplates : [],
-                generalSettings: parsed?.generalSettings && typeof parsed.generalSettings === 'object'
-                    ? { ...this.defaultGeneralSettings, ...parsed.generalSettings }
-                    : { ...this.defaultGeneralSettings },
-                currencyOptions: Array.isArray(parsed?.currencyOptions)
-                    ? parsed.currencyOptions
-                        .map((item: any) => ({
-                            label: String(item?.label ?? '').trim(),
-                            value: String(item?.value ?? '').trim().toUpperCase(),
-                            meta: String(item?.meta ?? '').trim(),
-                        }))
-                        .filter((item: any) => item.label && item.value)
-                    : [...this.defaultCurrencyOptions],
-                storeLevels: Array.isArray(parsed?.storeLevels) && parsed.storeLevels.length
-                    ? parsed.storeLevels
-                    : [...this.defaultStoreLevels],
-                storeThresholds: Array.isArray(parsed?.storeThresholds) ? parsed.storeThresholds : [],
-                units: Array.isArray(parsed?.units) ? parsed.units : [],
-                materialCategories: Array.isArray(parsed?.materialCategories) ? parsed.materialCategories : [],
-            };
+            if (parsed && typeof parsed === 'object') {
+                await this.prisma.systemSetting
+                    .upsert({
+                        where: { key: ADMIN_SETTINGS_KEY },
+                        create: { key: ADMIN_SETTINGS_KEY, value: parsed },
+                        update: {},
+                    })
+                    .catch(() => undefined);
+                return parsed;
+            }
         } catch {
-            return {
-                issueTypes: [],
-                changeCategories: [],
-                processCatalog: [],
-                processWorkflows: [],
-                emailConfigs: [],
-                apiKeys: [],
-                webhooks: [],
-                reportTemplates: [],
-                generalSettings: { ...this.defaultGeneralSettings },
-                currencyOptions: [...this.defaultCurrencyOptions],
-                storeLevels: [...this.defaultStoreLevels],
-                storeThresholds: [],
-                units: [],
-                materialCategories: [],
-            };
+            // No legacy file — fall through to defaults.
         }
+
+        return {};
+    }
+
+    private async readAdminSettings() {
+        const parsed = await this.loadRawAdminSettings();
+        return {
+            issueTypes: Array.isArray(parsed.issueTypes) ? parsed.issueTypes : [],
+            changeCategories: Array.isArray(parsed.changeCategories) ? parsed.changeCategories : [],
+            processCatalog: Array.isArray(parsed.processCatalog) ? parsed.processCatalog : [],
+            processWorkflows: Array.isArray(parsed.processWorkflows) ? parsed.processWorkflows : [],
+            emailConfigs: Array.isArray(parsed.emailConfigs) ? parsed.emailConfigs : [],
+            apiKeys: Array.isArray(parsed.apiKeys) ? parsed.apiKeys : [],
+            webhooks: Array.isArray(parsed.webhooks) ? parsed.webhooks : [],
+            reportTemplates: Array.isArray(parsed.reportTemplates) ? parsed.reportTemplates : [],
+            emailTemplates: Array.isArray(parsed.emailTemplates) ? parsed.emailTemplates : [],
+            notificationRules: Array.isArray(parsed.notificationRules) ? parsed.notificationRules : [],
+            reportSchedules: Array.isArray(parsed.reportSchedules) ? parsed.reportSchedules : [],
+            generalSettings: parsed?.generalSettings && typeof parsed.generalSettings === 'object'
+                ? { ...this.defaultGeneralSettings, ...parsed.generalSettings }
+                : { ...this.defaultGeneralSettings },
+            currencyOptions: Array.isArray(parsed?.currencyOptions)
+                ? parsed.currencyOptions
+                    .map((item: any) => ({
+                        label: String(item?.label ?? '').trim(),
+                        value: String(item?.value ?? '').trim().toUpperCase(),
+                        meta: String(item?.meta ?? '').trim(),
+                    }))
+                    .filter((item: any) => item.label && item.value)
+                : [...this.defaultCurrencyOptions],
+            storeLevels: Array.isArray(parsed?.storeLevels) && parsed.storeLevels.length
+                ? parsed.storeLevels
+                : [...this.defaultStoreLevels],
+            storeThresholds: Array.isArray(parsed?.storeThresholds) ? parsed.storeThresholds : [],
+            units: Array.isArray(parsed?.units) ? parsed.units : [],
+            materialCategories: Array.isArray(parsed?.materialCategories) ? parsed.materialCategories : [],
+        };
     }
 
     private async writeAdminSettings(data: {
@@ -429,9 +443,18 @@ export class AdminExtrasService {
         storeThresholds?: any[];
         units?: any[];
         materialCategories?: any[];
+        emailTemplates?: any[];
+        notificationRules?: any[];
+        reportSchedules?: any[];
     }) {
-        await fs.mkdir(path.dirname(this.settingsFilePath), { recursive: true });
-        await fs.writeFile(this.settingsFilePath, JSON.stringify(data, null, 2), 'utf-8');
+        // Persist as a single JSON document in the database. JSON round-trip
+        // strips any `undefined` values which Prisma's Json input rejects.
+        const value = JSON.parse(JSON.stringify(data));
+        await this.prisma.systemSetting.upsert({
+            where: { key: ADMIN_SETTINGS_KEY },
+            create: { key: ADMIN_SETTINGS_KEY, value },
+            update: { value },
+        });
     }
 
     async getStoreLevels() {
@@ -714,19 +737,6 @@ export class AdminExtrasService {
     }
 
     private async sendInviteEmail(email: string, name: string, activationLink: string): Promise<void> {
-        const emailProvider = String(process.env.EMAIL_PROVIDER || 'resend').toLowerCase();
-        if (emailProvider !== 'resend') {
-            throw new BadRequestException(`Invite email provider '${emailProvider}' is not supported by this service`);
-        }
-
-        const resendApiKey = process.env.RESEND_API_KEY;
-        // Keep backward compatibility while aligning with BuyOps variable naming.
-        const from = process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL;
-
-        if (!resendApiKey || !from) {
-            throw new BadRequestException('Invite email is not configured: set RESEND_API_KEY and EMAIL_FROM (or INVITE_FROM_EMAIL)');
-        }
-
                 const companyProfile = await this.prisma.companyProfile.findUnique({ where: { id: 'singleton' } }).catch(() => null);
                 const companyName = String(companyProfile?.name ?? '').trim() || 'BuildOS';
                 const logo = this.resolveInviteLogo(companyProfile?.logoUrl);
@@ -734,10 +744,8 @@ export class AdminExtrasService {
                 const escapedCompanyName = this.escapeHtml(companyName);
                 const escapedActivationLink = this.escapeHtml(activationLink);
 
-        const resend = new Resend(resendApiKey);
-                const payload: any = {
-            from,
-            to: [email],
+                const payload: EmailPayload = {
+                    to: email,
                     subject: `Activate your ${companyName} account`,
                     text: `Hi ${name},\n\nYou have been invited to ${companyName}. Activate your account here: ${activationLink}\n\nThis link expires in 7 days.`,
                     html: `
@@ -785,10 +793,7 @@ export class AdminExtrasService {
             payload.attachments = logo.attachments;
         }
 
-        const result = await resend.emails.send(payload);
-        if ((result as { error?: unknown }).error) {
-            throw new BadRequestException('Invite email provider rejected the message');
-        }
+        await this.mailQueue.enqueueEmail(payload);
     }
 
     private resolveInviteLogo(
@@ -2027,54 +2032,69 @@ export class AdminExtrasService {
     }
 
     // ── Email Templates ──
-    findEmailTemplates() {
-        return this.emailTemplates;
+    async findEmailTemplates() {
+        const settings = await this.readAdminSettings();
+        return settings.emailTemplates;
     }
 
-    createEmailTemplate(data: any) {
-        const created = { id: `et-${Date.now()}`, ...data, createdAt: new Date(), updatedAt: new Date() };
-        this.emailTemplates.unshift(created);
+    async createEmailTemplate(data: any) {
+        const settings = await this.readAdminSettings();
+        const created = { id: `et-${Date.now()}`, ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        settings.emailTemplates.unshift(created);
+        await this.writeAdminSettings(settings);
         return created;
     }
 
-    updateEmailTemplate(id: string, data: any) {
-        this.emailTemplates = this.emailTemplates.map((item) =>
-            item.id === id ? { ...item, ...data, id, updatedAt: new Date() } : item,
+    async updateEmailTemplate(id: string, data: any) {
+        const settings = await this.readAdminSettings();
+        settings.emailTemplates = settings.emailTemplates.map((item: any) =>
+            item.id === id ? { ...item, ...data, id, updatedAt: new Date().toISOString() } : item,
         );
-        return this.emailTemplates.find((item) => item.id === id) ?? { id, ...data };
+        await this.writeAdminSettings(settings);
+        return settings.emailTemplates.find((item: any) => item.id === id) ?? { id, ...data };
     }
 
-    deleteEmailTemplate(id: string) {
-        this.emailTemplates = this.emailTemplates.filter((item) => item.id !== id);
+    async deleteEmailTemplate(id: string) {
+        const settings = await this.readAdminSettings();
+        settings.emailTemplates = settings.emailTemplates.filter((item: any) => item.id !== id);
+        await this.writeAdminSettings(settings);
         return { id, deleted: true };
     }
 
     // ── Notification Rules ──
-    findNotificationRules() {
-        return this.notificationRules;
+    async findNotificationRules() {
+        const settings = await this.readAdminSettings();
+        return settings.notificationRules;
     }
 
-    createNotificationRule(data: any) {
-        const created = { id: `nr-${Date.now()}`, ...data, createdAt: new Date(), updatedAt: new Date() };
-        this.notificationRules.unshift(created);
+    async createNotificationRule(data: any) {
+        const settings = await this.readAdminSettings();
+        const created = { id: `nr-${Date.now()}`, ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        settings.notificationRules.unshift(created);
+        await this.writeAdminSettings(settings);
         return created;
     }
 
-    updateNotificationRule(id: string, data: any) {
-        this.notificationRules = this.notificationRules.map((item) =>
-            item.id === id ? { ...item, ...data, id, updatedAt: new Date() } : item,
+    async updateNotificationRule(id: string, data: any) {
+        const settings = await this.readAdminSettings();
+        settings.notificationRules = settings.notificationRules.map((item: any) =>
+            item.id === id ? { ...item, ...data, id, updatedAt: new Date().toISOString() } : item,
         );
-        return this.notificationRules.find((item) => item.id === id) ?? { id, ...data };
+        await this.writeAdminSettings(settings);
+        return settings.notificationRules.find((item: any) => item.id === id) ?? { id, ...data };
     }
 
-    deleteNotificationRule(id: string) {
-        this.notificationRules = this.notificationRules.filter((item) => item.id !== id);
+    async deleteNotificationRule(id: string) {
+        const settings = await this.readAdminSettings();
+        settings.notificationRules = settings.notificationRules.filter((item: any) => item.id !== id);
+        await this.writeAdminSettings(settings);
         return { id, deleted: true };
     }
 
     // ── Report Schedules ──
-    findReportSchedules() {
-        return this.reportSchedules;
+    async findReportSchedules() {
+        const settings = await this.readAdminSettings();
+        return settings.reportSchedules;
     }
 
     // ── Report Templates ──

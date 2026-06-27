@@ -346,6 +346,12 @@ export function ScheduledPostingPage() {
       .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    apiFetch<ScheduledPosting[]>("/scheduled-postings")
+      .then((data) => setPostings(Array.isArray(data) ? data : []))
+      .catch(() => setPostings([]));
+  }, []);
+
   const filtered = postings.filter((p) => {
     if (statusFilter !== "all" && p.status !== statusFilter) return false;
     if (typeFilter !== "all" && p.scheduleType !== typeFilter) return false;
@@ -601,12 +607,12 @@ export function ScheduledPostingPage() {
           accountOptions={accountOptions}
           onClose={() => setShowModal(false)}
           onSave={(p) => {
-            apiFetch("/scheduled-postings", {
+            apiFetch<ScheduledPosting>("/scheduled-postings", {
               method: "POST",
               body: JSON.stringify(p),
             })
-              .then(() => {
-                setPostings((prev) => [p, ...prev]);
+              .then((created) => {
+                setPostings((prev) => [created ?? p, ...prev]);
                 setShowModal(false);
               })
               .catch((err) => {

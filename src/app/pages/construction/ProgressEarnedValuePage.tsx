@@ -111,9 +111,6 @@ export function ProgressEarnedValuePage() {
     if (!project || !ev) return null;
     if (!ev.spi || ev.spi <= 0) return project.plannedEndDate;
     const plannedStart = new Date(project.plannedStartDate);
-    const plannedEnd = new Date(project.plannedEndDate);
-    const totalDays =
-      (plannedEnd.getTime() - plannedStart.getTime()) / 86400000;
     const actualElapsed =
       (new Date().getTime() - plannedStart.getTime()) / 86400000;
     const effectiveDays = actualElapsed / ev.spi;

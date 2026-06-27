@@ -9,7 +9,13 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../api/client";
-import { getChartAccounts, getTaxConfigs } from "../../api/finance-extras";
+import {
+  getChartAccounts,
+  getTaxConfigs,
+  createChartAccount,
+  updateChartAccount,
+  deleteChartAccount,
+} from "../../api/finance-extras";
 
 const DEFAULT_CHART_OF_ACCOUNTS = [
   { id: "coa-1000", code: "1000", name: "Assets", type: "Asset", parent: null },
@@ -81,33 +87,50 @@ export function FinancialConfigurationPage() {
     });
   };
 
-  const addAccount = () => {
+  const addAccount = async () => {
     const name = window.prompt("Account name", "New Account")?.trim();
     if (!name) return;
     const code = window.prompt("Account code", "0000")?.trim() || "0000";
     const type = window.prompt("Account type", "Asset")?.trim() || "Asset";
-    setChartOfAccounts((prev) => [
-      ...prev,
-      { id: `coa-${Date.now()}`, name, code, type, parent: null },
-    ]);
+    try {
+      const created = await createChartAccount({ name, code, type });
+      setChartOfAccounts((prev) => [
+        ...prev,
+        { id: created.id, name: created.name, code: created.code, type: created.type, parent: null },
+      ]);
+    } catch (err) {
+      console.error("Failed to add account:", err);
+      window.alert("Failed to add account. Please try again.");
+    }
   };
 
-  const editAccount = (id: string) => {
-    setChartOfAccounts((prev) =>
-      prev.map((a) => {
-        if (a.id !== id) return a;
-        const name = window.prompt("Account name", a.name)?.trim();
-        if (!name) return a;
-        const code = window.prompt("Account code", a.code)?.trim() || a.code;
-        const type = window.prompt("Account type", a.type)?.trim() || a.type;
-        return { ...a, name, code, type };
-      }),
-    );
+  const editAccount = async (id: string) => {
+    const account = chartOfAccounts.find((a) => a.id === id);
+    if (!account) return;
+    const name = window.prompt("Account name", account.name)?.trim();
+    if (!name) return;
+    const code = window.prompt("Account code", account.code)?.trim() || account.code;
+    const type = window.prompt("Account type", account.type)?.trim() || account.type;
+    try {
+      await updateChartAccount(id, { name, code, type });
+      setChartOfAccounts((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, name, code, type } : a)),
+      );
+    } catch (err) {
+      console.error("Failed to update account:", err);
+      window.alert("Failed to update account. Please try again.");
+    }
   };
 
-  const deleteAccount = (id: string) => {
+  const deleteAccount = async (id: string) => {
     if (!window.confirm("Delete this account?")) return;
-    setChartOfAccounts((prev) => prev.filter((a) => a.id !== id));
+    try {
+      await deleteChartAccount(id);
+      setChartOfAccounts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      console.error("Failed to delete account:", err);
+      window.alert("Failed to delete account. Please try again.");
+    }
   };
 
   const addTaxRate = () => {

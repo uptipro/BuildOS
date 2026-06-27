@@ -2,7 +2,6 @@ import { useNavigate } from "react-router";
 import {
   DollarSign,
   TrendingUp,
-  TrendingDown,
   BarChart3,
   ChevronRight,
   FileSpreadsheet,

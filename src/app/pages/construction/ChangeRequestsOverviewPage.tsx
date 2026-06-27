@@ -2,7 +2,6 @@ import { useNavigate } from "react-router";
 import {
   GitCompare,
   CheckCircle,
-  XCircle,
   Clock,
   ChevronRight,
   Search,

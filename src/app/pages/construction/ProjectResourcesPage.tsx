@@ -8,9 +8,6 @@ import {
   Search,
   X,
   Eye,
-  Award,
-  DollarSign,
-  Briefcase,
   Download,
   Edit,
   ExternalLink,
@@ -20,7 +17,6 @@ import {
 } from "lucide-react";
 import {
   getProjectById,
-  getTasksByProject,
   fmtCurrency,
   hrEmployees as mockHrEmployees,
   stubMaterials as mockStubMaterials,
@@ -30,7 +26,7 @@ import {
 import { fetchEmployees } from "../../api/employees";
 import { listMaterialResources } from "../../api/material-resources";
 import { listEquipmentResources } from "../../api/equipment-resources";
-import type { Task } from "./types";
+import type { Vendor } from "./types";
 import { exportCSV } from "../../utils/exportCSV";
 import { useResources } from "../../contexts/ResourceContext";
 
@@ -59,29 +55,6 @@ const emptyVendor = {
   mandaysEstimate: 0,
   status: "Awarded" as Vendor["status"],
 };
-
-const materialCategories = [
-  "Aggregates",
-  "Concrete",
-  "Formwork",
-  "Reinforcement",
-  "Structural Steel",
-  "Finishing",
-  "Plumbing",
-  "Electrical",
-  "Roofing",
-  "Other",
-];
-const equipmentCategories = [
-  "Earthwork",
-  "Lifting",
-  "Concreting",
-  "Transportation",
-  "Drilling & Piling",
-  "Formwork & Scaffolding",
-  "Power Generation",
-  "Light Tools",
-];
 
 type ResourceTab = "human" | "material" | "equipment";
 type HumanSubTab = "employees" | "contractors" | "vendors";
@@ -174,9 +147,6 @@ export function ProjectResourcesPage() {
       e.category.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const workPackages: Task[] = projectId
-    ? getTasksByProject(projectId).filter((t) => t.level === 4)
-    : [];
   const structureNames =
     project?.structure?.map((s) => s.name).filter(Boolean) ?? [];
 
@@ -235,10 +205,6 @@ export function ProjectResourcesPage() {
       status: "Awarded",
     });
     setShowAddContractor(false);
-  }
-
-  function handleRemoveContractor(id: string) {
-    removeContractor(id);
   }
 
   function exportHumanCSV() {

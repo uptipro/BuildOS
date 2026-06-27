@@ -1,15 +1,10 @@
-import { useParams, useNavigate } from "react-router";
+import { useParams } from "react-router";
 import { useState, useEffect } from "react";
 import {
   Clock,
   AlertTriangle,
   Search,
-  Filter,
   Eye,
-  CheckCircle,
-  ArrowRight,
-  User,
-  Calendar,
 } from "lucide-react";
 import { getProjectById, delays, fmtDate } from "./mockData";
 import type { Delay } from "./types";

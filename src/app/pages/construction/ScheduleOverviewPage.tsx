@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router";
 import {
-  Calendar,
   ChevronRight,
   Clock,
   CheckSquare,
@@ -12,7 +11,6 @@ import { useEffect, useState } from "react";
 import {
   projects as mockProjects,
   tasks,
-  fmtDate,
   ragColor,
   ragLabel,
 } from "./mockData";

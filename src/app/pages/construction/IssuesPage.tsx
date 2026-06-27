@@ -1,17 +1,13 @@
-import { useParams, useNavigate } from "react-router";
+import { useParams } from "react-router";
 import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   Plus,
   Search,
-  Filter,
   Eye,
   CheckCircle,
-  Clock,
   XCircle,
   Loader2,
-  User,
-  Calendar,
 } from "lucide-react";
 import {
   getIssuesByProject,
@@ -83,7 +79,6 @@ const emptyForm = {
 
 export function IssuesPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const project = id ? getProjectById(id) : undefined;
   const [issues, setIssues] = useState<Issue[]>(() =>
     id ? getIssuesByProject(id) : [],
@@ -122,7 +117,6 @@ export function IssuesPage() {
     return true;
   });
 
-  const now = Date.now();
   const workPackages = id
     ? getTasksByProject(id).filter((t) => t.level === 4)
     : [];
@@ -194,7 +188,7 @@ export function IssuesPage() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by title or ID…"
             className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 w-full"
-            style={{ focusRing: "#E8973A" }}
+            style={{ ["--tw-ring-color" as any]: "#E8973A" }}
           />
         </div>
         <select

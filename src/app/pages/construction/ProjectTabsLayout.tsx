@@ -1,6 +1,10 @@
 import { Outlet, useParams, useNavigate, NavLink } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { getProjectById, ragColor, ragLabel } from "./mockData";
+import { useEffect, useState } from "react";
+import { ragColor, ragLabel } from "./mockData";
+import { getConstructionProject } from "../../api/projects";
+import { upsertProjectCache } from "./projectStore";
+import type { Project } from "./types";
 
 const tabs = [
   { label: "Overview", path: "overview", icon: "📋" },
@@ -22,6 +26,32 @@ const tabs = [
 export function ProjectTabsLayout() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    getConstructionProject(id)
+      .then((p) => {
+        if (!active) return;
+        upsertProjectCache(p as Project);
+        setProject(p as Project);
+      })
+      .catch(() => {
+        if (active) setProject(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   if (!id) {
     return (
@@ -31,7 +61,14 @@ export function ProjectTabsLayout() {
     );
   }
 
-  const project = getProjectById(id);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-gray-500">Loading project…</p>
+      </div>
+    );
+  }
+
   if (!project) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">

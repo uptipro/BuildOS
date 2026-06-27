@@ -3,7 +3,6 @@ import {
   ShieldCheck,
   AlertTriangle,
   Users,
-  BookOpen,
   ChevronRight,
   Award,
   Search,

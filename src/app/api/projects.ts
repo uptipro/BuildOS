@@ -99,6 +99,15 @@ export function getProject(id: string) {
     return apiFetch<any>(`/projects/${id}`);
 }
 
+/**
+ * Fetches a single project from the backend and maps it into the construction
+ * module's `Project` shape.
+ */
+export async function getConstructionProject(id: string) {
+    const p = await apiFetch<any>(`/projects/${id}`);
+    return mapConstructionProject(p);
+}
+
 export function createProject(data: any) {
     return apiFetch(`/projects`, { method: 'POST', body: JSON.stringify(data) });
 }

@@ -25,9 +25,6 @@ import {
 } from "lucide-react";
 import type {
   Task,
-  ResourceAllocation,
-  Vendor,
-  ProjectCalendar,
 } from "./types";
 import { calcFloat, generateWBS } from "./types";
 import {
@@ -39,7 +36,6 @@ import {
   ragColor,
   ragLabel,
   pctCompleteColor,
-  tasks as allTasks,
   baselines as mockBaselines,
   calendars as mockCalendars,
   resourceAllocations,

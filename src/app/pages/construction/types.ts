@@ -137,7 +137,7 @@ export interface Task {
   dependencyType: "FS" | "FF" | "SS" | "SF" | null;
   lagDays: number;
   vendorId: string | null;
-  subVendorIds: string[];
+  subVendorIds?: string[];
   structureEntryId?: string;
   ragStatus: RAGStatus;
   ragOverride: boolean;
@@ -547,10 +547,8 @@ export function calcFloat(tasks: Task[]): Task[] {
   });
 
   l4.forEach(t => {
-    const es = new Date(t.plannedStart).getTime();
     const lft = lf.get(t.id) || projectEnd;
     const eft = ef.get(t.id) || projectEnd;
-    const lst = ls.get(t.id) || projectEnd;
     const idx = updated.findIndex(u => u.id === t.id);
     if (idx >= 0) {
       updated[idx].totalFloat = Math.round((lft - eft) / 86400000);
@@ -562,7 +560,6 @@ export function calcFloat(tasks: Task[]): Task[] {
 }
 
 export function calcEarnedValue(tasks: Task[], budget: number, spent: number): { pv: number; ev: number; ac: number; sv: number; cv: number; spi: number; cpi: number; eac: number; vac: number } {
-  const totalDuration = tasks.filter(t => t.level === 1).reduce((s, t) => s + t.plannedDuration, 0) || 1;
   const ev = tasks.filter(t => t.level === 4).reduce((s, t) => s + (t.percentComplete / 100) * (budget / (tasks.filter(x => x.level === 4).length || 1)), 0);
   const pv = (new Date().getTime() - new Date(tasks[0]?.plannedStart || "").getTime()) / (new Date(tasks[tasks.length - 1]?.plannedEnd || "").getTime() - new Date(tasks[0]?.plannedStart || "").getTime() || 1) * budget;
   const ac = spent;

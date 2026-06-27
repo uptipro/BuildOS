@@ -1,26 +1,31 @@
 import { Body, Controller, Get, Headers, Patch, Post, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
+import { Public } from './decorators';
 
 @Controller('auth')
 export class AuthController {
     constructor(private authService: AuthService, private jwtService: JwtService) { }
 
+    @Public()
     @Post('login')
     login(@Body() body: { email: string; password: string }) {
         return this.authService.login(body.email, body.password);
     }
 
+    @Public()
     @Post('register')
     register(@Body() body: { name: string; email: string; password: string }) {
         return this.authService.register(body.name, body.email, body.password);
     }
 
+    @Public()
     @Post('verify-email')
     verifyEmail(@Body() body: { token: string }) {
         return this.authService.verifyEmail(body.token);
     }
 
+    @Public()
     @Post('activate')
     activate(@Body() body: { token: string; password: string }) {
         return this.authService.activateInvite(body.token, body.password);
@@ -55,6 +60,7 @@ export class AuthController {
         return this.authService.updateProfile(payload.sub, body);
     }
 
+    @Public()
     @Post('refresh')
     refresh(@Body() body: { refresh_token: string }) {
         return this.authService.refresh(body.refresh_token);
@@ -75,11 +81,13 @@ export class AuthController {
         return { success: true };
     }
 
+    @Public()
     @Post('forgot-password')
     forgotPassword(@Body() body: { email: string }) {
         return this.authService.forgotPassword(body.email);
     }
 
+    @Public()
     @Post('reset-password')
     resetPassword(@Body() body: { token: string; password: string }) {
         return this.authService.resetPassword(body.token, body.password);

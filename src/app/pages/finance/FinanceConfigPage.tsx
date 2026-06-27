@@ -111,6 +111,14 @@ export function FinanceConfigPage() {
         ),
       )
       .catch(console.error);
+    apiFetch<any>("/config")
+      .then((cfg) => {
+        if (cfg?.currency) setCurrency(cfg.currency);
+        if (cfg?.fiscalYearStart) setFiscalYearStart(cfg.fiscalYearStart);
+        if (cfg?.approvalThreshold !== undefined && cfg?.approvalThreshold !== null)
+          setApprovalThreshold(String(cfg.approvalThreshold));
+      })
+      .catch(() => {});
   }, []);
 
   // Tax state

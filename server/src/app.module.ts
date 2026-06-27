@@ -1,7 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import IORedis from 'ioredis';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { RedisModule } from './redis/redis.module';
+import { getRedisConnectionOptions, isRedisEnabled } from './redis/redis.config';
+import { AppCacheModule } from './cache/app-cache.module';
+import { EmailModule } from './email/email.module';
+import { QueueModule } from './queue/queue.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ProjectSetupModule } from './project-setup/project-setup.module';
@@ -43,6 +50,7 @@ import { ConstructionIssuesModule } from './construction-issues/construction-iss
 import { ChangeRequestsModule } from './change-requests/change-requests.module';
 import { DelaysModule } from './delays/delays.module';
 import { StakeholdersModule } from './stakeholders/stakeholders.module';
+import { VisitorLogsModule } from './visitor-logs/visitor-logs.module';
 import { QualityNcrsModule } from './quality-ncrs/quality-ncrs.module';
 import { HseRecordsModule } from './hse-records/hse-records.module';
 import { CommunicationsModule } from './communications/communications.module';
@@ -62,11 +70,15 @@ import { MaterialResourcesModule } from './material-resources/material-resources
 import { EquipmentResourcesModule } from './equipment-resources/equipment-resources.module';
 import { ContractorsModule } from './contractors/contractors.module';
 import { VendorsModule } from './vendors/vendors.module';
-import { RolesGuard } from './auth/roles.guard';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
+        RedisModule,
+        AppCacheModule,
+        EmailModule,
+        QueueModule,
         AuthModule,
         PrismaModule,
         AuditLogModule,
@@ -108,6 +120,7 @@ import { RolesGuard } from './auth/roles.guard';
         ChangeRequestsModule,
         DelaysModule,
         StakeholdersModule,
+        VisitorLogsModule,
         QualityNcrsModule,
         HseRecordsModule,
         CommunicationsModule,
@@ -127,11 +140,28 @@ import { RolesGuard } from './auth/roles.guard';
         EquipmentResourcesModule,
         ContractorsModule,
         VendorsModule,
-        ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+        ThrottlerModule.forRootAsync({
+            useFactory: () => ({
+                throttlers: [{ ttl: 60000, limit: 100 }],
+                // Distributed rate limiting via Redis when configured; otherwise
+                // falls back to the default in-memory throttler storage.
+                storage: isRedisEnabled()
+                    ? new ThrottlerStorageRedisService(
+                          new IORedis(
+                              getRedisConnectionOptions({
+                                  maxRetriesPerRequest: null,
+                                  retryStrategy: (times: number) =>
+                                      times > 10 ? null : Math.min(times * 200, 2000),
+                              }),
+                          ),
+                      )
+                    : undefined,
+            }),
+        }),
     ],
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },
-        { provide: APP_GUARD, useClass: RolesGuard },
+        { provide: APP_GUARD, useClass: JwtAuthGuard },
     ],
 })
 export class AppModule { }

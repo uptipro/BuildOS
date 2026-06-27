@@ -7,6 +7,7 @@ export function useAuthUser() {
   let name = "";
   let email = "";
   let role = "";
+  let employeeId = "";
   let assignedApps: string[] = [];
 
   try {
@@ -17,6 +18,7 @@ export function useAuthUser() {
       name = parsed.name ?? "";
       email = parsed.email ?? "";
       role = parsed.role ?? "";
+      employeeId = parsed.employeeId ?? "";
       assignedApps = Array.isArray(parsed.assignedApps)
         ? parsed.assignedApps.map((app: unknown) => String(app))
         : [];
@@ -32,5 +34,5 @@ export function useAuthUser() {
     .slice(0, 2)
     .join("");
 
-  return { id, name, email, role, initials, assignedApps };
+  return { id, name, email, role, initials, assignedApps, employeeId };
 }

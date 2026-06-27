@@ -2,7 +2,6 @@ import { useParams } from "react-router";
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
   CheckCircle,
-  Circle,
   ArrowRight,
   ArrowLeft,
   Lock,
@@ -26,21 +25,18 @@ import {
   tradeTypes,
   fmtDate,
   defaultScheduleLevels,
-} from "./setupReferenceData";
+} from "./mockData";
 import type {
   Task,
   Vendor,
   VendorRepresentative,
   ProjectCalendar,
   Sector,
-  ProjectStructureItem,
-  ScheduleLevelConfig,
   HumanResource,
   HumanResourceSource,
   MaterialResource,
   EquipmentResource,
   ResourceAssignment,
-  ProjectRole,
   HumanResourceRole,
 } from "./types";
 import { useRoles } from "../../contexts/RolesContext";
@@ -48,7 +44,6 @@ import {
   SECTOR_CATEGORIES,
   getBlockLabel,
   getStructureConfig,
-  DEFAULT_WBS_LEVELS,
 } from "./types";
 import { useResources } from "../../contexts/ResourceContext";
 import { SearchableMultiSelect } from "../../components/SearchableMultiSelect";
@@ -305,7 +300,7 @@ export function ProjectSetupPage() {
     skilledCount: 0,
     unskilledCount: 0,
     mandaysEstimate: 0,
-    status: "Awarded" as const,
+    status: "Active" as "Active" | "Completed" | "Terminated",
   };
   const [contractorForm, setContractorForm] = useState(EMPTY_CONTRACTOR_FORM);
   const [projectContractors, setProjectContractors] = useState<HumanResource[]>(
@@ -850,6 +845,7 @@ export function ProjectSetupPage() {
       parentTaskId: "",
       plannedStart: "",
       plannedEnd: "",
+      structureEntryId: "",
     });
     setShowAddTask(false);
   };
@@ -984,7 +980,8 @@ export function ProjectSetupPage() {
       setIsNewVendor(false);
       const v = allVendors.find((v) => v.id === id);
       if (v) {
-        setVendorForm({
+        setVendorForm((prev) => ({
+          ...prev,
           name: v.name,
           trade: v.trade,
           contractType: v.contractType,
@@ -995,7 +992,7 @@ export function ProjectSetupPage() {
           unskilledCount: v.unskilledCount,
           mandaysEstimate: v.mandaysEstimate,
           status: v.status,
-        });
+        }));
       }
     }
   };
@@ -3584,7 +3581,7 @@ export function ProjectSetupPage() {
                                 {c.payRate
                                   ? ` · ₦${c.payRate.toLocaleString()}/${c.payRateUnit}`
                                   : ""}{" "}
-                                · {c.skilledCount + c.unskilledCount} workers
+                                · {(c.skilledCount ?? 0) + (c.unskilledCount ?? 0)} workers
                               </p>
                             </div>
                           </div>

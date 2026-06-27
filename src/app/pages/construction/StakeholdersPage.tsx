@@ -5,12 +5,9 @@ import {
   Briefcase,
   Plus,
   Search,
-  Mail,
-  Phone,
   Calendar,
   User,
   MessageSquare,
-  FileText,
   X,
   Building,
   Shield,
@@ -20,6 +17,7 @@ import {
 import { getProjectById, stakeholders, fmtDate } from "./mockData";
 import { exportCSV } from "../../utils/exportCSV";
 import { listStakeholders, createStakeholder } from "../../api/stakeholders";
+import { listVisitorLogs, createVisitorLog } from "../../api/visitor-logs";
 
 interface CommPlanEntry {
   id: string;
@@ -45,10 +43,11 @@ interface EngagementLogEntry {
 interface VisitorLogEntry {
   id: string;
   date: string;
-  visitor: string;
+  name: string;
   organization: string;
   purpose: string;
-  accompaniedBy: string;
+  host: string;
+  badgeNumber?: string;
 }
 
 const initialCommPlans: CommPlanEntry[] = [
@@ -113,24 +112,7 @@ const initialEngagementLog: EngagementLogEntry[] = [
   },
 ];
 
-const initialVisitorLog: VisitorLogEntry[] = [
-  {
-    id: "VL-001",
-    date: "2026-05-28",
-    visitor: "Engr. Musa Kano",
-    organization: "LASBCA",
-    purpose: "Foundation inspection",
-    accompaniedBy: "Emeka Okafor",
-  },
-  {
-    id: "VL-002",
-    date: "2026-05-25",
-    visitor: "Dr. Adeola Fashola",
-    organization: "Geotech Services Ltd",
-    purpose: "Soil test review",
-    accompaniedBy: "James Okafor",
-  },
-];
+const initialVisitorLog: VisitorLogEntry[] = [];
 
 const roleIcons: Record<string, React.ReactNode> = {
   Client: <Building className="w-3.5 h-3.5" />,
@@ -179,9 +161,21 @@ export function StakeholdersPage() {
       active = false;
     };
   }, [id]);
-  const [commPlans, setCommPlans] = useState(initialCommPlans);
+  const [commPlans] = useState(initialCommPlans);
   const [engagementLog, setEngagementLog] = useState(initialEngagementLog);
   const [visitorLog, setVisitorLog] = useState(initialVisitorLog);
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    listVisitorLogs(id)
+      .then((data) => {
+        if (active) setVisitorLog(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [id]);
   const [showAddVisitor, setShowAddVisitor] = useState(false);
   const [showAddEngagement, setShowAddEngagement] = useState(false);
   const [showLogCommunication, setShowLogCommunication] = useState(false);
@@ -217,10 +211,10 @@ export function StakeholdersPage() {
 
   const [visitorForm, setVisitorForm] = useState({
     date: new Date().toISOString().split("T")[0],
-    visitor: "",
+    name: "",
     organization: "",
     purpose: "",
-    accompaniedBy: "",
+    host: "",
   });
 
   const [engagementForm, setEngagementForm] = useState({
@@ -295,19 +289,21 @@ export function StakeholdersPage() {
     });
   }
 
-  function handleAddVisitor() {
-    if (!visitorForm.visitor) return;
-    setVisitorLog((prev) => [
-      ...prev,
-      { id: `VL-${Date.now()}`, ...visitorForm },
-    ]);
+  async function handleAddVisitor() {
+    if (!visitorForm.name || !id) return;
+    try {
+      const created = await createVisitorLog({ projectId: id, ...visitorForm });
+      setVisitorLog((prev) => [created, ...prev]);
+    } catch {
+      /* leave the list unchanged on failure */
+    }
     setShowAddVisitor(false);
     setVisitorForm({
       date: new Date().toISOString().split("T")[0],
-      visitor: "",
+      name: "",
       organization: "",
       purpose: "",
-      accompaniedBy: "",
+      host: "",
     });
   }
 
@@ -784,7 +780,7 @@ export function StakeholdersPage() {
                       {fmtDate(vl.date)}
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">
-                      {vl.visitor}
+                      {vl.name}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {vl.organization}
@@ -793,7 +789,7 @@ export function StakeholdersPage() {
                       {vl.purpose}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500">
-                      {vl.accompaniedBy}
+                      {vl.host}
                     </td>
                   </tr>
                 ))}
@@ -997,9 +993,9 @@ export function StakeholdersPage() {
                     Visitor Name *
                   </label>
                   <input
-                    value={visitorForm.visitor}
+                    value={visitorForm.name}
                     onChange={(e) =>
-                      setVisitorForm((f) => ({ ...f, visitor: e.target.value }))
+                      setVisitorForm((f) => ({ ...f, name: e.target.value }))
                     }
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -1026,11 +1022,11 @@ export function StakeholdersPage() {
                     Accompanied By
                   </label>
                   <input
-                    value={visitorForm.accompaniedBy}
+                    value={visitorForm.host}
                     onChange={(e) =>
                       setVisitorForm((f) => ({
                         ...f,
-                        accompaniedBy: e.target.value,
+                        host: e.target.value,
                       }))
                     }
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -1059,7 +1055,7 @@ export function StakeholdersPage() {
               </button>
               <button
                 onClick={handleAddVisitor}
-                disabled={!visitorForm.visitor}
+                disabled={!visitorForm.name}
                 className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm font-medium hover:bg-orange-700 disabled:opacity-40"
               >
                 Log

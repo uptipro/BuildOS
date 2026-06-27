@@ -1,18 +1,13 @@
 import { useParams } from "react-router";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
-  ShieldCheck,
   AlertTriangle,
   FileText,
   ClipboardList,
-  Users,
   BookOpen,
   Siren,
   Award,
   Plus,
-  Eye,
-  Calendar,
-  Search,
   XCircle,
 } from "lucide-react";
 import { getProjectById, hseMatrix, fmtDate, staffList } from "./mockData";

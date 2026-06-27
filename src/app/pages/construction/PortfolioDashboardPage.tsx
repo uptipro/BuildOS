@@ -13,19 +13,12 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle,
-  PieChart,
-  BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
 } from "lucide-react";
 import {
   projects as mockProjects,
   fmtCurrency,
   fmtDate,
-  ragColor,
   ragLabel,
-  ragBg,
-  ragText,
   clusters,
 } from "./mockData";
 import { fetchConstructionProjects } from "../../api/projects";

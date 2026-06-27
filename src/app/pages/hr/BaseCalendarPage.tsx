@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiFetch } from "../../api/client";
 
@@ -46,6 +46,12 @@ export function BaseCalendarPage() {
   });
   const [nonWorkingDays, setNonWorkingDays] = useState<number[]>([0, 6]); // Sun + Sat
 
+  useEffect(() => {
+    apiFetch<Holiday[]>("/holidays")
+      .then((data) => setHolidays(Array.isArray(data) ? data : []))
+      .catch(() => setHolidays([]));
+  }, []);
+
   const monthHolidays = holidays.filter((h) => {
     const d = new Date(h.date);
     return d.getFullYear() === year && d.getMonth() === selectedMonth;
@@ -79,8 +85,16 @@ export function BaseCalendarPage() {
         recurring: newHol.recurring,
       }),
     })
-      .then(() => {
-        setHolidays((prev) => [...prev, { id: `h${Date.now()}`, ...newHol }]);
+      .then((created: any) => {
+        setHolidays((prev) => [
+          ...prev,
+          {
+            id: created?.id ?? `h${Date.now()}`,
+            name: newHol.name,
+            date: newHol.date,
+            recurring: newHol.recurring,
+          },
+        ]);
         setNewHol({ name: "", date: "", recurring: false });
         setShowAdd(false);
       })
@@ -319,9 +333,16 @@ export function BaseCalendarPage() {
                       </p>
                     </div>
                     <button
-                      onClick={() =>
-                        setHolidays((prev) => prev.filter((x) => x.id !== h.id))
-                      }
+                      onClick={() => {
+                        apiFetch(`/holidays/${h.id}`, { method: "DELETE" })
+                          .then(() =>
+                            setHolidays((prev) => prev.filter((x) => x.id !== h.id)),
+                          )
+                          .catch((err) => {
+                            alert("Failed to delete holiday. Please try again.");
+                            console.error(err);
+                          });
+                      }}
                       className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-400"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

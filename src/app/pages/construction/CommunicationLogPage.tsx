@@ -10,10 +10,6 @@ import {
   FileText,
   CalendarCheck,
   Clock,
-  AlertCircle,
-  CheckCircle,
-  Send,
-  Archive,
 } from "lucide-react";
 import {
   communicationLog as mockComms,

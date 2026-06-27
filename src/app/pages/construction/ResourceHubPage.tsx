@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import {
   Users,
   HardHat,
-  Wrench,
   Truck,
   BookOpen,
   ArrowRight,

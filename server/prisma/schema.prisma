@@ -521,6 +521,7 @@ model User {
   roles       UserRole[]
   permissions Permission[]
   auditLogs   AuditLog[]
+  passwordHistory UserPasswordHistory[]
 }
 
 model UserRole {
@@ -1600,6 +1601,21 @@ model Stakeholder {
   @@index([projectId])
 }
 
+model VisitorLog {
+  id           String   @id @default(cuid())
+  projectId    String
+  date         String   @default("")
+  name         String
+  organization String   @default("")
+  purpose      String   @default("")
+  host         String   @default("")
+  badgeNumber  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId])
+}
+
 model QualityNcr {
   id                String   @id @default(cuid())
   projectId         String
@@ -1895,4 +1911,39 @@ model EquipmentResource {
   updatedAt          DateTime @updatedAt
 
   @@index([projectId])
+}
+
+/// Generic key/value store for application/admin configuration that was
+/// previously persisted to an ephemeral JSON file on disk. Persisting it here
+/// ensures admin settings survive restarts/redeploys and are shared across
+/// horizontally-scaled instances.
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+/// Password reuse history. Created at runtime by AuthService; modelled here so
+/// the schema reflects the live database and fresh deployments include it.
+model UserPasswordHistory {
+  id           String   @id
+  userId       String   @map("user_id")
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)], map: "idx_user_password_history_user_id_created_at")
+  @@map("user_password_history")
+}
+
+/// Reference list of banks used for employee bank-account setup and payroll.
+model BankName {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @default("")
+  country   String   @default("Nigeria")
+  swiftCode String   @default("")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

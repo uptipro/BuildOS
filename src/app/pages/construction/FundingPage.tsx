@@ -3,7 +3,6 @@ import { useMemo, useState, useEffect } from "react";
 import {
   Banknote,
   Landmark,
-  ArrowRight,
   CircleDollarSign,
   PiggyBank,
   Wallet,

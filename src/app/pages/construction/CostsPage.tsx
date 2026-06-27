@@ -20,7 +20,6 @@ import {
   getTasksByProject,
   getVendorsByProject,
   fmtCurrency,
-  tasks as allTasks,
   fundingAllocations as mockAllocations,
   fundingReleases as mockReleases,
   disbursements as mockDisbursements,
@@ -104,8 +103,6 @@ export function CostsPage() {
   const totalBudget = project?.budget ?? 0;
   const totalSpent = project?.spent ?? 0;
   const totalVariance = totalBudget - totalSpent;
-  const totalVariancePct =
-    totalBudget > 0 ? (totalVariance / totalBudget) * 100 : 0;
 
   const projectAllocations = useMemo(
     () =>
@@ -347,7 +344,15 @@ export function CostsPage() {
               </h3>
               <TableControls
                 columns={stageColumns}
-                onColumnsChange={setStageColumns}
+                onColumnsChange={(cols) =>
+                  setStageColumns(
+                    cols.map((c) => ({
+                      key: c.key,
+                      label: c.label,
+                      visible: c.visible ?? true,
+                    })),
+                  )
+                }
                 onExportCSV={() =>
                   exportToCSV(
                     stageBudgets.map((sb) => ({

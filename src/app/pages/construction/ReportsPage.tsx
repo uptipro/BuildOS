@@ -5,7 +5,6 @@ import {
   FileText,
   Download,
   Calendar,
-  TrendingUp,
   PieChart,
   CheckCircle,
   ChevronRight,

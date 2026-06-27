@@ -4,7 +4,6 @@ import {
   Award,
   Users,
   DollarSign,
-  ChevronRight,
   Search,
   ArrowUpDown,
   Download,
@@ -120,11 +119,11 @@ export function ResourcesOverviewPage() {
     name: "",
     trade: "",
     payRate: 0,
-    payRateUnit: "daily" as const,
+    payRateUnit: "daily" as IndividualContractor["payRateUnit"],
     skilledCount: 0,
     unskilledCount: 0,
     manDays: 0,
-    status: "Active" as const,
+    status: "Active" as IndividualContractor["status"],
     mobile: "",
     email: "",
   });
@@ -213,7 +212,6 @@ export function ResourcesOverviewPage() {
 
   const totalSum = vendors.reduce((s, v) => s + v.contractSum, 0);
   const activeVendors = vendors.filter((v) => v.status === "Active");
-  const nominated = vendors.filter((v) => v.isNominated);
 
   const stats = [
     { icon: Truck, label: "Total Vendors", value: vendors.length },

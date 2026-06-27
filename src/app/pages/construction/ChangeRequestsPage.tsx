@@ -1,17 +1,13 @@
-import { useParams, useNavigate } from "react-router";
+import { useParams } from "react-router";
 import { useState, useEffect } from "react";
 import {
   GitCompare,
   Plus,
   Search,
-  Filter,
   Eye,
   CheckCircle,
   XCircle,
   Clock,
-  DollarSign,
-  Calendar,
-  User,
   FileText,
 } from "lucide-react";
 import {
@@ -64,7 +60,7 @@ const emptyForm = {
   qualityImpact: "",
   stakeholderImpact: "",
   recommendedAction: "",
-  status: "Proposed" as const,
+  status: "Proposed" as ChangeRequest["status"],
 };
 
 export function ChangeRequestsPage() {

@@ -104,12 +104,24 @@ export class HrExtrasController {
     // ── Salary Bands ──
     @Get('salary-bands')
     getSalaryBands() { return this.svc.findSalaryBands(); }
+    @Post('salary-bands')
+    createSalaryBand(@Body() body: any) { return this.svc.createSalaryBand(body); }
+    @Patch('salary-bands/:id')
+    updateSalaryBand(@Param('id') id: string, @Body() body: any) { return this.svc.updateSalaryBand(id, body); }
+    @Delete('salary-bands/:id')
+    deleteSalaryBand(@Param('id') id: string) { return this.svc.deleteSalaryBand(id); }
 
     // ── Holidays ──
+    @Get('holidays')
+    getHolidays() { return this.svc.findHolidays(); }
     @Post('holidays')
     createHoliday(@Body() body: any) { return this.svc.createHoliday(body); }
+    @Delete('holidays/:id')
+    deleteHoliday(@Param('id') id: string) { return this.svc.deleteHoliday(id); }
 
     // ── HR Setup ──
+    @Get('setup')
+    getHrSetup() { return this.svc.getHrSetup(); }
     @Post('setup')
     saveHrSetup(@Body() body: any) { return this.svc.saveHrSetup(body); }
 }
