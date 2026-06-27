@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getProcessMappings, saveProcessMappings } from "../../api/finance-extras";
 import {
   GitBranch,
   Plus,
@@ -433,6 +434,12 @@ export function ProcessMappingPage() {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<ProcessMapping | undefined>();
 
+  useEffect(() => {
+    getProcessMappings()
+      .then((d) => setMappings(d as ProcessMapping[]))
+      .catch(() => {});
+  }, []);
+
   const filtered = mappings.filter((m) => {
     const matchApp = appFilter === "All" || m.application === appFilter;
     const matchStatus = statusFilter === "All" || m.status === statusFilter;
@@ -455,18 +462,20 @@ export function ProcessMappingPage() {
   }
 
   function save(m: ProcessMapping) {
-    setMappings((prev) => {
-      const exists = prev.find((x) => x.id === m.id);
-      return exists ? prev.map((x) => (x.id === m.id ? m : x)) : [m, ...prev];
-    });
+    const exists = mappings.find((x) => x.id === m.id);
+    const next = exists
+      ? mappings.map((x) => (x.id === m.id ? m : x))
+      : [m, ...mappings];
+    setMappings(next);
+    saveProcessMappings(next).catch(() => {});
   }
 
   function remove(id: string) {
-    setMappings((prev) =>
-      prev.map((m) =>
-        m.id === id ? { ...m, status: "unmapped", lines: [] } : m,
-      ),
+    const next = mappings.map((m) =>
+      m.id === id ? { ...m, status: "unmapped" as const, lines: [] } : m,
     );
+    setMappings(next);
+    saveProcessMappings(next).catch(() => {});
   }
 
   // Flatten to rows for table

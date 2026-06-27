@@ -87,3 +87,8 @@ export const updateTaxConfig = (id: string, data: Partial<TaxConfig>) =>
     apiFetch<TaxConfig>(`/tax-configs/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteTaxConfig = (id: string) =>
     apiFetch<void>(`/tax-configs/${id}`, { method: 'DELETE' });
+
+// Process / Account Mappings (GL posting rules) — persisted as a JSON collection.
+export const getProcessMappings = () => apiFetch<any[]>('/process-mappings');
+export const saveProcessMappings = (mappings: any[]) =>
+    apiFetch<any[]>('/process-mappings', { method: 'PUT', body: JSON.stringify({ mappings }) });

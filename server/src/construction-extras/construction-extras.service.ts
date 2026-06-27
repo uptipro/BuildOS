@@ -5,6 +5,36 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ConstructionExtrasService {
     constructor(private prisma: PrismaService) { }
 
+    // ── Project Config (types + statuses), stored in the systemSetting KV store ──
+    private async readSetting<T>(key: string, fallback: T): Promise<T> {
+        const row = await this.prisma.systemSetting.findUnique({ where: { key } });
+        return (row?.value as T) ?? fallback;
+    }
+    private async writeSetting(key: string, value: unknown): Promise<void> {
+        const clean = JSON.parse(JSON.stringify(value ?? null));
+        await this.prisma.systemSetting.upsert({
+            where: { key },
+            create: { key, value: clean },
+            update: { value: clean },
+        });
+    }
+    getProjectTypes() {
+        return this.readSetting<any[]>('construction-project-types', []);
+    }
+    async saveProjectTypes(types: any[]) {
+        const list = Array.isArray(types) ? types : [];
+        await this.writeSetting('construction-project-types', list);
+        return list;
+    }
+    getProjectStatuses() {
+        return this.readSetting<any[]>('construction-project-statuses', []);
+    }
+    async saveProjectStatuses(statuses: any[]) {
+        const list = Array.isArray(statuses) ? statuses : [];
+        await this.writeSetting('construction-project-statuses', list);
+        return list;
+    }
+
     // ── Project Documents ──
     findAllDocs(projectId?: string) {
         return this.prisma.projectDocument.findMany({

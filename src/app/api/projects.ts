@@ -68,16 +68,22 @@ function mapConstructionProject(p: any) {
         plannedStartDate: isoDate(p.plannedStartDate ?? p.startDate),
         plannedEndDate: isoDate(p.plannedEndDate ?? p.endDate),
         description: p.description ?? '',
+        blockCount: p.blockCount ?? undefined,
         clusterId: p.clusterId ?? '',
         status: statusMap[p.status] ?? p.status ?? 'Active',
         ragStatus: ragMap[p.ragStatus] ?? 'on-track',
         budget: p.budget ?? 0,
         spent: p.spent ?? 0,
         location: p.location ?? '',
+        sector: p.sector ?? undefined,
+        category: p.category ?? undefined,
+        descriptor: p.descriptor ?? undefined,
+        contractingModel: p.contractingModel ?? undefined,
         createdAt: isoDate(p.createdAt) || new Date().toISOString().slice(0, 10),
         lastReportDate: isoDate(p.lastReportDate) || undefined,
         setupComplete: p.setupComplete ?? false,
         setupProgress: p.setupProgress ?? 0,
+        setupLocked: p.setupLocked ?? false,
     };
 }
 
@@ -122,25 +128,62 @@ const reverseStatusMap: Record<string, string> = {
 
 /**
  * Maps the construction module's rich project shape into the backend `Project`
+ * columns. Shared by create and update so both persist the full set of
+ * construction-specific fields. Only keys present on `data` are included, so a
+ * partial update (PATCH) never clobbers unrelated columns.
+ */
+function toBackendConstructionPayload(data: any) {
+    const payload: Record<string, any> = {};
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.client !== undefined) payload.client = data.client ?? '';
+    // `location` (area, e.g. "Lekki, Lagos") and `siteAddress` (street address)
+    // are distinct in the construction shape; keep both, defaulting the shared
+    // `location` column to siteAddress when it is unset.
+    if (data.location !== undefined || data.siteAddress !== undefined)
+        payload.location = data.location || data.siteAddress || '';
+    if (data.siteAddress !== undefined) payload.siteAddress = data.siteAddress ?? '';
+    if (data.projectManager !== undefined) payload.manager = data.projectManager ?? '';
+    if (data.status !== undefined) payload.status = reverseStatusMap[data.status] ?? 'Active';
+    if (data.budget !== undefined) payload.budget = data.budget ?? 0;
+    if (data.spent !== undefined) payload.spent = data.spent ?? 0;
+    if (data.plannedStartDate) payload.startDate = new Date(data.plannedStartDate).toISOString();
+    if (data.plannedEndDate) payload.endDate = new Date(data.plannedEndDate).toISOString();
+    if (data.lastReportDate) payload.lastReportDate = new Date(data.lastReportDate).toISOString();
+    for (const key of [
+        'mainContractor', 'mainContractorId', 'contractType', 'clusterId',
+        'ragStatus', 'description', 'descriptor', 'sector', 'category',
+        'blockCount', 'contractingModel', 'setupComplete', 'setupProgress',
+        'setupLocked',
+    ]) {
+        if (data[key] !== undefined) payload[key] = data[key];
+    }
+    return payload;
+}
+
+/**
+ * Maps the construction module's rich project shape into the backend `Project`
  * columns, persists it, and returns the created project in the construction
  * shape (with its real backend id).
  */
 export async function createConstructionProject(data: any) {
-    const payload: Record<string, any> = {
-        name: data.name,
-        client: data.client ?? '',
-        location: data.siteAddress || data.location || '',
-        manager: data.projectManager ?? '',
-        status: reverseStatusMap[data.status] ?? 'Active',
-        budget: data.budget ?? 0,
-    };
-    if (data.plannedStartDate) payload.startDate = new Date(data.plannedStartDate).toISOString();
-    if (data.plannedEndDate) payload.endDate = new Date(data.plannedEndDate).toISOString();
     const created = await apiFetch<any>('/projects', {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(toBackendConstructionPayload(data)),
     });
     return mapConstructionProject(created);
+}
+
+/**
+ * Persists edits to a construction project (full-fidelity: every
+ * construction-specific field round-trips), returning the updated project in
+ * the construction shape.
+ */
+export async function updateConstructionProject(id: string, data: any) {
+    const updated = await apiFetch<any>(`/projects/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(toBackendConstructionPayload(data)),
+    });
+    return mapConstructionProject(updated);
 }
 
 export function updateProject(id: string, data: any) {

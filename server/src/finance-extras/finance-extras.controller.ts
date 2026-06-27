@@ -95,4 +95,12 @@ export class FinanceExtrasController {
     getConfig() { return this.svc.getConfig(); }
     @Post('config')
     saveConfig(@Body() body: any) { return this.svc.saveConfig(body); }
+
+    // ── Process / Account Mappings ──
+    @Get('process-mappings')
+    getProcessMappings() { return this.svc.getProcessMappings(); }
+    @Put('process-mappings')
+    saveProcessMappings(@Body() body: any) {
+        return this.svc.saveProcessMappings(body?.mappings ?? body);
+    }
 }

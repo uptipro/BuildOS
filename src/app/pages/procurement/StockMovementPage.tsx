@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -11,11 +11,13 @@ import {
   Download,
 } from "lucide-react";
 import { exportCSV } from "../../utils/exportCSV";
+import { getStockMovements, type StockMovement } from "../../api/materials";
 
 type MovType = "incoming" | "outgoing" | "adjustment" | "transfer";
 
-const movements: {
+interface MovementRow {
   id: string;
+  ts: number;
   date: string;
   time: string;
   material: string;
@@ -29,200 +31,50 @@ const movements: {
   requestedBy: string;
   project: string;
   notes: string;
-}[] = [
-  {
-    id: "MOV-0091",
-    date: "Apr 9, 2026",
-    time: "10:22",
-    material: "Concrete Block 9 Inch",
-    category: "Concrete & Masonry",
-    type: "incoming",
-    qty: 3000,
-    unit: "Units",
-    direction: "+",
-    reference: "GRN-0031",
-    refType: "Goods Receipt",
-    requestedBy: "Warehouse",
-    project: "Downtown Office Complex",
-    notes: "Received against PO-0031",
-  },
-  {
-    id: "MOV-0090",
-    date: "Apr 9, 2026",
-    time: "09:15",
-    material: "Steel Rebar Y12",
-    category: "Steel & Ironmongery",
-    type: "outgoing",
-    qty: 8,
-    unit: "Tonnes",
-    direction: "-",
-    reference: "MR-0040",
-    refType: "Material Request",
-    requestedBy: "Robert Lee",
-    project: "Highway Interchange",
-    notes: "Issued for column reinforcement",
-  },
-  {
-    id: "MOV-0089",
-    date: "Apr 9, 2026",
-    time: "08:45",
-    material: "Cement (50kg bags)",
-    category: "Concrete & Masonry",
-    type: "outgoing",
-    qty: 120,
-    unit: "Bags",
-    direction: "-",
-    reference: "MR-0038",
-    refType: "Material Request",
-    requestedBy: "Mike Davis",
-    project: "Industrial Warehouse",
-    notes: "Foundation slab pour",
-  },
-  {
-    id: "MOV-0088",
-    date: "Apr 8, 2026",
-    time: "16:40",
-    material: "Binding Wire",
-    category: "Steel & Ironmongery",
-    type: "incoming",
-    qty: 200,
-    unit: "Rolls",
-    direction: "+",
-    reference: "GRN-0030",
-    refType: "Goods Receipt",
-    requestedBy: "Warehouse",
-    project: "—",
-    notes: "General stock replenishment",
-  },
-  {
-    id: "MOV-0087",
-    date: "Apr 8, 2026",
-    time: "15:20",
-    material: "Plywood Formwork 18mm",
-    category: "Timber & Formwork",
-    type: "transfer",
-    qty: 60,
-    unit: "Sheets",
-    direction: "-",
-    reference: "TRF-0012",
-    refType: "Transfer",
-    requestedBy: "Sarah Johnson",
-    project: "Riverside Residential",
-    notes: "Transfer to site store",
-  },
-  {
-    id: "MOV-0086",
-    date: "Apr 8, 2026",
-    time: "13:10",
-    material: "Sand (River)",
-    category: "Concrete & Masonry",
-    type: "outgoing",
-    qty: 40,
-    unit: "Tonnes",
-    direction: "-",
-    reference: "MR-0037",
-    refType: "Material Request",
-    requestedBy: "Alice Ware",
-    project: "University Science Block",
-    notes: "Plastering works",
-  },
-  {
-    id: "MOV-0085",
-    date: "Apr 8, 2026",
-    time: "11:00",
-    material: "PVC Pipe 110mm",
-    category: "Plumbing & MEP",
-    type: "adjustment",
-    qty: 20,
-    unit: "Metres",
-    direction: "-",
-    reference: "ADJ-0009",
-    refType: "Adjustment",
-    requestedBy: "Amaka Osei",
-    project: "—",
-    notes: "Damaged in storage — written off",
-  },
-  {
-    id: "MOV-0084",
-    date: "Apr 7, 2026",
-    time: "14:30",
-    material: "2.5mm Twin Cable",
-    category: "Electrical",
-    type: "incoming",
-    qty: 2000,
-    unit: "Metres",
-    direction: "+",
-    reference: "GRN-0029",
-    refType: "Goods Receipt",
-    requestedBy: "Warehouse",
-    project: "—",
-    notes: "Stock replenishment",
-  },
-  {
-    id: "MOV-0083",
-    date: "Apr 7, 2026",
-    time: "10:05",
-    material: "Steel Rebar Y16",
-    category: "Steel & Ironmongery",
-    type: "outgoing",
-    qty: 15,
-    unit: "Tonnes",
-    direction: "-",
-    reference: "MR-0036",
-    refType: "Material Request",
-    requestedBy: "Tom Fox",
-    project: "Downtown Office Complex",
-    notes: "Slab reinforcement Level 3",
-  },
-  {
-    id: "MOV-0082",
-    date: "Apr 7, 2026",
-    time: "09:00",
-    material: "Granite 3/4 Inch",
-    category: "Concrete & Masonry",
-    type: "incoming",
-    qty: 50,
-    unit: "Tonnes",
-    direction: "+",
-    reference: "GRN-0028",
-    refType: "Goods Receipt",
-    requestedBy: "Warehouse",
-    project: "—",
-    notes: "From Alpha Aggregates",
-  },
-  {
-    id: "MOV-0081",
-    date: "Apr 6, 2026",
-    time: "16:00",
-    material: "BRC Mesh A193",
-    category: "Steel & Ironmongery",
-    type: "outgoing",
-    qty: 30,
-    unit: "Sheets",
-    direction: "-",
-    reference: "MR-0035",
-    refType: "Material Request",
-    requestedBy: "Kwame Asante",
-    project: "Highway Interchange",
-    notes: "Road slab reinforcement",
-  },
-  {
-    id: "MOV-0080",
-    date: "Apr 6, 2026",
-    time: "11:30",
-    material: "Ceramic Tiles 600x600",
-    category: "Finishes",
-    type: "incoming",
-    qty: 80,
-    unit: "Cartons",
-    direction: "+",
-    reference: "GRN-0027",
-    refType: "Goods Receipt",
-    requestedBy: "Warehouse",
-    project: "—",
-    notes: "Received from TileWorld",
-  },
-];
+}
+
+const REF_TYPE_BY_MOV: Record<MovType, string> = {
+  incoming: "Goods Receipt",
+  outgoing: "Material Request",
+  transfer: "Transfer",
+  adjustment: "Adjustment",
+};
+
+function normalizeMovType(type: string): MovType {
+  const t = (type || "").toLowerCase();
+  if (t === "incoming" || t === "in" || t === "receipt") return "incoming";
+  if (t === "outgoing" || t === "out" || t === "issue") return "outgoing";
+  if (t === "transfer") return "transfer";
+  return "adjustment";
+}
+
+// Maps a backend stock-movement record into the table's display row shape.
+function mapMovement(m: StockMovement): MovementRow {
+  const type = normalizeMovType(m.type);
+  const d = m.date ? new Date(m.date) : null;
+  const valid = !!d && !isNaN(d.getTime());
+  return {
+    id: m.id,
+    ts: valid ? d!.getTime() : 0,
+    date: valid
+      ? d!.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "—",
+    time: valid
+      ? d!.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
+      : "",
+    material: m.materialName ?? "—",
+    category: "",
+    type,
+    qty: m.qty ?? 0,
+    unit: m.unit ?? "",
+    direction: type === "incoming" ? "+" : "-",
+    reference: m.reference ?? "—",
+    refType: REF_TYPE_BY_MOV[type],
+    requestedBy: m.createdBy ?? "—",
+    project: m.projectName ?? "—",
+    notes: m.notes ?? "",
+  };
+}
 
 const typeConfig: Record<
   MovType,
@@ -261,6 +113,21 @@ export function StockMovementPage() {
     "date",
   );
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [movements, setMovements] = useState<MovementRow[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    getStockMovements()
+      .then((rows) => {
+        if (active) setMovements(rows.map(mapMovement));
+      })
+      .catch(() => {
+        if (active) setMovements([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function handleSort(k: typeof sortKey) {
     if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -289,8 +156,7 @@ export function StockMovementPage() {
     })
     .sort((a, b) => {
       let v = 0;
-      if (sortKey === "date")
-        v = `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
+      if (sortKey === "date") v = a.ts - b.ts;
       else if (sortKey === "material") v = a.material.localeCompare(b.material);
       else if (sortKey === "qty") v = a.qty - b.qty;
       else if (sortKey === "type") v = a.type.localeCompare(b.type);

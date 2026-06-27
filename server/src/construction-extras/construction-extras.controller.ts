@@ -8,6 +8,16 @@ import { ConstructionExtrasService } from './construction-extras.service';
 export class ConstructionExtrasController {
     constructor(private readonly svc: ConstructionExtrasService) { }
 
+    // ── Project Config (types + statuses) ──
+    @Get('project-types')
+    getProjectTypes() { return this.svc.getProjectTypes(); }
+    @Put('project-types')
+    saveProjectTypes(@Body() body: any) { return this.svc.saveProjectTypes(body?.types ?? body); }
+    @Get('project-statuses')
+    getProjectStatuses() { return this.svc.getProjectStatuses(); }
+    @Put('project-statuses')
+    saveProjectStatuses(@Body() body: any) { return this.svc.saveProjectStatuses(body?.statuses ?? body); }
+
     // ── Project Documents ──
     @Get('project-documents')
     getAllDocs(@Query('projectId') projectId?: string) { return this.svc.findAllDocs(projectId); }

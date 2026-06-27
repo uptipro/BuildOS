@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 const FINANCE_CONFIG_KEY = 'finance-config';
 const SCHEDULED_POSTINGS_KEY = 'finance-scheduled-postings';
 const PAYMENT_METHODS_KEY = 'finance-payment-methods';
+const PROCESS_MAPPINGS_KEY = 'finance-process-mappings';
 
 @Injectable()
 export class FinanceExtrasService {
@@ -217,5 +218,15 @@ export class FinanceExtrasService {
         const merged = { ...current, ...(data ?? {}) };
         await this.writeSetting(FINANCE_CONFIG_KEY, merged);
         return { saved: true, ...merged };
+    }
+
+    // ── Process / Account Mappings (GL posting rules) ──
+    getProcessMappings() {
+        return this.readSetting<any[]>(PROCESS_MAPPINGS_KEY, []);
+    }
+    async saveProcessMappings(mappings: any[]) {
+        const list = Array.isArray(mappings) ? mappings : [];
+        await this.writeSetting(PROCESS_MAPPINGS_KEY, list);
+        return list;
     }
 }

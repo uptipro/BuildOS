@@ -10,3 +10,11 @@ export const updateConstructionSetting = (id: string, data: Partial<Construction
     apiFetch<ConstructionSetting>(`/construction-settings/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 export const deleteConstructionSetting = (id: string) =>
     apiFetch<void>(`/construction-settings/${id}`, { method: 'DELETE' });
+
+// Project configuration (types + statuses) — persisted as JSON collections.
+export const getProjectTypes = () => apiFetch<any[]>('/project-types');
+export const saveProjectTypes = (types: any[]) =>
+    apiFetch<any[]>('/project-types', { method: 'PUT', body: JSON.stringify({ types }) });
+export const getProjectStatuses = () => apiFetch<any[]>('/project-statuses');
+export const saveProjectStatuses = (statuses: any[]) =>
+    apiFetch<any[]>('/project-statuses', { method: 'PUT', body: JSON.stringify({ statuses }) });

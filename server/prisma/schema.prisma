@@ -180,8 +180,31 @@ model Project {
   teamSize       Int           @default(0)
   approvalStatus String        @default("pending") // pending, approved, rejected
   stakeholders   String[]      @default([])
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+
+  // ─── Construction-module fields ───
+  // Full-fidelity storage for the richer construction `Project` shape. All
+  // nullable so the core ERP project shape and existing rows are unaffected;
+  // the construction read/write mappers (src/app/api/projects.ts) round-trip
+  // these alongside the shared columns (name, client, budget, manager, dates).
+  siteAddress      String?
+  mainContractor   String?
+  mainContractorId String?
+  contractType     String? // Lump Sum | Remeasurable | Cost Plus
+  clusterId        String?
+  ragStatus        String?   @default("on-track") // on-track | at-risk | delayed
+  description      String?
+  descriptor       String?
+  sector           String?
+  category         String?
+  blockCount       Int?
+  contractingModel String? // developer | contractor | gc
+  lastReportDate   DateTime?
+  setupComplete    Boolean?  @default(false)
+  setupProgress    Int?      @default(0)
+  setupLocked      Boolean?  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   expenses Expense[]
   incomes  Income[]

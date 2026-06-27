@@ -1,5 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Edit, Trash2, FolderCog } from "lucide-react";
+import {
+  getProjectTypes,
+  saveProjectTypes,
+  getProjectStatuses,
+  saveProjectStatuses,
+} from "../../api/construction-settings";
 
 interface ProjectType {
   id: string;
@@ -35,6 +41,12 @@ function ProjectTypesPanel() {
   const [form, setForm] = useState({ name: "", description: "" });
   const [deleteTarget, setDeleteTarget] = useState<ProjectType | null>(null);
 
+  useEffect(() => {
+    getProjectTypes()
+      .then((d) => setTypes(d as ProjectType[]))
+      .catch(() => {});
+  }, []);
+
   function openAdd() {
     setEditing(null);
     setForm({ name: "", description: "" });
@@ -48,13 +60,11 @@ function ProjectTypesPanel() {
 
   function save() {
     if (!form.name.trim()) return;
-    if (editing) {
-      setTypes((prev) =>
-        prev.map((t) => (t.id === editing.id ? { ...t, ...form } : t)),
-      );
-    } else {
-      setTypes((prev) => [...prev, { id: String(Date.now()), ...form }]);
-    }
+    const next = editing
+      ? types.map((t) => (t.id === editing.id ? { ...t, ...form } : t))
+      : [...types, { id: String(Date.now()), ...form }];
+    setTypes(next);
+    saveProjectTypes(next).catch(() => {});
     setShowModal(false);
   }
 
@@ -191,9 +201,9 @@ function ProjectTypesPanel() {
               </button>
               <button
                 onClick={() => {
-                  setTypes((prev) =>
-                    prev.filter((t) => t.id !== deleteTarget.id),
-                  );
+                  const next = types.filter((t) => t.id !== deleteTarget.id);
+                  setTypes(next);
+                  saveProjectTypes(next).catch(() => {});
                   setDeleteTarget(null);
                 }}
                 className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl"
@@ -216,6 +226,12 @@ function ProjectStatusesPanel() {
   const [form, setForm] = useState({ name: "", color: COLOR_PRESETS[0] });
   const [deleteTarget, setDeleteTarget] = useState<ProjectStatus | null>(null);
 
+  useEffect(() => {
+    getProjectStatuses()
+      .then((d) => setStatuses(d as ProjectStatus[]))
+      .catch(() => {});
+  }, []);
+
   function openAdd() {
     setEditing(null);
     setForm({ name: "", color: COLOR_PRESETS[0] });
@@ -229,17 +245,12 @@ function ProjectStatusesPanel() {
 
   function save() {
     if (!form.name.trim()) return;
-    if (editing) {
-      setStatuses((prev) =>
-        prev.map((s) => (s.id === editing.id ? { ...s, ...form } : s)),
-      );
-    } else {
-      const maxSeq = statuses.reduce((m, s) => Math.max(m, s.sequence), 0);
-      setStatuses((prev) => [
-        ...prev,
-        { id: String(Date.now()), sequence: maxSeq + 1, ...form },
-      ]);
-    }
+    const maxSeq = statuses.reduce((m, s) => Math.max(m, s.sequence), 0);
+    const next = editing
+      ? statuses.map((s) => (s.id === editing.id ? { ...s, ...form } : s))
+      : [...statuses, { id: String(Date.now()), sequence: maxSeq + 1, ...form }];
+    setStatuses(next);
+    saveProjectStatuses(next).catch(() => {});
     setShowModal(false);
   }
 
@@ -409,9 +420,9 @@ function ProjectStatusesPanel() {
               </button>
               <button
                 onClick={() => {
-                  setStatuses((prev) =>
-                    prev.filter((s) => s.id !== deleteTarget.id),
-                  );
+                  const next = statuses.filter((s) => s.id !== deleteTarget.id);
+                  setStatuses(next);
+                  saveProjectStatuses(next).catch(() => {});
                   setDeleteTarget(null);
                 }}
                 className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl"
