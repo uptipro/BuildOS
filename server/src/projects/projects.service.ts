@@ -20,7 +20,22 @@ export class ProjectsService {
     }
 
     create(data: any) {
-        return this.prisma.project.create({ data });
+        // Provide safe defaults for required, no-default columns so a partial
+        // payload (e.g. from the construction module, which uses a richer
+        // project shape) cannot crash with a Prisma validation 500.
+        return this.prisma.project.create({
+            data: {
+                location: '',
+                state: '',
+                city: '',
+                type: 'Commercial',
+                manager: '',
+                budget: 0,
+                startDate: new Date(),
+                endDate: new Date(),
+                ...data,
+            },
+        });
     }
 
     update(id: string, data: any) {

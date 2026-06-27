@@ -112,6 +112,37 @@ export function createProject(data: any) {
     return apiFetch(`/projects`, { method: 'POST', body: JSON.stringify(data) });
 }
 
+const reverseStatusMap: Record<string, string> = {
+    Active: 'Active',
+    'On Hold': 'OnHold',
+    Planning: 'Planning',
+    Completed: 'Completed',
+    Cancelled: 'Cancelled',
+};
+
+/**
+ * Maps the construction module's rich project shape into the backend `Project`
+ * columns, persists it, and returns the created project in the construction
+ * shape (with its real backend id).
+ */
+export async function createConstructionProject(data: any) {
+    const payload: Record<string, any> = {
+        name: data.name,
+        client: data.client ?? '',
+        location: data.siteAddress || data.location || '',
+        manager: data.projectManager ?? '',
+        status: reverseStatusMap[data.status] ?? 'Active',
+        budget: data.budget ?? 0,
+    };
+    if (data.plannedStartDate) payload.startDate = new Date(data.plannedStartDate).toISOString();
+    if (data.plannedEndDate) payload.endDate = new Date(data.plannedEndDate).toISOString();
+    const created = await apiFetch<any>('/projects', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+    return mapConstructionProject(created);
+}
+
 export function updateProject(id: string, data: any) {
     return apiFetch(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 }

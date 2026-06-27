@@ -25,8 +25,8 @@ import {
 } from "./mockData";
 import type { Project, ContractType } from "./types";
 import { useResources } from "../../contexts/ResourceContext";
-import { fetchConstructionProjects } from "../../api/projects";
-import { setProjectsCache } from "./projectStore";
+import { fetchConstructionProjects, createConstructionProject } from "../../api/projects";
+import { setProjectsCache, upsertProjectCache } from "./projectStore";
 
 type ProjectStatus = Project["status"];
 
@@ -97,6 +97,7 @@ export function ProjectsListPage() {
   const [sortField, setSortField] = useState<keyof Project | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(DEFAULT_FORM);
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -467,30 +468,37 @@ export function ProjectsListPage() {
             </div>
             <form
               className="p-6 space-y-5"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                const newProject: Project = {
-                  id: `PRJ-${String(projectList.length + 1).padStart(3, "0")}`,
-                  name: form.name,
-                  siteAddress: form.siteAddress,
-                  location: form.location,
-                  client: form.client,
-                  projectManager: form.projectManager,
-                  mainContractor: "",
-                  contractType: form.contractType,
-                  plannedStartDate: form.plannedStartDate,
-                  plannedEndDate: form.plannedEndDate,
-                  description: form.description,
-                  clusterId: form.clusterId,
-                  status: "Active" as ProjectStatus,
-                  ragStatus: "on-track" as const,
-                  budget: 0,
-                  spent: 0,
-                  createdAt: new Date().toISOString().split("T")[0],
-                };
-                setProjectList((prev) => [...prev, newProject]);
-                setShowCreate(false);
-                setForm(DEFAULT_FORM);
+                if (creating) return;
+                setCreating(true);
+                try {
+                  const created = (await createConstructionProject({
+                    name: form.name,
+                    client: form.client,
+                    siteAddress: form.siteAddress,
+                    location: form.location,
+                    projectManager: form.projectManager,
+                    contractType: form.contractType,
+                    plannedStartDate: form.plannedStartDate,
+                    plannedEndDate: form.plannedEndDate,
+                    description: form.description,
+                    clusterId: form.clusterId,
+                    status: "Active",
+                    budget: 0,
+                  })) as Project;
+                  setProjectList((prev) => [...prev, created]);
+                  upsertProjectCache(created);
+                  setShowCreate(false);
+                  setForm(DEFAULT_FORM);
+                } catch (err) {
+                  alert(
+                    (err as Error)?.message ||
+                      "Failed to create project. Please try again.",
+                  );
+                } finally {
+                  setCreating(false);
+                }
               }}
             >
               <div className="grid grid-cols-2 gap-4">
@@ -686,10 +694,11 @@ export function ProjectsListPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-white rounded-md text-sm font-medium hover:opacity-90"
+                  disabled={creating}
+                  className="px-4 py-2 text-white rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-60"
                   style={{ backgroundColor: "#E8973A" }}
                 >
-                  Create Project
+                  {creating ? "Creating…" : "Create Project"}
                 </button>
               </div>
             </form>
