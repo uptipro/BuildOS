@@ -92,20 +92,6 @@ defaultScheduleLevels.forEach((l) => {
   LEVEL_PREFIX[l.level] = l.prefix;
 });
 
-const EMPTY_VENDOR_FORM = {
-  name: "",
-  trade: "",
-  contractType: "Labor-only" as Vendor["contractType"],
-  isNominated: false,
-  contractSum: 0,
-  blockAssignment: "",
-  skilledCount: 0,
-  unskilledCount: 0,
-  mandaysEstimate: 0,
-  status: "Awarded" as Vendor["status"],
-  isMainContractor: false,
-};
-
 export function ProjectSetupPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const [project, setProject] = useState<any>(null);
@@ -283,9 +269,6 @@ export function ProjectSetupPage() {
 
   // Step 3 — Vendor Registration
   const [projectVendors, setProjectVendors] = useState<Vendor[]>([]);
-  const [vendorForm, setVendorForm] = useState(EMPTY_VENDOR_FORM);
-  const [selectedExistingVendor, setSelectedExistingVendor] = useState("");
-  const [isNewVendor, setIsNewVendor] = useState(false);
   const [humanSubType, setHumanSubType] =
     useState<HumanResourceSource>("vendor");
 
@@ -310,19 +293,8 @@ export function ProjectSetupPage() {
     [],
   );
   const [isNewContractor, setIsNewContractor] = useState(false);
-  const [, setSelectedExistingContractor] = useState("");
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
 
-  const EMPTY_MATERIAL_FORM = {
-    name: "",
-    category: "",
-    unit: "",
-    estimatedQty: 0,
-    estimatedUnitCost: 0,
-    procurementSource: "internal" as "internal" | "purchase",
-    supplierName: "",
-  };
-  const [materialForm, setMaterialForm] = useState(EMPTY_MATERIAL_FORM);
   const [projectMaterials, setProjectMaterials] = useState<MaterialResource[]>(
     [],
   );
@@ -968,35 +940,6 @@ export function ProjectSetupPage() {
     });
   }, [allVendors]);
 
-  const handleSelectExistingVendor = (id: string) => {
-    setSelectedExistingVendor(id);
-    if (id === "__new__") {
-      setIsNewVendor(true);
-      setVendorForm(EMPTY_VENDOR_FORM);
-    } else if (id === "") {
-      setIsNewVendor(false);
-      setVendorForm(EMPTY_VENDOR_FORM);
-    } else {
-      setIsNewVendor(false);
-      const v = allVendors.find((v) => v.id === id);
-      if (v) {
-        setVendorForm((prev) => ({
-          ...prev,
-          name: v.name,
-          trade: v.trade,
-          contractType: v.contractType,
-          isNominated: v.isNominated,
-          contractSum: v.contractSum,
-          blockAssignment: v.blockAssignment,
-          skilledCount: v.skilledCount,
-          unskilledCount: v.unskilledCount,
-          mandaysEstimate: v.mandaysEstimate,
-          status: v.status,
-        }));
-      }
-    }
-  };
-
   const addVendor = () => {
     if (selectedVendorIds.length === 0) return;
     const existingNames = new Set(projectVendors.map((v) => v.name));
@@ -1110,32 +1053,6 @@ export function ProjectSetupPage() {
   const removeStaff = (id: string) =>
     setProjectStaff((prev) => prev.filter((s) => s.id !== id));
 
-  // Contractor helpers
-  const handleSelectExistingContractor = (id: string) => {
-    setSelectedExistingContractor(id);
-    if (id === "__new__") {
-      setIsNewContractor(true);
-      setContractorForm(EMPTY_CONTRACTOR_FORM);
-    } else if (id === "") {
-      setIsNewContractor(false);
-      setContractorForm(EMPTY_CONTRACTOR_FORM);
-    } else {
-      setIsNewContractor(false);
-      const c = individualContractors.find((c) => c.id === id);
-      if (c) {
-        setContractorForm({
-          name: c.name,
-          trade: c.trade,
-          payRate: c.payRate,
-          payRateUnit: c.payRateUnit,
-          skilledCount: c.skilledCount,
-          unskilledCount: c.unskilledCount,
-          mandaysEstimate: c.manDays,
-          status: c.status,
-        });
-      }
-    }
-  };
   const addContractor = () => {
     if (selectedContractorIds.length === 0) return;
     const existingNames = new Set(projectContractors.map((c) => c.name));
@@ -1167,22 +1084,6 @@ export function ProjectSetupPage() {
   };
   const removeContractor = (id: string) =>
     setProjectContractors((prev) => prev.filter((c) => c.id !== id));
-
-  // Stage assignment toggle (unified for all human resources)
-  const [resourceStageAssignments, setResourceStageAssignments] = useState<
-    Record<string, string[]>
-  >({});
-  const toggleResourceStage = (resourceId: string, stageId: string) => {
-    setResourceStageAssignments((prev) => {
-      const current = prev[resourceId] || [];
-      return {
-        ...prev,
-        [resourceId]: current.includes(stageId)
-          ? current.filter((s) => s !== stageId)
-          : [...current, stageId],
-      };
-    });
-  };
 
   // Material helpers
   const addMaterial = () => {
@@ -2999,8 +2900,6 @@ export function ProjectSetupPage() {
 
   // Step 3 — Vendor Registration
   const renderHumanResources = () => {
-    const stages = projectTasks.filter((t) => t.level === 1);
-
     const allHumanResources = [
       ...projectStaff.map((s) => ({ ...s, _subtype: "Employee" as const })),
       ...projectContractors.map((c) => ({
@@ -4080,37 +3979,6 @@ export function ProjectSetupPage() {
   };
 
   const renderMaterials = () => {
-    const materialCategories = [
-      "Aggregates",
-      "Reinforcement",
-      "Concrete",
-      "Steel",
-      "Finishing",
-      "Plumbing",
-      "Electrical",
-      "Roofing",
-      "Lumber / Formwork",
-      "Hardware",
-      "Paint & Coatings",
-      "Waterproofing",
-      "Insulation",
-      "Other",
-    ];
-    const materialUnits = [
-      "bags",
-      "tonnes",
-      "kg",
-      "litres",
-      "gallons",
-      "m³",
-      "m²",
-      "linear metres",
-      "pieces",
-      "rolls",
-      "sheets",
-      "pails",
-      "drums",
-    ];
     return (
       <div className="space-y-4">
         <div
@@ -4327,7 +4195,6 @@ export function ProjectSetupPage() {
       "Safety",
       "Other",
     ];
-    const equipmentStatuses = ["Available", "Assigned", "Under Maintenance"];
     return (
       <div className="space-y-4">
         <div

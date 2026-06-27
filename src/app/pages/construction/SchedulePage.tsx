@@ -90,13 +90,6 @@ const levelNames: Record<number, string> = {
   4: "Work Package",
 };
 
-const dependencyLabels: Record<string, string> = {
-  FS: "Finish-to-Start (FS)",
-  FF: "Finish-to-Finish (FF)",
-  SS: "Start-to-Start (SS)",
-  SF: "Start-to-Finish (SF)",
-};
-
 function buildWbsMap(tasks: Task[]): Map<string, string> {
   const wbsMap = new Map<string, string>();
   const byId = new Map(tasks.map((t) => [t.id, t]));
@@ -238,14 +231,8 @@ export function SchedulePage() {
     }
     return result;
   }
-  const visibleTasks = useMemo(
-    () => flattenVisible(filteredTasks, null),
-    [filteredTasks, expanded, rootTasks],
-  );
-
   function renumberWbs(taskList: Task[]): Task[] {
     const sorted = taskList.map((t) => ({ ...t }));
-    const levelOrder = [1, 2, 3, 4];
     const counters: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
     const prefixMap: Record<number, string> = {
       1: "ST",
@@ -336,10 +323,6 @@ export function SchedulePage() {
     const target = tasks.find((t) => t.id === targetId);
     if (!dragged || !target) return;
 
-    const visible = flattenVisible(tasks, null);
-    const draggedIdx = visible.findIndex((t) => t.id === draggedId);
-    const targetIdx = visible.findIndex((t) => t.id === targetId);
-
     const reordered = tasks.filter((t) => t.id !== draggedId);
     const insertAt = tasks.findIndex((t) => t.id === targetId);
     const updated: Task = {
@@ -353,7 +336,7 @@ export function SchedulePage() {
       updated,
       ...reordered.slice(insertAt),
     ];
-    setTasks(calcFloat(result));
+    setTasks(calcFloat(renumberWbs(result)));
     setDropTarget(null);
     setDropPosition(null);
   }
@@ -684,7 +667,6 @@ export function SchedulePage() {
     const projectStart = new Date(project!.plannedStartDate);
     const projectEnd = new Date(project!.plannedEndDate);
     const totalMs = projectEnd.getTime() - projectStart.getTime();
-    const totalDays = totalMs / (1000 * 60 * 60 * 24);
     const today = new Date();
     const todayMs = today.getTime() - projectStart.getTime();
     const todayPct = (todayMs / totalMs) * 100;
@@ -724,7 +706,6 @@ export function SchedulePage() {
         if (childRows.length === 0 && task.level < 4) return [];
 
         const showHeader = task.level < 4;
-        const showBar = task.level === 4;
         const paddingLeft = (task.level - 1) * 24 + 16;
 
         if (showHeader) {
