@@ -70,6 +70,7 @@ import { MaterialResourcesModule } from './material-resources/material-resources
 import { EquipmentResourcesModule } from './equipment-resources/equipment-resources.module';
 import { ContractorsModule } from './contractors/contractors.module';
 import { VendorsModule } from './vendors/vendors.module';
+import { OrgUnitsModule } from './org-units/org-units.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
@@ -116,6 +117,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
         AppCatalogModule,
         ClustersModule,
         EquipmentModule,
+        OrgUnitsModule,
         ConstructionIssuesModule,
         ChangeRequestsModule,
         DelaysModule,

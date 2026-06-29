@@ -21,6 +21,7 @@ import {
   CreditCard,
   ListTodo,
   User,
+  Layers,
 } from "lucide-react";
 
 const sidebarSections = [
@@ -65,6 +66,17 @@ const sidebarSections = [
         label: "Departments",
         href: "/apps/hr/departments",
         icon: <Building2 className="w-4 h-4" />,
+        end: true,
+      },
+    ],
+  },
+  {
+    label: "Organization",
+    items: [
+      {
+        label: "Organization Structure",
+        href: "/apps/hr/org-structure",
+        icon: <Layers className="w-4 h-4" />,
         end: true,
       },
     ],

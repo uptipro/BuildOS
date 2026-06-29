@@ -91,6 +91,7 @@ const HRDashboardPage = lazy(() => import("./pages/hr/HRDashboardPage").then((m)
 const EmployeesPage = lazy(() => import("./pages/hr/EmployeesPage").then((m) => ({ default: m.EmployeesPage })));
 const EmployeeProfilePage = lazy(() => import("./pages/hr/EmployeeProfilePage").then((m) => ({ default: m.EmployeeProfilePage })));
 const DepartmentsPage = lazy(() => import("./pages/hr/DepartmentsPage").then((m) => ({ default: m.DepartmentsPage })));
+const OrgStructurePage = lazy(() => import("./pages/hr/OrgStructurePage").then((m) => ({ default: m.OrgStructurePage })));
 const HRRolesPage = lazy(() => import("./pages/hr/HRRolesPage").then((m) => ({ default: m.HRRolesPage })));
 const AttendancePage = lazy(() => import("./pages/hr/AttendancePage").then((m) => ({ default: m.AttendancePage })));
 const AttendanceLogsPage = lazy(() => import("./pages/hr/AttendanceLogsPage").then((m) => ({ default: m.AttendanceLogsPage })));
@@ -353,6 +354,7 @@ export const router = createBrowserRouter([
               { path: "dashboard", Component: HRDashboardPage },
               { path: "employees/:id", Component: EmployeeProfilePage },
               { path: "departments", Component: DepartmentsPage },
+              { path: "org-structure", Component: OrgStructurePage },
               { path: "hr-roles", Component: HRRolesPage },
               { path: "attendance", Component: AttendancePage },
               { path: "attendance-logs", Component: AttendanceLogsPage },
