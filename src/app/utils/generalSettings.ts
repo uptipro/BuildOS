@@ -211,6 +211,32 @@ export function getGreeting(value?: string | number | Date): string {
 }
 
 /**
+ * Returns the current fiscal quarter label (e.g. "Q2 2026") derived from
+ * the "Fiscal Year Start" month configured in Admin → General Settings
+ * (fiscalYearStart: "01"–"12"). The year shown is the calendar year in
+ * which the current fiscal year started.
+ */
+export function getCurrentFiscalQuarterLabel(
+  value?: string | number | Date,
+): string {
+  const { fiscalYearStart } = getGeneralSettings();
+  const startMonth = Math.min(
+    12,
+    Math.max(1, Number.parseInt(fiscalYearStart, 10) || 1),
+  );
+  const now = toDate(value ?? new Date()) ?? new Date();
+
+  const monthsSinceFYStart = (now.getMonth() + 1 - startMonth + 12) % 12;
+  const quarter = Math.floor(monthsSinceFYStart / 3) + 1;
+  const fiscalYear =
+    now.getMonth() + 1 >= startMonth
+      ? now.getFullYear()
+      : now.getFullYear() - 1;
+
+  return `Q${quarter} ${fiscalYear}`;
+}
+
+/**
  * Applies the configured language to the document so the browser and
  * assistive tech render in the correct language/locale. Full UI string
  * translation is layered on top of this elsewhere.

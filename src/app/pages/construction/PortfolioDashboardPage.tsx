@@ -22,6 +22,10 @@ import {
   clusters,
 } from "./mockData";
 import { fetchConstructionProjects } from "../../api/projects";
+import {
+  getCurrentFiscalQuarterLabel,
+  GENERAL_SETTINGS_CHANGED_EVENT,
+} from "../../utils/generalSettings";
 import type { RAGStatus } from "./types";
 
 const RAG_HEX: Record<RAGStatus, string> = {
@@ -58,6 +62,16 @@ export function PortfolioDashboardPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [projects, setProjects] = useState(mockProjects);
+  const [fiscalQuarter, setFiscalQuarter] = useState(() =>
+    getCurrentFiscalQuarterLabel(),
+  );
+
+  useEffect(() => {
+    const refresh = () => setFiscalQuarter(getCurrentFiscalQuarterLabel());
+    window.addEventListener(GENERAL_SETTINGS_CHANGED_EVENT, refresh);
+    return () =>
+      window.removeEventListener(GENERAL_SETTINGS_CHANGED_EVENT, refresh);
+  }, []);
 
   useEffect(() => {
     fetchConstructionProjects()
@@ -179,7 +193,7 @@ export function PortfolioDashboardPage() {
           className="text-xs font-medium px-3 py-1.5 rounded-full"
           style={{ backgroundColor: "rgba(232,151,58,0.15)", color: "#E8973A" }}
         >
-          Q2 2026
+          {fiscalQuarter}
         </div>
       </div>
 

@@ -12,7 +12,7 @@ import {
   CalendarDays,
   User,
 } from "lucide-react";
-import { apiFetch } from "../api/client";
+import { listAppTasks } from "../api/app-tasks";
 
 type TaskStatus = "Pending" | "In Progress" | "Completed";
 type TaskPriority = "Low" | "Medium" | "High";
@@ -64,6 +64,21 @@ const STATUS_NEXT: Record<TaskStatus, TaskStatus> = {
   Completed: "Pending",
 };
 
+// Backend tasks use board-style statuses ("To Do", "Awaiting Approval", …);
+// normalise them onto this page's three-state model.
+function normalizeStatus(status: string | undefined): TaskStatus {
+  switch (status) {
+    case "In Progress":
+    case "Awaiting Approval":
+      return "In Progress";
+    case "Completed":
+    case "Approved":
+      return "Completed";
+    default:
+      return "Pending";
+  }
+}
+
 export function TasksPage({
   app,
   accentColor = "bg-indigo-600 hover:bg-indigo-700",
@@ -76,8 +91,25 @@ export function TasksPage({
   const [tasks, setTasks] = useState<Task[]>([]);
 
   useEffect(() => {
-    apiFetch(`/tasks?app=${app}`)
-      .then(setTasks)
+    listAppTasks()
+      .then((rows) => {
+        setTasks(
+          rows
+            .filter((t) => t.app === app)
+            .map((t) => ({
+              id: t.id,
+              name: t.name,
+              description: t.description,
+              assignedTo: t.assignedTo,
+              dueDate: t.dueDate,
+              priority: (t.priority as TaskPriority) ?? "Medium",
+              status: normalizeStatus(t.status),
+              app: t.app,
+              createdAt: t.createdAt,
+              category: (t.category as Task["category"]) ?? "general",
+            })),
+        );
+      })
       .catch((err) => {
         console.error(`Failed to load tasks for ${app}:`, err);
         setTasks([]);

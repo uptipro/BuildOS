@@ -280,12 +280,12 @@ export function MyTasksView({
         })}
       </div>
 
-      {/* Kanban board */}
-      <div className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1">
+      {/* Kanban board — columns share the available width so the board fits the screen */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 pb-4">
         {COLUMNS.map((col) => {
           const colTasks = myTasks.filter((t) => t.status === col.status);
           return (
-            <div key={col.status} className="flex-shrink-0 w-60">
+            <div key={col.status} className="min-w-0">
               {/* Column header */}
               <div
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-t-xl border ${col.headerClass}`}
