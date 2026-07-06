@@ -47,6 +47,8 @@ const CostsOverviewPage = lazy(() => import("./pages/construction/CostsOverviewP
 const StakeholdersOverviewPage = lazy(() => import("./pages/construction/StakeholdersOverviewPage").then((m) => ({ default: m.StakeholdersOverviewPage })));
 const StakeholdersPage = lazy(() => import("./pages/construction/StakeholdersPage").then((m) => ({ default: m.StakeholdersPage })));
 const ResourceHubPage = lazy(() => import("./pages/construction/ResourceHubPage").then((m) => ({ default: m.ResourceHubPage })));
+const ResourcePlanningPage = lazy(() => import("./pages/construction/ResourcePlanningPage").then((m) => ({ default: m.ResourcePlanningPage })));
+const ConstructionApprovalsPage = lazy(() => import("./pages/construction/ApprovalsPage").then((m) => ({ default: m.ApprovalsPage })));
 const ReportsPage = lazy(() => import("./pages/construction/ReportsPage").then((m) => ({ default: m.ReportsPage })));
 const ProgressEarnedValuePage = lazy(() => import("./pages/construction/ProgressEarnedValuePage").then((m) => ({ default: m.ProgressEarnedValuePage })));
 const SettingsPage = lazy(() => import("./pages/construction/SettingsPage").then((m) => ({ default: m.SettingsPage })));
@@ -264,6 +266,8 @@ export const router = createBrowserRouter([
               { path: "stakeholders", Component: StakeholdersOverviewPage },
               { path: "reports", Component: ReportsPage },
               { path: "resource-hub", Component: ResourceHubPage },
+              { path: "resource-planning", Component: ResourcePlanningPage },
+              { path: "approvals", Component: ConstructionApprovalsPage },
               { path: "settings", Component: SettingsPage },
               { path: "disbursements", Component: DisbursementsPage },
               { path: "communications", Component: CommunicationLogPage },
