@@ -18,6 +18,7 @@ import {
 } from "./mockData";
 import type { Disbursement } from "./types";
 import { listDisbursements, createDisbursement } from "../../api/disbursements";
+import { useNumbering } from "../../stores/numberingStore";
 
 const sourceStyles: Record<
   string,
@@ -51,6 +52,7 @@ const emptyForm: Omit<Disbursement, "id"> = {
 };
 
 export function DisbursementsPage() {
+  const { getNextId } = useNumbering();
   const { id: projectId } = useParams<{ id: string }>();
   const project = projectId ? getProjectById(projectId) : null;
   const [search, setSearch] = useState("");
@@ -94,7 +96,7 @@ export function DisbursementsPage() {
   function handleAdd() {
     if (!form.projectId || !form.amount) return;
     const newEntry: Disbursement = {
-      id: `DB-${String(allDisbursements.length + 1).padStart(3, "0")}`,
+      id: getNextId("Disbursement"),
       ...form,
     };
     const { id: _omit, ...payload } = newEntry;

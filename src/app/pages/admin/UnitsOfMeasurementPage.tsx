@@ -1,7 +1,8 @@
-import { Plus, Edit, Trash2, Ruler } from "lucide-react";
+import { Plus, Edit, Trash2, Ruler, Download } from "lucide-react";
 import { useEffect, useState } from "react";
-import { DataTable } from "../../components/DataTable";
+import { DataTable, type Column } from "../../components/DataTable";
 import { CreatableSelect } from "../../components/CreatableSelect";
+import { exportCSV } from "../../utils/exportCSV";
 import {
   getUnits,
   createUnit,
@@ -46,11 +47,14 @@ export function UnitsOfMeasurementPage() {
     conversionFactor: 1,
   });
 
-  const columns = [
+  const columns: Column<Unit>[] = [
     {
       key: "name",
       label: "Name",
       sortable: true,
+      render: (row: Unit) => (
+        <span className="text-sm text-gray-900">{row.name}</span>
+      ),
     },
     {
       key: "abbreviation",
@@ -88,6 +92,9 @@ export function UnitsOfMeasurementPage() {
       key: "baseUnit",
       label: "Base Unit",
       sortable: true,
+      render: (row: Unit) => (
+        <span className="text-sm text-gray-700">{row.baseUnit}</span>
+      ),
     },
     {
       key: "conversionFactor",
@@ -228,10 +235,41 @@ export function UnitsOfMeasurementPage() {
       <DataTable
         data={units}
         columns={columns}
-        searchable={true}
-        exportable={true}
+        keyExtractor={(row) => row.id}
+        searchFields={[
+          (row) => row.name,
+          (row) => row.abbreviation,
+          (row) => row.category,
+          (row) => row.baseUnit,
+        ]}
+        searchPlaceholder="Search units..."
         pageSize={10}
-        maxHeight="520px"
+        headerExtra={
+          <button
+            onClick={() =>
+              exportCSV(
+                "units-of-measurement",
+                [
+                  "Name",
+                  "Abbreviation",
+                  "Category",
+                  "Base Unit",
+                  "Conversion Factor",
+                ],
+                units.map((u) => [
+                  u.name,
+                  u.abbreviation,
+                  u.category,
+                  u.baseUnit,
+                  String(u.conversionFactor),
+                ]),
+              )
+            }
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <Download className="w-4 h-4" /> Export
+          </button>
+        }
       />
 
       {/* Add/Edit Modal */}

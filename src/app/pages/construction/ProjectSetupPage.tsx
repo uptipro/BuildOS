@@ -65,6 +65,7 @@ import {
   lockProjectSetup,
   unlockProjectSetup,
 } from "../../api/project-setup";
+import { useNumbering } from "../../stores/numberingStore";
 
 const STEPS = [
   { id: "basic", label: "Basic Information", icon: FileText },
@@ -111,6 +112,7 @@ export function ProjectSetupPage() {
   const [clusters, setClusters] = useState<string[]>([]);
   const [equipmentInventory, setEquipmentInventory] = useState<any[]>([]);
 
+  const { getNextId } = useNumbering();
   const { contractors: individualContractors } = useResources();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -168,7 +170,7 @@ export function ProjectSetupPage() {
     const config = structureConfig;
     if (!config) return;
     const newEntry = {
-      id: `SE-${structureEntries.length + 1}`,
+      id: getNextId("Structure"),
       name: "",
       innerUnitCount: 1,
       attributes: {} as Record<string, string | number>,
@@ -953,10 +955,10 @@ export function ProjectSetupPage() {
         const v = allVendors.find((x) => x.id === id);
         return v && !existingNames.has(v.name);
       })
-      .map((id, i) => {
+      .map((id) => {
         const v = allVendors.find((x) => x.id === id);
         return {
-          id: `V-${String(projectVendors.length + i + 1).padStart(3, "0")}`,
+          id: getNextId("Vendor"),
           projectId: projectId!,
           assignedWorkPackages: [],
           name: v?.name || "",
@@ -1036,10 +1038,10 @@ export function ProjectSetupPage() {
     const existingIds = new Set(projectStaff.map((s) => s.employeeId));
     const newStaff: HumanResource[] = selectedEmployeeIds
       .filter((id) => !existingIds.has(id))
-      .map((id, i) => {
+      .map((id) => {
         const emp = hrEmployees.find((e) => e.id === id);
         return {
-          id: `STF-${String(projectStaff.length + i + 1).padStart(3, "0")}`,
+          id: getNextId("Staff"),
           projectId: projectId!,
           source: "employee" as const,
           name: `${emp?.firstName || ""} ${emp?.lastName || ""}`,
@@ -1066,10 +1068,10 @@ export function ProjectSetupPage() {
         const c = individualContractors.find((x) => x.id === id);
         return c && !existingNames.has(c.name);
       })
-      .map((id, i) => {
+      .map((id) => {
         const c = individualContractors.find((x) => x.id === id);
         return {
-          id: `CON-${String(projectContractors.length + i + 1).padStart(3, "0")}`,
+          id: getNextId("Contractor"),
           projectId: projectId!,
           source: "individual-contractor" as const,
           name: c?.name || "",
@@ -1093,10 +1095,10 @@ export function ProjectSetupPage() {
   // Material helpers
   const addMaterial = () => {
     if (selectedMaterialIds.length === 0) return;
-    const newMats: MaterialResource[] = selectedMaterialIds.map((id, i) => {
+    const newMats: MaterialResource[] = selectedMaterialIds.map((id) => {
       const inv = materialInventory.find((x) => x.id === id);
       return {
-        id: `MAT-${String(projectMaterials.length + i + 1).padStart(3, "0")}`,
+        id: getNextId("Material"),
         projectId: projectId!,
         name: inv?.name || "Unknown",
         category: inv?.category || "",
@@ -1118,10 +1120,10 @@ export function ProjectSetupPage() {
     // Add fleet equipment (multi-select)
     if (selectedFleetEquipmentIds.length > 0) {
       const newEquips: EquipmentResource[] = selectedFleetEquipmentIds.map(
-        (id, i) => {
+        (id) => {
           const inv = equipmentInventory.find((e) => e.id === id);
           return {
-            id: `EQ-${String(projectEquipment.length + i + 1).padStart(3, "0")}`,
+            id: getNextId("Equipment"),
             projectId: projectId!,
             name: inv?.name || "Unknown",
             category: inv?.category || "",
@@ -2047,7 +2049,7 @@ export function ProjectSetupPage() {
                         .toISOString()
                         .split("T")[0];
                     newTasks.push({
-                      id: `ST-${String(nextId).padStart(3, "0")}`,
+                      id: getNextId("SiteTask"),
                       projectId: projectId!,
                       parentTaskId: null,
                       level: 1,
@@ -3208,7 +3210,7 @@ export function ProjectSetupPage() {
                     onClick={() => {
                       if (!contractorForm.name || !contractorForm.trade) return;
                       const newCon: HumanResource = {
-                        id: `CON-${String(projectContractors.length + 1).padStart(3, "0")}`,
+                        id: getNextId("Contractor"),
                         projectId: projectId!,
                         source: "individual-contractor",
                         name: contractorForm.name,
@@ -4472,7 +4474,7 @@ export function ProjectSetupPage() {
                     if (!equipmentForm.name || !equipmentForm.category) return;
                     const isRented = externalEquipType === "rented";
                     const newEquip: EquipmentResource = {
-                      id: `EQ-${String(projectEquipment.length + 1).padStart(3, "0")}`,
+                      id: getNextId("Equipment"),
                       projectId: projectId!,
                       name: equipmentForm.name,
                       category: equipmentForm.category,

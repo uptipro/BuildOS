@@ -263,10 +263,10 @@ export function GeneralStorePage() {
                     {formatNumberByGeneralSettings(item.reorderLevel)} {item.unit}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {getCurrencySymbol()}{formatNumberByGeneralSettings(item.unitCost)}
+                    {formatNumberByGeneralSettings(item.unitCost)}
                   </td>
                   <td className="px-4 py-3 font-medium text-gray-900">
-                    {getCurrencySymbol()}{formatNumberByGeneralSettings(item.qty * item.unitCost)}
+                    {formatNumberByGeneralSettings(item.qty * item.unitCost)}
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">
                     {item.lastReceived}

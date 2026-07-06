@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { getReferenceData } from "../../api/reference-data";
 import { formatDateByGeneralSettings } from "../../utils/generalSettings";
+import { useNumbering } from "../../stores/numberingStore";
 
 type GRNStatus = "pending" | "partial" | "completed" | "over_supply";
 
@@ -173,6 +174,7 @@ function RecordDeliveryModal({
     setItems((p) => p.filter((_, j) => j !== i));
   const updateItem = (i: number, k: keyof GRNItem, v: string) =>
     setItems((p) => p.map((it, j) => (j === i ? { ...it, [k]: v } : it)));
+  const { getNextId } = useNumbering();
   const valid =
     poRef &&
     deliveryNote.trim() &&
@@ -180,7 +182,7 @@ function RecordDeliveryModal({
 
   function handleSave() {
     if (!valid) return;
-    const nextId = `GRN-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    const nextId = getNextId("GoodsReceipt");
     const builtItems = items.map((it) => ({
       material: it.material,
       ordered: parseFloat(it.ordered) || 0,

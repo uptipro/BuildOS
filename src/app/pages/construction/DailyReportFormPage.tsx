@@ -41,6 +41,7 @@ import type {
   Weather,
 } from "./types";
 import { useRoles } from "../../contexts/RolesContext";
+import { useNumbering } from "../../stores/numberingStore";
 
 const equipmentCategories = [
   "Earthwork",
@@ -269,6 +270,7 @@ function newCommLogRow(projectId: string): CommunicationLogEntry {
 }
 
 export function DailyReportFormPage() {
+  const { getNextId } = useNumbering();
   const { id: projectId, reportId } = useParams<{
     id: string;
     reportId?: string;
@@ -537,7 +539,7 @@ export function DailyReportFormPage() {
         ? ("pending-review" as const)
         : status;
     const report: DailyReport = {
-      id: existingDraft?.id || nextId("DR"),
+      id: existingDraft?.id || getNextId("DailyReport"),
       projectId: projectId || "",
       reportDate,
       weather,

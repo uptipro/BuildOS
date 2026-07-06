@@ -30,6 +30,7 @@ import {
   MapPin,
   Layers,
 } from "lucide-react";
+import { useNumbering } from "../../stores/numberingStore";
 
 type VendorDocType = "quote" | "invoice";
 type DocStatus = "pending_review" | "approved" | "po_created" | "rejected";
@@ -224,6 +225,7 @@ function RecordDocModal({
   const updateItem = (i: number, k: keyof DocItem, v: string) =>
     setItems((p) => p.map((it, j) => (j === i ? { ...it, [k]: v } : it)));
 
+  const { getNextId } = useNumbering();
   const totalAmount = items.reduce(
     (s, it) => s + (parseFloat(it.qty) || 0) * (parseFloat(it.unitPrice) || 0),
     0,
@@ -236,8 +238,7 @@ function RecordDocModal({
 
   function handleSave() {
     if (!valid) return;
-    const prefix = docType === "quote" ? "QT" : "INV";
-    const nextId = `${prefix}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    const nextId = docType === "quote" ? getNextId("Quote") : getNextId("PurchaseInvoice");
     const selectedStore = stores.find((s) => s.name === destinationStore);
     onSave({
       id: nextId,
@@ -738,6 +739,7 @@ function CreatePOFromQuoteModal({
   onClose: () => void;
   onDone: (id: string) => void;
 }) {
+  const { getNextId } = useNumbering();
   const fmt = (n: number) => {
     const symbol = getCurrencySymbol();
     return n >= 1_000_000
@@ -794,7 +796,7 @@ function CreatePOFromQuoteModal({
   const [supplierContact, setSupplierContact] = useState(defaultContact);
   const [notes, setNotes] = useState("");
 
-  const nextPO = `PO-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+  const nextPO = getNextId("PurchaseOrder");
 
   function handleCreate() {
     onDone(nextPO);

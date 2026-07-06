@@ -22,6 +22,7 @@ import {
   listCommunications,
   createCommunication,
 } from "../../api/communications";
+import { useNumbering } from "../../stores/numberingStore";
 
 const channelStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
   email: {
@@ -65,6 +66,7 @@ const emptyForm: Omit<CommunicationLogEntry, "id" | "createdAt" | "createdBy"> =
   };
 
 export function CommunicationLogPage() {
+  const { getNextId } = useNumbering();
   const { id: projectId } = useParams<{ id: string }>();
   const project = projectId ? getProjectById(projectId) : null;
   const [search, setSearch] = useState("");
@@ -108,7 +110,7 @@ export function CommunicationLogPage() {
   function handleAdd() {
     if (!form.projectId || !form.subject) return;
     const newEntry: CommunicationLogEntry = {
-      id: `CL-${String(allComms.length + 1).padStart(3, "0")}`,
+      id: getNextId("Communication"),
       createdAt: new Date().toISOString(),
       createdBy: "Current User",
       ...form,

@@ -12,6 +12,7 @@ import {
 import { getProjectById, qualityNCRs, fmtDate } from "./mockData";
 import type { QualityNCR } from "./types";
 import { listQualityNcrs, createQualityNcr } from "../../api/quality-ncrs";
+import { useNumbering } from "../../stores/numberingStore";
 
 type QATab = "compliance" | "inspections" | "ncrs" | "capa" | "schedule";
 
@@ -222,6 +223,7 @@ function NCRModal({
   onClose: (ncr: QualityNCR | null) => void;
   projectId: string;
 }) {
+  const { getNextId } = useNumbering();
   const [form, setForm] = useState({
     description: "",
     taskId: "",
@@ -233,7 +235,7 @@ function NCRModal({
   function handleSubmit() {
     if (!form.description.trim()) return;
     const newNcr: QualityNCR = {
-      id: `NCR-${String(qualityNCRs.length + 1).padStart(3, "0")}`,
+      id: getNextId("NonConformance"),
       projectId,
       ncrId: `NCR-${String(qualityNCRs.length + 23).padStart(4, "0")}`,
       date: new Date().toISOString().split("T")[0],

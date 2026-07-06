@@ -22,6 +22,7 @@ import {
 } from "../../api/procurement-requests";
 import { getReferenceData } from "../../api/reference-data";
 import { formatDateByGeneralSettings } from "../../utils/generalSettings";
+import { useNumbering } from "../../stores/numberingStore";
 
 type SRStatus = "sent" | "viewed" | "quote_received" | "declined" | "expired";
 
@@ -183,6 +184,7 @@ function NewRFQModal({
   const updateItem = (i: number, k: keyof RFQItem, v: string) =>
     setItems((p) => p.map((it, j) => (j === i ? { ...it, [k]: v } : it)));
 
+  const { getNextId } = useNumbering();
   const valid =
     vendor &&
     prRef.trim() &&
@@ -190,7 +192,7 @@ function NewRFQModal({
 
   function handleSave() {
     if (!valid) return;
-    const nextId = `RFQ-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    const nextId = getNextId("RFQ");
     onSave({
       id: nextId,
       prRef: prRef.trim(),

@@ -561,7 +561,7 @@ export function AllMaterialsPage() {
                     {formatNumberByGeneralSettings(m.availableQty)}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {getCurrencySymbol()}{formatNumberByGeneralSettings(m.unitCost)}
+                    {formatNumberByGeneralSettings(m.unitCost)}
                   </td>
                   <td className="px-4 py-3">
                     <span

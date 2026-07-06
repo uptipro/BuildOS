@@ -27,6 +27,7 @@ import {
   type ActiveFilters,
   type SortConfig,
 } from "../../components/AdvancedFilter";
+import { useNumbering } from "../../stores/numberingStore";
 import { getReferenceData } from "../../api/reference-data";
 
 type ReqStatus =
@@ -231,6 +232,7 @@ function NewMRModal({
     setItems((p) => p.filter((_, j) => j !== i));
   const updateItem = (i: number, k: keyof MRItem, v: string) =>
     setItems((p) => p.map((it, j) => (j === i ? { ...it, [k]: v } : it)));
+  const { getNextId } = useNumbering();
   const valid =
     project &&
     justification.trim() &&
@@ -238,7 +240,7 @@ function NewMRModal({
 
   function handleSave() {
     if (!valid) return;
-    const nextId = `MR-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    const nextId = getNextId("MaterialRequest");
     onSave({
       id: nextId,
       project,
@@ -506,6 +508,7 @@ function RaisePRModal({
   const [procType, setProcType] = useState<"direct" | "rfq">("direct");
   const [suppliers, setSuppliers] = useState<string[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const { getNextId } = useNumbering();
 
   useEffect(() => {
     getReferenceData()
@@ -529,7 +532,7 @@ function RaisePRModal({
 
   function submit() {
     if (!selected.length) return;
-    const prId = `PR-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    const prId = getNextId("PurchaseRequest");
     onDone(prId, procType, selected);
     onClose();
   }

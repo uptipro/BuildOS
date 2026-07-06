@@ -337,7 +337,7 @@ export function StorefrontReportsPage() {
                       {formatNumberByGeneralSettings(s.reorder)}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {getCurrencySymbol()}{formatNumberByGeneralSettings(s.value)}
+                      {formatNumberByGeneralSettings(s.value)}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -523,7 +523,7 @@ export function StorefrontReportsPage() {
                       {formatNumberByGeneralSettings(t.qty)}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {getCurrencySymbol()}{formatNumberByGeneralSettings(t.value)}
+                      {formatNumberByGeneralSettings(t.value)}
                     </td>
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {t.date}

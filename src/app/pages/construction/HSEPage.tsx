@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { getProjectById, hseMatrix, fmtDate, staffList } from "./mockData";
 import { listHseRecords, createHseRecord } from "../../api/hse-records";
+import { useNumbering } from "../../stores/numberingStore";
 
 type HSETab =
   | "toolbox"
@@ -261,6 +262,7 @@ function Badge({ label, className }: { label: string; className: string }) {
 }
 
 export function HSEPage() {
+  const { getNextId } = useNumbering();
   const { id } = useParams();
   const project = id ? getProjectById(id) : undefined;
   const [activeTab, setActiveTab] = useState<HSETab>("toolbox");
@@ -377,11 +379,10 @@ export function HSEPage() {
     });
   }
   function addIncident() {
-    const newId = `INC-${String(localIncidents.length + 1).padStart(3, "0")}`;
     setLocalIncidents((prev) => [
       ...prev,
       {
-        id: newId,
+        id: getNextId("Incident"),
         date: incForm.date || new Date().toISOString().split("T")[0],
         type: incForm.type as any,
         description: incForm.description,
@@ -488,7 +489,7 @@ export function HSEPage() {
         setLocalMatrix((prev) => [
           ...prev,
           {
-            id: `HSE-${String(prev.length + 1).padStart(3, "0")}`,
+            id: getNextId("HSERecord"),
             ...record,
             status: compForm.status as any,
           },

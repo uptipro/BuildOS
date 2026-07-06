@@ -10,6 +10,8 @@ import {
   hasValidAuthSession,
   clearAuthSession,
 } from "../utils/authSession";
+import { ChangelogProvider } from "../stores/changelogStore";
+import { NumberingProvider } from "../stores/numberingStore";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -67,16 +69,20 @@ export function AppLayout() {
   if (!ready) return null;
 
   return (
-    <HRConfigProvider>
-      <ResourceProvider>
-        <TaskProvider>
-          <RolesProvider>
-            <div className="min-h-screen bg-gray-50">
-              <Outlet />
-            </div>
-          </RolesProvider>
-        </TaskProvider>
-      </ResourceProvider>
-    </HRConfigProvider>
+    <ChangelogProvider>
+      <HRConfigProvider>
+        <ResourceProvider>
+          <TaskProvider>
+            <RolesProvider>
+              <NumberingProvider>
+                <div className="min-h-screen bg-gray-50">
+                  <Outlet />
+                </div>
+              </NumberingProvider>
+            </RolesProvider>
+          </TaskProvider>
+        </ResourceProvider>
+      </HRConfigProvider>
+    </ChangelogProvider>
   );
 }

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { exportCSV } from "../../utils/exportCSV";
+import { DataTable, type Column } from "../../components/DataTable";
+import { useChangelog } from "../../stores/changelogStore";
 import {
   getPurchaseInvoices,
   createPurchaseInvoice,
@@ -112,6 +114,7 @@ export function PurchaseInvoicePage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ ...BLANK_FORM, lines: [BLANK_LINE()] });
+  const { logChange } = useChangelog();
 
   useEffect(() => {
     getPurchaseInvoices()
@@ -165,11 +168,23 @@ export function PurchaseInvoicePage() {
         lines: form.lines,
       });
       setInvoices((prev) => [fromApi(created), ...prev]);
+      logChange({ module: "Procurement", action: "Created", entityType: "PurchaseInvoice", entityId: created.id, summary: `Invoice ${form.invoiceNo} created — ${form.supplier}`, performedBy: "Current User" });
     } catch (e) {
       console.error(e);
     }
     setShowModal(false);
     setForm({ ...BLANK_FORM, lines: [BLANK_LINE()] });
+  }
+
+  function updateStatus(id: string, newStatus: InvoiceStatus) {
+    setInvoices((prev) => prev.map((inv) => inv.id === id ? { ...inv, status: newStatus } : inv));
+    logChange({ module: "Procurement", action: "StatusChanged", entityType: "PurchaseInvoice", entityId: id, summary: `Invoice ${id} status changed to ${newStatus}`, performedBy: "Current User" });
+  }
+
+  function deleteInvoice(id: string, invoiceNo: string) {
+    setInvoices((prev) => prev.filter((inv) => inv.id !== id));
+    logChange({ module: "Procurement", action: "Deleted", entityType: "PurchaseInvoice", entityId: id, summary: `Invoice ${invoiceNo} deleted`, performedBy: "Current User" });
+    setExpanded((prev) => prev === id ? null : prev);
   }
 
   function handleExport() {
@@ -196,6 +211,105 @@ export function PurchaseInvoicePage() {
     );
   }
 
+  const actionsFor = (inv: PurchaseInvoice) => {
+    switch (inv.status) {
+      case "Draft":
+        return (
+          <button onClick={() => updateStatus(inv.id, "Pending Approval")}
+            className="text-xs text-blue-600 hover:underline">Submit →</button>
+        );
+      case "Pending Approval":
+        return (
+          <div className="flex gap-2">
+            <button onClick={() => updateStatus(inv.id, "Approved")}
+              className="text-xs text-green-600 hover:underline">Approve</button>
+            <button onClick={() => updateStatus(inv.id, "Draft")}
+              className="text-xs text-gray-500 hover:underline">Reject</button>
+          </div>
+        );
+      case "Approved":
+        return (
+          <button onClick={() => updateStatus(inv.id, "Paid")}
+            className="text-xs text-emerald-600 hover:underline">Pay →</button>
+        );
+      case "Overdue":
+        return (
+          <button onClick={() => updateStatus(inv.id, "Paid")}
+            className="text-xs text-emerald-600 hover:underline">Pay →</button>
+        );
+      case "Paid":
+        return (
+          <button onClick={() => deleteInvoice(inv.id, inv.invoiceNo)}
+            className="text-xs text-red-500 hover:underline">Delete</button>
+        );
+    }
+  };
+
+  const columns: Column<PurchaseInvoice>[] = [
+    {
+      key: "invoiceNo",
+      label: "Invoice No",
+      sortable: true,
+      filterable: true,
+      render: (inv) => <span className="font-mono text-xs text-gray-700">{inv.invoiceNo}</span>,
+    },
+    {
+      key: "supplier",
+      label: "Supplier",
+      sortable: true,
+      filterable: true,
+      render: (inv) => <span className="font-medium text-gray-900">{inv.supplier}</span>,
+    },
+    {
+      key: "description",
+      label: "Description",
+      sortable: true,
+      filterable: true,
+      minWidth: 200,
+      render: (inv) => <span className="text-sm text-gray-600">{inv.lines.map(l => l.description).join(", ")}</span>,
+    },
+    {
+      key: "amount",
+      label: "Amount ($)",
+      sortable: true,
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (inv) => <span className="font-semibold text-gray-900">{fmt(lineTotal(inv.lines))}</span>,
+    },
+    {
+      key: "date",
+      label: "Due Date",
+      sortable: true,
+      render: (inv) => <span className={`text-sm ${inv.status === "Overdue" ? "text-red-600 font-medium" : "text-gray-500"}`}>{inv.dueDate}</span>,
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      filterable: true,
+      render: (inv) => <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[inv.status]}`}>{inv.status}</span>,
+    },
+    {
+      key: "lines",
+      label: "Lines",
+      sortable: false,
+      filterable: false,
+      render: (inv) => (
+        <button onClick={() => setExpanded((p) => (p === inv.id ? null : inv.id))}
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+          {expanded === inv.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      filterable: false,
+      render: (inv) => actionsFor(inv),
+    },
+  ];
+
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between">
@@ -208,19 +322,8 @@ export function PurchaseInvoicePage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={handleExport}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1.5"
-          >
-            <FileText className="w-4 h-4" /> Export
-          </button>
-          <button
-            onClick={() => {
-              setForm({ ...BLANK_FORM, lines: [BLANK_LINE()] });
-              setShowModal(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700 text-white rounded-xl text-sm hover:bg-blue-800"
-          >
+          <button onClick={() => { setForm({ ...BLANK_FORM, lines: [BLANK_LINE()] }); setShowModal(true); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700 text-white rounded-xl text-sm hover:bg-blue-800">
             <Plus className="w-4 h-4" /> New Invoice
           </button>
         </div>
@@ -256,13 +359,8 @@ export function PurchaseInvoicePage() {
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-56">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Search invoices…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <input className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Search invoices…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {(
@@ -286,138 +384,57 @@ export function PurchaseInvoicePage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-            <tr>
-              {[
-                "Invoice No",
-                "Supplier",
-                "PO Ref",
-                "Issue Date",
-                "Due Date",
-                "Amount",
-                "Status",
-                "",
-              ].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-medium">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {filtered.map((inv) => {
-              const total = lineTotal(inv.lines);
-              return (
-                <>
-                  <tr key={inv.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-700">
-                      {inv.invoiceNo}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {inv.supplier}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                      {inv.poRef}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{inv.issueDate}</td>
-                    <td
-                      className={`px-4 py-3 ${inv.status === "Overdue" ? "text-red-600 font-medium" : "text-gray-500"}`}
-                    >
-                      {inv.dueDate}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">
-                      {fmt(total)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[inv.status]}`}
-                      >
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() =>
-                          setExpanded((p) => (p === inv.id ? null : inv.id))
-                        }
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
-                      >
-                        {expanded === inv.id ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </button>
-                    </td>
+      <DataTable
+        columns={columns}
+        data={filtered}
+        keyExtractor={inv => inv.id}
+        searchPlaceholder="Search invoices..."
+        searchFields={[inv => inv.invoiceNo, inv => inv.supplier, inv => inv.poRef]}
+        emptyMessage="No invoices found"
+        headerExtra={
+          <button onClick={handleExport}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">
+            <FileText className="w-3.5 h-3.5" /> Export
+          </button>
+        }
+      />
+
+      {/* Expanded line items */}
+      {expanded && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+          {invoices.filter(inv => inv.id === expanded).map(inv => (
+            <div key={inv.id}>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Line Items — {inv.invoiceNo}</h3>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
+                    <th className="pb-2 text-left font-medium">Description</th>
+                    <th className="pb-2 text-right font-medium">Qty</th>
+                    <th className="pb-2 text-right font-medium">Unit</th>
+                    <th className="pb-2 text-right font-medium">Unit Price</th>
+                    <th className="pb-2 text-right font-medium">Total</th>
                   </tr>
-                  {expanded === inv.id && (
-                    <tr key={`${inv.id}-lines`}>
-                      <td colSpan={8} className="bg-gray-50 px-8 py-4">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-                              <th className="pb-2 text-left font-medium">
-                                Description
-                              </th>
-                              <th className="pb-2 text-right font-medium">
-                                Qty
-                              </th>
-                              <th className="pb-2 text-right font-medium">
-                                Unit
-                              </th>
-                              <th className="pb-2 text-right font-medium">
-                                Unit Price
-                              </th>
-                              <th className="pb-2 text-right font-medium">
-                                Total
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {inv.lines.map((l) => (
-                              <tr key={l.id}>
-                                <td className="py-2 text-gray-700">
-                                  {l.description}
-                                </td>
-                                <td className="py-2 text-right text-gray-600">
-                                  {l.qty}
-                                </td>
-                                <td className="py-2 text-right text-gray-500">
-                                  {l.unit}
-                                </td>
-                                <td className="py-2 text-right text-gray-600">
-                                  {fmt(l.unitPrice)}
-                                </td>
-                                <td className="py-2 text-right font-medium text-gray-900">
-                                  {fmt(l.qty * l.unitPrice)}
-                                </td>
-                              </tr>
-                            ))}
-                            <tr>
-                              <td
-                                colSpan={4}
-                                className="pt-3 text-right font-semibold text-gray-700 text-sm"
-                              >
-                                Total
-                              </td>
-                              <td className="pt-3 text-right font-bold text-gray-900">
-                                {fmt(total)}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </td>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {inv.lines.map((l) => (
+                    <tr key={l.id}>
+                      <td className="py-2 text-gray-700">{l.description}</td>
+                      <td className="py-2 text-right text-gray-600">{l.qty}</td>
+                      <td className="py-2 text-right text-gray-500">{l.unit}</td>
+                      <td className="py-2 text-right text-gray-600">{fmt(l.unitPrice)}</td>
+                      <td className="py-2 text-right font-medium text-gray-900">{fmt(l.qty * l.unitPrice)}</td>
                     </tr>
-                  )}
-                </>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                  ))}
+                  <tr>
+                    <td colSpan={4} className="pt-3 text-right font-semibold text-gray-700 text-sm">Total</td>
+                    <td className="pt-3 text-right font-bold text-gray-900">{fmt(lineTotal(inv.lines))}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Create Invoice Modal */}
       {showModal && (
