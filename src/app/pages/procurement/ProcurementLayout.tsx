@@ -16,6 +16,7 @@ import {
   Send,
   Inbox,
   ShieldCheck,
+  Settings,
 } from "lucide-react";
 
 const sidebarSections = [
@@ -146,6 +147,12 @@ const sidebarSections = [
         end: true,
         icon: <BarChart3 className="w-4 h-4" />,
       },
+    ],
+  },
+  {
+    label: "Settings",
+    items: [
+      { label: "Configuration", href: "/apps/procurement/config", end: true, icon: <Settings className="w-4 h-4" /> },
     ],
   },
 ];

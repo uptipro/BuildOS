@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Clock, Mail, BarChart3, Trash2 } from "lucide-react";
 import { apiFetch } from "../../api/client";
 import { getReportTemplates } from "../../api/admin-extras";
+import { useNumbering } from "../../stores/numberingStore";
 
 type Frequency = "Daily" | "Weekly" | "Monthly";
 type ReportModule =
@@ -64,6 +65,7 @@ export function ReportAutomationPage() {
   );
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ ...BLANK_FORM });
+  const { getNextId } = useNumbering();
 
   useEffect(() => {
     apiFetch("/admin/report-schedules")
@@ -98,14 +100,11 @@ export function ReportAutomationPage() {
   }
 
   function saveSchedule() {
-    setSchedules([
-      ...schedules,
-      {
-        ...form,
-        id: `RS-${String(schedules.length + 1).padStart(3, "0")}`,
-        lastSent: "—",
-      },
-    ]);
+    setSchedules([...schedules, {
+      ...form,
+      id: getNextId("ReportSchedule"),
+      lastSent: "—",
+    }]);
     setShowModal(false);
     setForm({ ...BLANK_FORM });
   }

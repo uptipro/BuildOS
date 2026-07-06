@@ -824,7 +824,7 @@ export function SuppliersPage() {
                               {m.unit}
                             </td>
                             <td className="px-4 py-2.5 text-right font-mono text-gray-800">
-                              {getCurrencySymbol()}{formatNumberByGeneralSettings(m.lastPrice)}
+                              {formatNumberByGeneralSettings(m.lastPrice)}
                             </td>
                           </tr>
                         ),
@@ -868,7 +868,7 @@ export function SuppliersPage() {
                               {order.createdDate}
                             </td>
                             <td className="px-4 py-2.5 text-right text-gray-800">
-                              {getCurrencySymbol()}{formatNumberByGeneralSettings(order.totalValue)}
+                              {formatNumberByGeneralSettings(order.totalValue)}
                             </td>
                             <td className="px-4 py-2.5">
                               <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">

@@ -18,6 +18,7 @@ import {
   RefreshCw,
   PlayCircle,
 } from "lucide-react";
+import { useNumbering } from "../../stores/numberingStore";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ScheduleType = "immediate" | "scheduled" | "recurring";
@@ -98,6 +99,7 @@ function NewPostingModal({
   onClose: () => void;
   onSave: (p: ScheduledPosting) => void;
 }) {
+  const { getNextId } = useNumbering();
   const today = formatDateByGeneralSettings(new Date());
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -122,7 +124,7 @@ function NewPostingModal({
   function save() {
     if (!valid) return;
     onSave({
-      id: `SP-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+      id: getNextId("ScheduledPosting"),
       description: description.trim(),
       amount: parseFloat(amount),
       debitAccount,

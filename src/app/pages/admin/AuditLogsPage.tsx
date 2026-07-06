@@ -1,9 +1,10 @@
-import { Filter } from "lucide-react";
+import { Filter, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { DataTable } from "../../components/DataTable";
+import { DataTable, type Column } from "../../components/DataTable";
 import { getAuditLogs, getUsers } from "../../api/admin-extras";
 import { formatDateTimeByGeneralSettings } from "../../utils/generalSettings";
+import { exportCSV } from "../../utils/exportCSV";
 
 const ACTION_LABELS: Record<string, string> = {
   CREATE: "Created",
@@ -105,7 +106,7 @@ export function AuditLogsPage() {
     );
   }).length;
 
-  const columns = [
+  const columns: Column<AuditLog>[] = [
     {
       key: "timestamp",
       label: "Timestamp",
@@ -118,6 +119,9 @@ export function AuditLogsPage() {
       key: "user",
       label: "User",
       sortable: true,
+      render: (row: AuditLog) => (
+        <span className="text-sm text-gray-900">{row.user}</span>
+      ),
     },
     {
       key: "userId",
@@ -155,6 +159,9 @@ export function AuditLogsPage() {
       key: "module",
       label: "Module",
       sortable: true,
+      render: (row: AuditLog) => (
+        <span className="text-sm text-gray-700">{row.module}</span>
+      ),
     },
     {
       key: "details",
@@ -251,9 +258,47 @@ export function AuditLogsPage() {
       <DataTable
         data={logs}
         columns={columns}
-        searchable={true}
-        exportable={true}
+        keyExtractor={(row) => row.id}
+        searchFields={[
+          (row) => row.user,
+          (row) => row.userId,
+          (row) => row.action,
+          (row) => row.module,
+          (row) => row.details,
+          (row) => row.ipAddress,
+        ]}
+        searchPlaceholder="Search audit logs..."
         pageSize={15}
+        headerExtra={
+          <button
+            onClick={() =>
+              exportCSV(
+                "audit-logs",
+                [
+                  "Timestamp",
+                  "User",
+                  "User ID",
+                  "Action",
+                  "Module",
+                  "Details",
+                  "IP Address",
+                ],
+                logs.map((l) => [
+                  l.timestamp,
+                  l.user,
+                  l.userId,
+                  l.action,
+                  l.module,
+                  l.details,
+                  l.ipAddress,
+                ]),
+              )
+            }
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <Download className="w-4 h-4" /> Export
+          </button>
+        }
       />
     </div>
   );

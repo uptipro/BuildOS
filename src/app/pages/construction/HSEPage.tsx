@@ -10,8 +10,10 @@ import {
   Plus,
   XCircle,
 } from "lucide-react";
-import { getProjectById, hseMatrix, fmtDate, staffList } from "./mockData";
+import { getProjectById, hseMatrix, fmtDate } from "./mockData";
 import { listHseRecords, createHseRecord } from "../../api/hse-records";
+import { fetchEmployees } from "../../api/employees";
+import { useNumbering } from "../../stores/numberingStore";
 
 type HSETab =
   | "toolbox"
@@ -261,6 +263,7 @@ function Badge({ label, className }: { label: string; className: string }) {
 }
 
 export function HSEPage() {
+  const { getNextId } = useNumbering();
   const { id } = useParams();
   const project = id ? getProjectById(id) : undefined;
   const [activeTab, setActiveTab] = useState<HSETab>("toolbox");
@@ -278,6 +281,27 @@ export function HSEPage() {
   const [localMatrix, setLocalMatrix] = useState(
     hseMatrix.filter((m) => m.projectId === id),
   );
+  const [staffList, setStaffList] = useState<string[]>([]);
+
+  // Load employees for personnel dropdowns.
+  useEffect(() => {
+    let active = true;
+    fetchEmployees({ status: "active" })
+      .then((employees) => {
+        if (!active) return;
+        setStaffList(
+          employees
+            .map((e) => `${e.firstName ?? ""} ${e.lastName ?? ""}`.trim())
+            .filter(Boolean),
+        );
+      })
+      .catch(() => {
+        /* leave dropdowns empty on failure */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   useEffect(() => {
     if (!id) return;
     let active = true;
@@ -377,11 +401,10 @@ export function HSEPage() {
     });
   }
   function addIncident() {
-    const newId = `INC-${String(localIncidents.length + 1).padStart(3, "0")}`;
     setLocalIncidents((prev) => [
       ...prev,
       {
-        id: newId,
+        id: getNextId("Incident"),
         date: incForm.date || new Date().toISOString().split("T")[0],
         type: incForm.type as any,
         description: incForm.description,
@@ -488,7 +511,7 @@ export function HSEPage() {
         setLocalMatrix((prev) => [
           ...prev,
           {
-            id: `HSE-${String(prev.length + 1).padStart(3, "0")}`,
+            id: getNextId("HSERecord"),
             ...record,
             status: compForm.status as any,
           },

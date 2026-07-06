@@ -11,6 +11,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { NavLink } from "react-router";
+import { DataTable } from "../../components/DataTable";
 import { fetchExpenses } from "../../api/expenses";
 import { fetchIncome } from "../../api/income";
 import { fetchBudgets } from "../../api/budgets";
@@ -288,59 +289,21 @@ export function FinanceDashboardPage() {
             View ledger
           </NavLink>
         </div>
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                ID
-              </th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Description
-              </th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Amount
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {recentTransactions.map((t) => (
-              <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-3 text-xs font-mono text-gray-500">
-                  {t.id}
-                </td>
-                <td className="px-5 py-3 text-sm text-gray-900">
-                  {t.description}
-                </td>
-                <td className="px-5 py-3">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      t.type === "Income"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : t.type === "Payroll"
-                          ? "bg-purple-100 text-purple-700"
-                          : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {t.type}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-sm text-gray-500">{t.date}</td>
-                <td
-                  className={`px-5 py-3 text-sm font-semibold text-right ${t.amount > 0 ? "text-emerald-600" : "text-red-600"}`}
-                >
-                  {t.amount > 0 ? "+" : "−"}
-                  {fmt(t.amount)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable columns={[
+          { key: "id", label: "ID", render: t => <span className="font-mono text-xs text-gray-500">{t.id}</span>, sortable: true, filterable: true },
+          { key: "description", label: "Description", render: t => <span className="text-sm text-gray-900">{t.description}</span>, sortable: true, filterable: true, minWidth: 200 },
+          { key: "type", label: "Type", render: t => {
+            const colors: Record<string, string> = { Income: "bg-emerald-100 text-emerald-700", Payroll: "bg-purple-100 text-purple-700" };
+            return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[t.type] ?? "bg-red-100 text-red-700"}`}>{t.type}</span>;
+          }, sortable: true, filterable: true },
+          { key: "date", label: "Date", render: t => <span className="text-sm text-gray-500">{t.date}</span>, sortable: true, filterable: false },
+          { key: "amount", label: "Amount ($)", render: t => (
+            <span className={`text-sm font-semibold ${t.amount > 0 ? "text-emerald-600" : "text-red-600"}`}>{t.amount > 0 ? "+" : "−"}{fmt(t.amount)}</span>
+          ), sortable: true, filterable: false, className: "text-right", headerClassName: "text-right" },
+        ]} data={recentTransactions} keyExtractor={t => t.id}
+          searchPlaceholder="Search..."
+          searchFields={[t => t.id, t => t.description, t => t.type]}
+          emptyMessage="No recent transactions" pageSize={5} />
       </div>
 
       {/* Quick actions */}

@@ -83,6 +83,7 @@ const StockMovementPage = lazy(() => import("./pages/procurement/StockMovementPa
 const PurchaseOrdersPage = lazy(() => import("./pages/procurement/PurchaseOrdersPage").then((m) => ({ default: m.PurchaseOrdersPage })));
 const GoodsReceiptPage = lazy(() => import("./pages/procurement/GoodsReceiptPage").then((m) => ({ default: m.GoodsReceiptPage })));
 const ProcurementReportsPage = lazy(() => import("./pages/procurement/ProcurementReportsPage").then((m) => ({ default: m.ProcurementReportsPage })));
+const ProcurementConfigPage = lazy(() => import("./pages/procurement/ProcurementConfigPage").then((m) => ({ default: m.ProcurementConfigPage })));
 
 // HR App (pages lazy-loaded)
 import { HRLayout } from "./pages/hr/HRLayout";
@@ -144,6 +145,7 @@ const ReportAutomationPage = lazy(() => import("./pages/admin/ReportAutomationPa
 const EmailConfigPage = lazy(() => import("./pages/admin/EmailConfigPage").then((m) => ({ default: m.EmailConfigPage })));
 const IssueTypesPage = lazy(() => import("./pages/admin/IssueTypesPage").then((m) => ({ default: m.IssueTypesPage })));
 const ChangeCategoriesPage = lazy(() => import("./pages/admin/ChangeCategoriesPage").then((m) => ({ default: m.ChangeCategoriesPage })));
+const ChangelogPage = lazy(() => import("./pages/admin/ChangelogPage").then((m) => ({ default: m.ChangelogPage })));
 
 // Storefront App (pages lazy-loaded)
 import { StorefrontLayout } from "./pages/storefront/StorefrontLayout";
@@ -171,6 +173,9 @@ const FinanceTasksPage = lazy(() => import("./pages/finance/FinanceTasksPage").t
 const FinanceMyTasksPage = lazy(() => import("./pages/finance/FinanceMyTasksPage").then((m) => ({ default: m.FinanceMyTasksPage })));
 const ProcessMappingPage = lazy(() => import("./pages/finance/ProcessMappingPage").then((m) => ({ default: m.ProcessMappingPage })));
 const PostingEnginePage = lazy(() => import("./pages/finance/PostingEnginePage").then((m) => ({ default: m.PostingEnginePage })));
+const AccrualsPage = lazy(() => import("./pages/finance/AccrualsPage").then((m) => ({ default: m.AccrualsPage })));
+const YearEndClosePage = lazy(() => import("./pages/finance/YearEndClosePage").then((m) => ({ default: m.YearEndClosePage })));
+const FiscalYearsPage = lazy(() => import("./pages/finance/FiscalYearsPage").then((m) => ({ default: m.FiscalYearsPage })));
 
 // HR new pages (lazy-loaded)
 const HRTasksPage = lazy(() => import("./pages/hr/HRTasksPage").then((m) => ({ default: m.HRTasksPage })));
@@ -302,6 +307,7 @@ export const router = createBrowserRouter([
               { path: "dashboard", Component: FinanceDashboardPage },
               { path: "chart-of-accounts", Component: ChartOfAccountsPage },
               { path: "journal", Component: JournalEntryPage },
+              { path: "accruals", Component: AccrualsPage },
               { path: "expenses", Component: ExpenseManagementPage },
               { path: "income", Component: IncomeManagementPage },
               { path: "budget", Component: BudgetManagementPage },
@@ -321,6 +327,8 @@ export const router = createBrowserRouter([
               { path: "expenses-list", Component: ExpensesPage },
               { path: "scheduled-posting", Component: ScheduledPostingPage },
               { path: "transactions", Component: TransactionsPage },
+              { path: "year-end-close", Component: YearEndClosePage },
+              { path: "fiscal-years", Component: FiscalYearsPage },
             ],
           },
           {
@@ -346,6 +354,7 @@ export const router = createBrowserRouter([
                 path: "supplier-compliance",
                 Component: SupplierCompliancePage,
               },
+              { path: "config", Component: ProcurementConfigPage },
             ],
           },
           {
@@ -423,6 +432,7 @@ export const router = createBrowserRouter([
                 path: "financial-config",
                 Component: FinancialConfigurationPage,
               },
+              { path: "changelog", Component: ChangelogPage },
             ],
           },
           {

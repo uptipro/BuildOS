@@ -16,6 +16,7 @@ import { useMemo, useState, useEffect } from "react";
 import { projects, stakeholders } from "./mockData";
 import { exportCSV } from "../../utils/exportCSV";
 import { listStakeholders } from "../../api/stakeholders";
+import { useNumbering } from "../../stores/numberingStore";
 
 const LEVEL_STYLES: Record<string, { bg: string; text: string }> = {
   High: { bg: "#FDE8E6", text: "#B33A2E" },
@@ -42,6 +43,7 @@ type SortField =
   | "impactLevel";
 
 export function StakeholdersOverviewPage() {
+  const { getNextId } = useNumbering();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [localStakeholders, setLocalStakeholders] = useState(stakeholders);
@@ -173,7 +175,7 @@ export function StakeholdersOverviewPage() {
   function handleCreate() {
     if (!form.name.trim()) return;
     const newStakeholder = {
-      id: `SH-${Date.now()}`,
+      id: getNextId("Stakeholder"),
       projectId: form.projectId,
       name: form.name.trim(),
       organization: form.organization.trim(),

@@ -27,6 +27,10 @@ import {
   BookOpen,
   Layers,
 } from "lucide-react";
+import { useFinance } from "../../stores/financeStore";
+import { useChangelog } from "../../stores/changelogStore";
+import { useNumbering } from "../../stores/numberingStore";
+import { DataTable } from "../../components/DataTable";
 
 // ── Types
 type TxnStatus = "pending" | "approved" | "rejected" | "posted";
@@ -139,15 +143,12 @@ function todayStr() {
 }
 
 // ── New Category Modal ────────────────────────────────────────────────────────
-function NewCategoryModal({
-  accountOptions,
-  onClose,
-  onSave,
-}: {
-  accountOptions: string[];
+function NewCategoryModal({ onClose, onSave, accounts }: {
   onClose: () => void;
   onSave: (c: ProcessCategory) => void;
+  accounts: { code: string; name: string }[];
 }) {
+  const accountOptions = accounts.map(a => `${a.code} ${a.name}`);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -157,11 +158,12 @@ function NewCategoryModal({
     creditAccount: "",
   });
   useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      debitAccount: prev.debitAccount || accountOptions[0] || "",
-      creditAccount: prev.creditAccount || accountOptions[1] || "",
-    }));
+    setForm((prev) => {
+      const debitAccount = prev.debitAccount || accountOptions[0] || "";
+      const creditAccount = prev.creditAccount || accountOptions[1] || "";
+      if (debitAccount === prev.debitAccount && creditAccount === prev.creditAccount) return prev;
+      return { ...prev, debitAccount, creditAccount };
+    });
   }, [accountOptions]);
   const canSubmit =
     form.name.trim() &&
@@ -715,111 +717,31 @@ function CategoryDetailView({
       </div>
 
       {/* Transaction table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium">
-                Transaction ID
-              </th>
-              <th className="px-4 py-3 text-left font-medium">Description</th>
-              <th className="px-4 py-3 text-right font-medium">Amount</th>
-              <th className="px-4 py-3 text-left font-medium">Date</th>
-              <th className="px-4 py-3 text-left font-medium">Submitted By</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
-              <th className="px-4 py-3 text-left font-medium w-28">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filtered.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-8 text-center text-gray-400 text-sm"
-                >
-                  No transactions found.
-                </td>
-              </tr>
+      <DataTable columns={[
+        { key: "id", label: "Transaction ID", render: t => <span className="font-mono text-xs text-gray-500">{t.id}</span>, sortable: true, filterable: true, minWidth: 100 },
+        { key: "description", label: "Description", render: t => <div><p className="font-medium text-gray-900 max-w-xs truncate">{t.description}</p><p className="text-xs text-gray-400 font-mono">{t.reference}</p></div>, sortable: true, filterable: true, minWidth: 200 },
+        { key: "amount", label: "Amount (₦)", render: t => <span className="text-sm font-semibold text-gray-800">{fmt(t.amount)}</span>, sortable: true, filterable: false, className: "text-right", headerClassName: "text-right" },
+        { key: "date", label: "Date", render: t => <span className="text-xs text-gray-500">{t.date}</span>, sortable: true, filterable: false },
+        { key: "submittedBy", label: "Submitted By", render: t => <span className="text-xs text-gray-600">{t.submittedBy}</span>, sortable: true, filterable: true },
+        { key: "status", label: "Status", render: t => { const sc = STATUS_CFG[t.status]; return <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${sc.badge}`}>{sc.icon} {sc.label}</span>; }, sortable: true, filterable: true },
+        { key: "actions", label: "Actions", render: t => (
+          <div className="flex items-center gap-1">
+            <button onClick={() => setSelectedTxn(t)} className="p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50" title="View Details"><Eye className="w-3.5 h-3.5" /></button>
+            {t.status === "pending" && (
+              <>
+                <button onClick={() => onApprove(t.id)} className="p-1.5 text-gray-400 hover:text-emerald-700 rounded-lg hover:bg-emerald-50" title="Approve"><CheckCircle className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setSelectedTxn(t)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50" title="Reject"><XCircle className="w-3.5 h-3.5" /></button>
+              </>
             )}
-            {filtered.map((t) => {
-              const sc = STATUS_CFG[t.status];
-              return (
-                <tr
-                  key={t.id}
-                  className="hover:bg-emerald-50/40 transition-colors"
-                >
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                    {t.id}
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900 max-w-xs truncate">
-                      {t.description}
-                    </p>
-                    <p className="text-xs text-gray-400 font-mono">
-                      {t.reference}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-800">
-                    {fmt(t.amount)}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{t.date}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600">
-                    {t.submittedBy}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${sc.badge}`}
-                    >
-                      {sc.icon} {sc.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setSelectedTxn(t)}
-                        className="p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50"
-                        title="View Details"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      {t.status === "pending" && (
-                        <>
-                          <button
-                            onClick={() => onApprove(t.id)}
-                            className="p-1.5 text-gray-400 hover:text-emerald-700 rounded-lg hover:bg-emerald-50"
-                            title="Approve"
-                          >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setSelectedTxn(t)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
-                            title="Reject"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                      {t.status === "approved" && (
-                        <button
-                          onClick={() => onPost(t.id)}
-                          className="p-1.5 text-gray-400 hover:text-purple-600 rounded-lg hover:bg-purple-50"
-                          title="Post to Ledger"
-                        >
-                          <Zap className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-xs text-gray-400">
-        Showing {filtered.length} of {transactions.length} transactions
-      </p>
+            {t.status === "approved" && (
+              <button onClick={() => onPost(t.id)} className="p-1.5 text-gray-400 hover:text-purple-600 rounded-lg hover:bg-purple-50" title="Post to Ledger"><Zap className="w-3.5 h-3.5" /></button>
+            )}
+          </div>
+        ), sortable: false, filterable: false, className: "text-right", headerClassName: "text-right" },
+      ]} data={filtered} keyExtractor={t => t.id}
+        searchPlaceholder="Search transactions..."
+        searchFields={[t => t.description, t => t.reference, t => t.id]}
+        emptyMessage="No transactions found." />
 
       {selectedTxn && (
         <TransactionDetailModal
@@ -923,14 +845,17 @@ function CategoryCard({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function PostingEnginePage() {
+  const { setTransactions: setLedgerTransactions } = useFinance();
+  const { logChange } = useChangelog();
+  const { getNextId } = useNumbering();
   const [categories, setCategories] = useState<ProcessCategory[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [accountOptions, setAccountOptions] = useState<string[]>([]);
+  const [accounts, setAccounts] = useState<{ code: string; name: string }[]>([]);
 
   useEffect(() => {
     Promise.all([getTransactions(), getChartAccounts()])
-      .then(([data, accounts]) => {
-        setAccountOptions(accounts.map((a) => `${a.code} ${a.name}`));
+      .then(([data, accountData]) => {
+        setAccounts(accountData.map((a) => ({ code: a.code, name: a.name })));
         setTransactions(
           data.map((t) => ({
             id: t.id,
@@ -958,41 +883,39 @@ export function PostingEnginePage() {
   const now = todayStr();
 
   function approveTransaction(id: string) {
-    setTransactions((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              status: "approved",
-              reviewedBy: "Sola Adeleke",
-              reviewedDate: now,
-            }
-          : t,
-      ),
-    );
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: "approved", reviewedBy: "Sola Adeleke", reviewedDate: now } : t));
+    const txn = transactions.find(t => t.id === id);
+    if (txn) logChange({ module: "Finance", action: "Approved", entityType: "PostingEngineTxn", entityId: id, summary: `Posting Engine: "${txn.description}" approved`, performedBy: "Sola Adeleke" });
   }
   function rejectTransaction(id: string, notes: string) {
-    setTransactions((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              status: "rejected",
-              reviewedBy: "Sola Adeleke",
-              reviewedDate: now,
-              notes: notes || undefined,
-            }
-          : t,
-      ),
-    );
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: "rejected", reviewedBy: "Sola Adeleke", reviewedDate: now, notes: notes || undefined } : t));
+    const txn = transactions.find(t => t.id === id);
+    if (txn) logChange({ module: "Finance", action: "Rejected", entityType: "PostingEngineTxn", entityId: id, summary: `Posting Engine: "${txn.description}" rejected`, performedBy: "Sola Adeleke" });
   }
   function postToLedger(id: string) {
+    const txn = transactions.find(t => t.id === id);
+    if (!txn) return;
+    const cat = categories.find(c => c.id === txn.categoryId);
+    if (!cat) return;
     const ledgerRef = `LGR-${String(Math.floor(1000 + Math.random() * 8999))}`;
-    setTransactions((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, status: "posted", ledgerRef } : t,
-      ),
-    );
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: "posted", ledgerRef } : t));
+    logChange({ module: "Finance", action: "Posted", entityType: "PostingEngineTxn", entityId: id, summary: `Posting Engine: "${txn.description}" → Ledger (${ledgerRef})`, performedBy: "Sola Adeleke" });
+    // Create corresponding entry in the FinanceContext ledger
+    setLedgerTransactions(prev => [...prev, {
+      id: getNextId("Transaction"),
+      type: "Journal" as const,
+      description: `${cat.name}: ${txn.description}`,
+      debitAccount: cat.debitAccount,
+      creditAccount: cat.creditAccount,
+      reference: ledgerRef,
+      amount: txn.amount,
+      date: now,
+      createdBy: txn.reviewedBy ?? "Posting Engine",
+      sourceApp: txn.sourceApp,
+      sourceProcess: cat.linkedProcess,
+      approvalStatus: "auto-approved" as const,
+      linkedRecords: [{ label: "Posting Engine Ref", ref: txn.id }],
+    }]);
   }
 
   const filteredCategories = categories.filter((c) => {
@@ -1158,11 +1081,9 @@ export function PostingEnginePage() {
       )}
 
       {showNewCatModal && (
-        <NewCategoryModal
-          accountOptions={accountOptions}
-          onClose={() => setShowNewCatModal(false)}
-          onSave={(c) => setCategories((prev) => [...prev, c])}
-        />
+        <NewCategoryModal onClose={() => setShowNewCatModal(false)}
+          onSave={c => setCategories(prev => [...prev, c])}
+          accounts={accounts} />
       )}
     </div>
   );
