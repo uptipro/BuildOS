@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Plus, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
 import {
   fetchLeaveTypes,
@@ -7,6 +8,7 @@ import {
   deleteLeaveType,
   type LeaveType as ApiLeaveType,
 } from "../../api/leave-types";
+import { ConfirmationModal } from "../../components/ConfirmationModal";
 
 type LeaveGender = "all" | "male" | "female";
 
@@ -70,6 +72,7 @@ export function LeaveTypeSetupPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<typeof EMPTY>(EMPTY);
+  const [deleteTarget, setDeleteTarget] = useState<UILeaveType | null>(null);
 
   useEffect(() => {
     fetchLeaveTypes()
@@ -373,12 +376,7 @@ export function LeaveTypeSetupPage() {
                       <Edit className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={async () => {
-                        await deleteLeaveType(t.id);
-                        setLeaveTypes((prev) =>
-                          prev.filter((x) => x.id !== t.id),
-                        );
-                      }}
+                      onClick={() => setDeleteTarget(t)}
                       className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
