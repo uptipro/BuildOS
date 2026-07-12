@@ -404,6 +404,31 @@ export function LeaveTypeSetupPage() {
           {GENDER_LABELS.male}
         </span>
       </div>
+
+      <ConfirmationModal
+        isOpen={deleteTarget !== null}
+        title="Delete Leave Type?"
+        description={
+          deleteTarget
+            ? `This will permanently remove "${deleteTarget.name}". This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        isDangerous
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          try {
+            await deleteLeaveType(deleteTarget.id);
+            setLeaveTypes((prev) => prev.filter((x) => x.id !== deleteTarget.id));
+            toast.success("Leave type deleted");
+          } catch {
+            toast.error("Failed to delete leave type. Please try again.");
+          } finally {
+            setDeleteTarget(null);
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

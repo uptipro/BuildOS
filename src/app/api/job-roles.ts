@@ -45,7 +45,3 @@ export function deleteJobRole(id: string): Promise<void> {
 export function updateJobRole(id: string, dto: Partial<CreateJobRoleDto>): Promise<JobRole> {
     return apiFetch<JobRole>(`/job-roles/${id}`, { method: 'PUT', body: JSON.stringify(dto) });
 }
-
-export function deleteJobRole(id: string): Promise<JobRole> {
-    return apiFetch<JobRole>(`/job-roles/${id}`, { method: 'DELETE' });
-}
