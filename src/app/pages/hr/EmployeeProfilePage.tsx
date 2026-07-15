@@ -5,7 +5,10 @@ import {
   getCurrencySymbol,
   formatNumberByGeneralSettings,
 } from "../../utils/generalSettings";
-import { getActivityHistory, type ActivityRecord } from "../../api/activity-history";
+import {
+  getActivityHistory,
+  type ActivityRecord,
+} from "../../api/activity-history";
 import {
   ArrowLeft,
   Mail,
@@ -26,7 +29,11 @@ import {
   X,
   Save,
 } from "lucide-react";
-import { fetchEmployee, updateEmployee, toEmployeeUpdatePayload } from "../../api/employees";
+import {
+  fetchEmployee,
+  updateEmployee,
+  toEmployeeUpdatePayload,
+} from "../../api/employees";
 import { fetchDepartments } from "../../api/departments";
 import {
   getAttendance,
@@ -109,14 +116,18 @@ export function EmployeeProfilePage() {
   const [editDraft, setEditDraft] = useState<any>({});
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [departments, setDepartments] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   // Human-friendly display ID passed from the list page
   const displayId = searchParams.get("displayId") ?? emp?.id ?? "";
 
   useEffect(() => {
     fetchDepartments()
-      .then((depts) => setDepartments(depts.map((d) => ({ id: d.id, name: d.name }))))
+      .then((depts) =>
+        setDepartments(depts.map((d) => ({ id: d.id, name: d.name }))),
+      )
       .catch(() => {});
   }, []);
 
@@ -128,7 +139,7 @@ export function EmployeeProfilePage() {
       getAttendance(id),
       getPayslips(id),
       getWorkforceAllocations(id),
-      getActivityHistory('Employee', id),
+      getActivityHistory("Employee", id),
     ])
       .then(([e, att, slips, allocs, acts]) => {
         setEmp(e);
@@ -577,13 +588,16 @@ export function EmployeeProfilePage() {
                       {p.period}
                     </td>
                     <td className="px-4 py-3 text-gray-700">
-                      {getCurrencySymbol()}{formatNumberByGeneralSettings(p.grossPay)}
+                      {getCurrencySymbol()}
+                      {formatNumberByGeneralSettings(p.grossPay)}
                     </td>
                     <td className="px-4 py-3 text-red-500">
-                      -{getCurrencySymbol()}{formatNumberByGeneralSettings(p.deductions)}
+                      -{getCurrencySymbol()}
+                      {formatNumberByGeneralSettings(p.deductions)}
                     </td>
                     <td className="px-4 py-3 font-semibold text-green-700">
-                      {getCurrencySymbol()}{formatNumberByGeneralSettings(p.netPay)}
+                      {getCurrencySymbol()}
+                      {formatNumberByGeneralSettings(p.netPay)}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -664,10 +678,17 @@ export function EmployeeProfilePage() {
                   </label>
                   <input
                     value={editDraft.firstName}
-                    onChange={(e) => { df("firstName", e.target.value); setEditErrors((p) => ({ ...p, firstName: "" })); }}
+                    onChange={(e) => {
+                      df("firstName", e.target.value);
+                      setEditErrors((p) => ({ ...p, firstName: "" }));
+                    }}
                     className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${editErrors.firstName ? "border-red-400" : "border-gray-300"}`}
                   />
-                  {editErrors.firstName && <p className="text-xs text-red-500 mt-1">{editErrors.firstName}</p>}
+                  {editErrors.firstName && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {editErrors.firstName}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -675,10 +696,17 @@ export function EmployeeProfilePage() {
                   </label>
                   <input
                     value={editDraft.lastName}
-                    onChange={(e) => { df("lastName", e.target.value); setEditErrors((p) => ({ ...p, lastName: "" })); }}
+                    onChange={(e) => {
+                      df("lastName", e.target.value);
+                      setEditErrors((p) => ({ ...p, lastName: "" }));
+                    }}
                     className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${editErrors.lastName ? "border-red-400" : "border-gray-300"}`}
                   />
-                  {editErrors.lastName && <p className="text-xs text-red-500 mt-1">{editErrors.lastName}</p>}
+                  {editErrors.lastName && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {editErrors.lastName}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -690,11 +718,18 @@ export function EmployeeProfilePage() {
                   </label>
                   <input
                     value={editDraft.email}
-                    onChange={(e) => { df("email", e.target.value); setEditErrors((p) => ({ ...p, email: "" })); }}
+                    onChange={(e) => {
+                      df("email", e.target.value);
+                      setEditErrors((p) => ({ ...p, email: "" }));
+                    }}
                     type="email"
                     className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${editErrors.email ? "border-red-400" : "border-gray-300"}`}
                   />
-                  {editErrors.email && <p className="text-xs text-red-500 mt-1">{editErrors.email}</p>}
+                  {editErrors.email && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {editErrors.email}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -702,10 +737,17 @@ export function EmployeeProfilePage() {
                   </label>
                   <input
                     value={editDraft.phone}
-                    onChange={(e) => { df("phone", e.target.value); setEditErrors((p) => ({ ...p, phone: "" })); }}
+                    onChange={(e) => {
+                      df("phone", e.target.value);
+                      setEditErrors((p) => ({ ...p, phone: "" }));
+                    }}
                     className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${editErrors.phone ? "border-red-400" : "border-gray-300"}`}
                   />
-                  {editErrors.phone && <p className="text-xs text-red-500 mt-1">{editErrors.phone}</p>}
+                  {editErrors.phone && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {editErrors.phone}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -728,7 +770,9 @@ export function EmployeeProfilePage() {
                   <select
                     value={editDraft.departmentId}
                     onChange={(e) => {
-                      const dept = departments.find((d) => d.id === e.target.value);
+                      const dept = departments.find(
+                        (d) => d.id === e.target.value,
+                      );
                       setEditDraft((prev: any) => ({
                         ...prev,
                         departmentId: e.target.value,
@@ -881,7 +925,8 @@ export function EmployeeProfilePage() {
                 disabled={saving}
                 className="px-4 py-2 text-sm bg-indigo-700 text-white rounded-xl hover:bg-indigo-800 flex items-center gap-2 disabled:opacity-60"
               >
-                <Save className="w-4 h-4" /> {saving ? "Saving\u2026" : "Save Changes"}
+                <Save className="w-4 h-4" />{" "}
+                {saving ? "Saving\u2026" : "Save Changes"}
               </button>
             </div>
           </div>

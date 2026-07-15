@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { fetchEmployees, createEmployee, EMPLOYMENT_TYPE_TO_BACKEND } from "../../api/employees";
+import {
+  fetchEmployees,
+  createEmployee,
+  EMPLOYMENT_TYPE_TO_BACKEND,
+} from "../../api/employees";
 import { fetchDepartments } from "../../api/departments";
 import { useNumbering } from "../../stores/numberingStore";
 import { useClickOutside } from "../../utils/useClickOutside";
@@ -56,7 +60,9 @@ const empTypeColor: Record<string, string> = {
   Contract: "bg-orange-100 text-orange-700",
 };
 
-function buildEmployeeFilterFields(departmentNames: string[]): FilterFieldDef[] {
+function buildEmployeeFilterFields(
+  departmentNames: string[],
+): FilterFieldDef[] {
   return [
     { key: "role", label: "Role / Position", type: "text" },
     {
@@ -266,7 +272,9 @@ export function EmployeesPage() {
   const navigate = useNavigate();
   const { configs } = useNumbering();
   const [empList, setEmpList] = useState<EmployeeRow[]>([]);
-  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [departments, setDepartments] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   function loadEmployees() {
@@ -338,9 +346,10 @@ export function EmployeesPage() {
 
   const filtered = empList
     .filter((e) => {
-      const matchSearch = `${e.firstName} ${e.lastName} ${displayId(e.id)} ${e.role}`
-        .toLowerCase()
-        .includes(search.toLowerCase());
+      const matchSearch =
+        `${e.firstName} ${e.lastName} ${displayId(e.id)} ${e.role}`
+          .toLowerCase()
+          .includes(search.toLowerCase());
       const matchAdv = Object.entries(advFilters).every(([key, vals]) => {
         const fieldVal = String(e[key as keyof EmployeeRow] ?? "");
         if (
@@ -390,7 +399,8 @@ export function EmployeesPage() {
         form.email ||
         `${form.firstName.toLowerCase()}.${form.lastName.toLowerCase()}@buildos.ng`,
       phone: form.phone || "",
-      employmentType: EMPLOYMENT_TYPE_TO_BACKEND[form.employmentType] ?? form.employmentType,
+      employmentType:
+        EMPLOYMENT_TYPE_TO_BACKEND[form.employmentType] ?? form.employmentType,
       status: "active",
       dateHired: new Date().toISOString(),
     })
@@ -544,7 +554,11 @@ export function EmployeesPage() {
                 <tr
                   key={emp.id}
                   className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => navigate(`/apps/hr/employees/${emp.id}?displayId=${encodeURIComponent(displayId(emp.id))}`)}
+                  onClick={() =>
+                    navigate(
+                      `/apps/hr/employees/${emp.id}?displayId=${encodeURIComponent(displayId(emp.id))}`,
+                    )
+                  }
                 >
                   <td className="px-4 py-3 font-mono text-xs font-medium text-gray-500">
                     {displayId(emp.id)}
@@ -615,7 +629,9 @@ export function EmployeesPage() {
                       <div className="absolute right-8 top-2 bg-white border border-gray-200 rounded-md shadow-lg z-10 py-1 min-w-[140px]">
                         <button
                           onClick={() =>
-                            navigate(`/apps/hr/employees/${emp.id}?displayId=${encodeURIComponent(displayId(emp.id))}`)
+                            navigate(
+                              `/apps/hr/employees/${emp.id}?displayId=${encodeURIComponent(displayId(emp.id))}`,
+                            )
                           }
                           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
@@ -624,7 +640,9 @@ export function EmployeesPage() {
                         <button
                           onClick={() => {
                             setMenuOpen(null);
-                            navigate(`/apps/hr/employees/${emp.id}?edit=1&displayId=${encodeURIComponent(displayId(emp.id))}`);
+                            navigate(
+                              `/apps/hr/employees/${emp.id}?edit=1&displayId=${encodeURIComponent(displayId(emp.id))}`,
+                            );
                           }}
                           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
