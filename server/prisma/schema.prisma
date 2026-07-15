@@ -267,6 +267,9 @@ model Employee {
   pensionId         String?
   healthInsuranceId String?
 
+  // Job role (free-text position title, separate from the jobRole relation)
+  role String?
+
   // Additional info
   emergencyContact String?
   emergencyPhone   String?

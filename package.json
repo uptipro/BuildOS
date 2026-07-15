@@ -67,6 +67,7 @@
     "zustand": "5.0.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "4.1.12",
     "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",
