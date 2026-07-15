@@ -39,12 +39,16 @@ function mapEmployee(e: any) {
  */
 export function toEmployeeUpdatePayload(draft: any) {
     const { department, dateHired, dateHiredISO, projectCount, projects, id, status, employmentType, departmentId, ...rest } = draft;
+    // Convert empty-string date fields to undefined so Prisma skips them instead of
+    // sending invalid DateTime values that would cause a 500 on update.
+    const dateOfBirth = rest.dateOfBirth && String(rest.dateOfBirth).trim() ? rest.dateOfBirth : undefined;
     return {
         ...rest,
+        dateOfBirth,
         status,
         departmentId: departmentId || undefined,
         employmentType: EMPLOYMENT_TYPE_TO_BACKEND[employmentType] ?? employmentType,
-        dateHired: dateHiredISO || undefined,
+        dateHired: dateHiredISO && String(dateHiredISO).trim() ? dateHiredISO : undefined,
     };
 }
 

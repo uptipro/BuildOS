@@ -7,5 +7,6 @@ import { PrismaModule } from '../prisma/prisma.module';
     imports: [PrismaModule],
     controllers: [ActivityHistoryController],
     providers: [ActivityHistoryService],
+    exports: [ActivityHistoryService],
 })
 export class ActivityHistoryModule { }

@@ -5,6 +5,7 @@ import {
   getCurrencySymbol,
   formatNumberByGeneralSettings,
 } from "../../utils/generalSettings";
+import { getActivityHistory, type ActivityRecord } from "../../api/activity-history";
 import {
   ArrowLeft,
   Mail,
@@ -103,10 +104,15 @@ export function EmployeeProfilePage() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [projects, setProjects] = useState<WorkforceAllocation[]>([]);
+  const [activityLog, setActivityLog] = useState<ActivityRecord[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<any>({});
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+
+  // Human-friendly display ID passed from the list page
+  const displayId = searchParams.get("displayId") ?? emp?.id ?? "";
 
   useEffect(() => {
     fetchDepartments()
@@ -122,12 +128,14 @@ export function EmployeeProfilePage() {
       getAttendance(id),
       getPayslips(id),
       getWorkforceAllocations(id),
+      getActivityHistory('Employee', id),
     ])
-      .then(([e, att, slips, allocs]) => {
+      .then(([e, att, slips, allocs, acts]) => {
         setEmp(e);
         setAttendance(att);
         setPayslips(slips);
         setProjects(allocs);
+        setActivityLog(acts);
         setEditDraft({ ...e });
         if (searchParams.get("edit") === "1") {
           setEditOpen(true);
@@ -140,10 +148,27 @@ export function EmployeeProfilePage() {
 
   function openEdit() {
     setEditDraft({ ...emp });
+    setEditErrors({});
     setEditOpen(true);
   }
 
+  function validateEditDraft(draft: any): Record<string, string> {
+    const errs: Record<string, string> = {};
+    if (!draft.firstName?.trim()) errs.firstName = "First name is required";
+    if (!draft.lastName?.trim()) errs.lastName = "Last name is required";
+    if (draft.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email))
+      errs.email = "Enter a valid email address";
+    if (draft.phone && !/^\+?[\d\s\-().]{7,20}$/.test(draft.phone))
+      errs.phone = "Enter a valid phone number";
+    return errs;
+  }
+
   function saveEdit() {
+    const errs = validateEditDraft(editDraft);
+    if (Object.keys(errs).length) {
+      setEditErrors(errs);
+      return;
+    }
     setSaving(true);
     updateEmployee(emp.id, toEmployeeUpdatePayload(editDraft))
       .then(() => {
@@ -227,7 +252,7 @@ export function EmployeeProfilePage() {
             <p className="text-sm text-gray-500">
               {emp.role} · {emp.department}
             </p>
-            <p className="text-xs text-gray-400 font-mono">{emp.id}</p>
+            <p className="text-xs text-gray-400 font-mono">{displayId}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -358,7 +383,7 @@ export function EmployeeProfilePage() {
               Employment Details
             </h3>
             {[
-              { label: "Employee ID", value: emp.id },
+              { label: "Employee ID", value: displayId },
               { label: "Job Title / Role", value: emp.role },
               { label: "Department", value: emp.department || "—" },
               { label: "Grade Level", value: emp.gradeLevel || "—" },
@@ -577,15 +602,35 @@ export function EmployeeProfilePage() {
 
       {/* Activity */}
       {tab === "activity" && (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-          <Activity className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-sm text-gray-500 font-medium">
-            Activity history not yet available
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            Activity log will appear here once the audit trail module is
-            integrated.
-          </p>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-100">
+            <h3 className="font-medium text-gray-800 text-sm">Activity Log</h3>
+          </div>
+          {activityLog.length === 0 ? (
+            <div className="py-12 text-center">
+              <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">No activity recorded yet.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-50">
+              {activityLog.map((a) => (
+                <li key={a.id} className="flex items-start gap-3 px-4 py-3">
+                  <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Activity className="w-3.5 h-3.5 text-indigo-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-800">
+                      <span className="font-medium">{a.action}</span>
+                      {a.description ? ` — ${a.description}` : ""}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(a.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
@@ -619,9 +664,10 @@ export function EmployeeProfilePage() {
                   </label>
                   <input
                     value={editDraft.firstName}
-                    onChange={(e) => df("firstName", e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    onChange={(e) => { df("firstName", e.target.value); setEditErrors((p) => ({ ...p, firstName: "" })); }}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${editErrors.firstName ? "border-red-400" : "border-gray-300"}`}
                   />
+                  {editErrors.firstName && <p className="text-xs text-red-500 mt-1">{editErrors.firstName}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -629,9 +675,10 @@ export function EmployeeProfilePage() {
                   </label>
                   <input
                     value={editDraft.lastName}
-                    onChange={(e) => df("lastName", e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    onChange={(e) => { df("lastName", e.target.value); setEditErrors((p) => ({ ...p, lastName: "" })); }}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${editErrors.lastName ? "border-red-400" : "border-gray-300"}`}
                   />
+                  {editErrors.lastName && <p className="text-xs text-red-500 mt-1">{editErrors.lastName}</p>}
                 </div>
               </div>
 
@@ -643,10 +690,11 @@ export function EmployeeProfilePage() {
                   </label>
                   <input
                     value={editDraft.email}
-                    onChange={(e) => df("email", e.target.value)}
+                    onChange={(e) => { df("email", e.target.value); setEditErrors((p) => ({ ...p, email: "" })); }}
                     type="email"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${editErrors.email ? "border-red-400" : "border-gray-300"}`}
                   />
+                  {editErrors.email && <p className="text-xs text-red-500 mt-1">{editErrors.email}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -654,9 +702,10 @@ export function EmployeeProfilePage() {
                   </label>
                   <input
                     value={editDraft.phone}
-                    onChange={(e) => df("phone", e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    onChange={(e) => { df("phone", e.target.value); setEditErrors((p) => ({ ...p, phone: "" })); }}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${editErrors.phone ? "border-red-400" : "border-gray-300"}`}
                   />
+                  {editErrors.phone && <p className="text-xs text-red-500 mt-1">{editErrors.phone}</p>}
                 </div>
               </div>
 

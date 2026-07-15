@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WebhookService } from '../integrations/webhook.service';
 
 @Injectable()
 export class ProcurementRequestsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private webhookService: WebhookService,
+    ) {}
 
     // ── Purchase Requests ──
     findAllPRs(status?: string) {
@@ -17,7 +21,10 @@ export class ProcurementRequestsService {
     }
     createPR(data: any) {
         const prRef = `PR-${Date.now()}`;
-        return this.prisma.purchaseRequest.create({ data: { ...data, prRef } });
+        return this.prisma.purchaseRequest.create({ data: { ...data, prRef } }).then((pr) => {
+            this.webhookService.triggerWebhook('purchase-request.created', pr).catch(() => {});
+            return pr;
+        });
     }
     updatePR(id: string, data: any) {
         return this.prisma.purchaseRequest.update({ where: { id }, data });
@@ -59,7 +66,10 @@ export class ProcurementRequestsService {
     }
     createRFQ(data: any) {
         const rfqRef = `RFQ-${Date.now()}`;
-        return this.prisma.sentRFQ.create({ data: { ...data, rfqRef } });
+        return this.prisma.sentRFQ.create({ data: { ...data, rfqRef } }).then((rfq) => {
+            this.webhookService.triggerWebhook('rfq.sent', rfq).catch(() => {});
+            return rfq;
+        });
     }
     updateRFQ(id: string, data: any) {
         return this.prisma.sentRFQ.update({ where: { id }, data });

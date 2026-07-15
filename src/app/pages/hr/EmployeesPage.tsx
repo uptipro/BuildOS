@@ -100,6 +100,7 @@ interface EmployeeRow {
   email: string;
   phone: string;
   dateHired: string;
+  dateHiredISO: string;
   employmentType: string;
   projectCount: number;
   projects: string[];
@@ -280,6 +281,7 @@ export function EmployeesPage() {
               ? e.status
               : "active",
           projects: Array.isArray(e.projects) ? e.projects : [],
+          dateHiredISO: e.dateHiredISO ?? "",
         })),
       ),
     );
@@ -422,14 +424,14 @@ export function EmployeesPage() {
       displayId(e.id),
       e.firstName,
       e.lastName,
-      e.role,
-      e.department,
-      statusConfig[e.status as EmpStatus].label,
-      e.email,
-      e.phone,
-      e.dateHired,
-      e.employmentType,
-      e.projects.join("; "),
+      e.role ?? "",
+      e.department ?? "",
+      statusConfig[e.status as EmpStatus]?.label ?? e.status,
+      e.email ?? "",
+      e.phone ?? "",
+      e.dateHiredISO || e.dateHired,
+      e.employmentType ?? "",
+      (e.projects ?? []).join("; "),
     ]);
     exportCSV("employees", headers, rows);
   }
@@ -542,7 +544,7 @@ export function EmployeesPage() {
                 <tr
                   key={emp.id}
                   className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => navigate(`/apps/hr/employees/${emp.id}`)}
+                  onClick={() => navigate(`/apps/hr/employees/${emp.id}?displayId=${encodeURIComponent(displayId(emp.id))}`)}
                 >
                   <td className="px-4 py-3 font-mono text-xs font-medium text-gray-500">
                     {displayId(emp.id)}
@@ -613,7 +615,7 @@ export function EmployeesPage() {
                       <div className="absolute right-8 top-2 bg-white border border-gray-200 rounded-md shadow-lg z-10 py-1 min-w-[140px]">
                         <button
                           onClick={() =>
-                            navigate(`/apps/hr/employees/${emp.id}`)
+                            navigate(`/apps/hr/employees/${emp.id}?displayId=${encodeURIComponent(displayId(emp.id))}`)
                           }
                           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
@@ -622,7 +624,7 @@ export function EmployeesPage() {
                         <button
                           onClick={() => {
                             setMenuOpen(null);
-                            navigate(`/apps/hr/employees/${emp.id}?edit=1`);
+                            navigate(`/apps/hr/employees/${emp.id}?edit=1&displayId=${encodeURIComponent(displayId(emp.id))}`);
                           }}
                           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
