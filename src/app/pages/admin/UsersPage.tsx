@@ -211,6 +211,11 @@ const PERM_ACTIONS: Array<{
   { key: "delete", label: "Delete", Icon: Trash2 },
 ];
 
+const USERS_PER_PAGE = 20;
+const NAME_PATTERN = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
+const EMAIL_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const PHONE_PATTERN = /^\d+$/;
+
 function AppBadge({
   appKey,
   size = "sm",
@@ -906,6 +911,7 @@ function EditUserModal({
   const handleSubmit = async () => {
     const name = form.name.trim();
     const email = form.email.trim().toLowerCase();
+    const phone = form.phone.trim();
     const role = form.role.trim();
     const department = form.department.trim();
 
@@ -913,8 +919,18 @@ function EditUserModal({
       setError("Name, email, role, and department are required.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!NAME_PATTERN.test(name)) {
+      setError(
+        "Name can only include letters, spaces, hyphens, and apostrophes.",
+      );
+      return;
+    }
+    if (!EMAIL_PATTERN.test(email)) {
       setError("Please enter a valid email address.");
+      return;
+    }
+    if (phone && !PHONE_PATTERN.test(phone)) {
+      setError("Phone number can only contain digits.");
       return;
     }
 
@@ -924,7 +940,7 @@ function EditUserModal({
       await onSave({
         name,
         email,
-        phone: form.phone.trim(),
+        phone,
         role,
         department,
       });
@@ -958,7 +974,12 @@ function EditUserModal({
             <input
               type="text"
               value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  name: e.target.value.replace(/[^A-Za-z\s'-]/g, ""),
+                })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -980,7 +1001,14 @@ function EditUserModal({
             <input
               type="tel"
               value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  phone: e.target.value.replace(/\D/g, ""),
+                })
+              }
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="+234 800 000 0000"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -1353,6 +1381,7 @@ export function UsersPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<UserStatus | "all">("all");
   const [appFilter, setAppFilter] = useState<AppKey | "all">("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -1417,6 +1446,24 @@ export function UsersPage() {
     const matchApp = appFilter === "all" || u.apps.includes(appFilter);
     return matchSearch && matchStatus && matchApp;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / USERS_PER_PAGE));
+  const pageStartIndex = (currentPage - 1) * USERS_PER_PAGE;
+  const paginatedUsers = filtered.slice(
+    pageStartIndex,
+    pageStartIndex + USERS_PER_PAGE,
+  );
+  const pageStart = filtered.length === 0 ? 0 : pageStartIndex + 1;
+  const pageEnd = Math.min(pageStartIndex + USERS_PER_PAGE, filtered.length);
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, appFilter]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   const stats = {
     total: users.length,
@@ -1675,7 +1722,7 @@ export function UsersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filtered.map((user) => (
+            {paginatedUsers.map((user) => (
               <tr
                 key={user.id}
                 className="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -1890,8 +1937,56 @@ export function UsersPage() {
                 </td>
               </tr>
             ))}
+            {paginatedUsers.length === 0 && (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-5 py-10 text-center text-sm text-gray-400"
+                >
+                  No users found for the current filters.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+        <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
+          <p className="text-sm text-gray-500">
+            Showing {pageStart}-{pageEnd} of {filtered.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+              {pageNumbers.map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`min-w-8 px-2 py-1.5 text-sm rounded-lg border transition-colors ${
+                    currentPage === page
+                      ? "border-indigo-600 bg-indigo-600 text-white"
+                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage >= totalPages}
+              className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

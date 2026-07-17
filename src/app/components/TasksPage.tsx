@@ -20,6 +20,7 @@ import {
   deleteAppTask,
 } from "../api/app-tasks";
 import { fetchEmployees } from "../api/employees";
+import { ConfirmationModal } from "./ConfirmationModal";
 
 type TaskStatus = "Pending" | "In Progress" | "Completed";
 type TaskPriority = "Low" | "Medium" | "High";
@@ -156,6 +157,7 @@ export function TasksPage({
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "All">("All");
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -207,6 +209,10 @@ export function TasksPage({
 
   function saveTask() {
     if (!form.name.trim()) return;
+    if (!editId && form.dueDate < today) {
+      toast.error("Due date cannot be in the past for new tasks.");
+      return;
+    }
     if (editId) {
       const prevTasks = tasks;
       setTasks((prev) =>
@@ -401,7 +407,7 @@ export function TasksPage({
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
                 <button
                   onClick={() => openEdit(task)}
                   className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
@@ -409,7 +415,7 @@ export function TasksPage({
                   <Edit className="w-3.5 h-3.5" />
                 </button>
                 <button
-                  onClick={() => deleteTask(task.id)}
+                  onClick={() => setPendingDeleteTask(task)}
                   className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -510,6 +516,7 @@ export function TasksPage({
                     onChange={(e) =>
                       setForm({ ...form, dueDate: e.target.value })
                     }
+                    min={editId ? undefined : today}
                     className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${ringColor}`}
                   />
                 </div>
@@ -550,6 +557,24 @@ export function TasksPage({
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={pendingDeleteTask !== null}
+        title="Delete Task?"
+        description={
+          pendingDeleteTask
+            ? `This will permanently remove "${pendingDeleteTask.name}". This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        isDangerous={true}
+        onConfirm={() => {
+          if (!pendingDeleteTask) return;
+          deleteTask(pendingDeleteTask.id);
+          setPendingDeleteTask(null);
+        }}
+        onCancel={() => setPendingDeleteTask(null)}
+      />
     </div>
   );
 }

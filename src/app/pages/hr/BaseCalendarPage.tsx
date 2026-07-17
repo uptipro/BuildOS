@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiFetch } from "../../api/client";
+import { ConfirmationModal } from "../../components/ConfirmationModal";
 
 interface Holiday {
   id: string;
@@ -45,6 +46,7 @@ export function BaseCalendarPage() {
     recurring: false,
   });
   const [nonWorkingDays, setNonWorkingDays] = useState<number[]>([0, 6]); // Sun + Sat
+  const [deleteTarget, setDeleteTarget] = useState<Holiday | null>(null);
 
   useEffect(() => {
     apiFetch<Holiday[]>("/holidays")
@@ -116,6 +118,15 @@ export function BaseCalendarPage() {
       setSelectedMonth(0);
       setYear((y) => y + 1);
     } else setSelectedMonth((m) => m + 1);
+  }
+
+  function removeHoliday(id: string) {
+    apiFetch(`/holidays/${id}`, { method: "DELETE" })
+      .then(() => setHolidays((prev) => prev.filter((x) => x.id !== id)))
+      .catch((err) => {
+        alert("Failed to delete holiday. Please try again.");
+        console.error(err);
+      });
   }
 
   return (
@@ -333,16 +344,7 @@ export function BaseCalendarPage() {
                       </p>
                     </div>
                     <button
-                      onClick={() => {
-                        apiFetch(`/holidays/${h.id}`, { method: "DELETE" })
-                          .then(() =>
-                            setHolidays((prev) => prev.filter((x) => x.id !== h.id)),
-                          )
-                          .catch((err) => {
-                            alert("Failed to delete holiday. Please try again.");
-                            console.error(err);
-                          });
-                      }}
+                      onClick={() => setDeleteTarget(h)}
                       className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-400"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -384,6 +386,24 @@ export function BaseCalendarPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={deleteTarget !== null}
+        title="Delete Holiday?"
+        description={
+          deleteTarget
+            ? `This will permanently remove "${deleteTarget.name}" on ${deleteTarget.date}. This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        isDangerous={true}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          removeHoliday(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

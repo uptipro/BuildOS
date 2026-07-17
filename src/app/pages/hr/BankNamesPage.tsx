@@ -8,6 +8,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { apiFetch } from "../../api/client";
+import { ConfirmationModal } from "../../components/ConfirmationModal";
 
 interface Bank {
   id: string;
@@ -26,6 +27,7 @@ export function BankNamesPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Bank | null>(null);
 
   const toBank = (raw: any): Bank => ({
     id: raw.id,
@@ -308,7 +310,7 @@ export function BankNamesPage() {
                       <Edit className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => removeBank(b.id)}
+                      onClick={() => setDeleteTarget(b)}
                       className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -325,6 +327,24 @@ export function BankNamesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={deleteTarget !== null}
+        title="Delete Bank?"
+        description={
+          deleteTarget
+            ? `This will permanently remove "${deleteTarget.name}". This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        isDangerous={true}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          removeBank(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
